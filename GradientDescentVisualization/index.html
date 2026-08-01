@@ -321,7 +321,7 @@
           <table>
             <thead>
               <tr>
-                <th>Index</th><th>Input</th><th>Correct Output</th><th>Predicted Output</th><th>Difference</th><th>Difference × 2 × Input</th><th>Difference × 2</th><th>Difference Squared</th>
+                <th>Index (i)</th><th>Input</th><th>Correct Output (y)</th><th>Predicted Output (ŷ)</th><th>Error</th><th>Error × 2 × Input</th><th>Error × 2</th><th>Error Squared</th>
               </tr>
             </thead>
             <tbody id="sampleBody"></tbody>
@@ -535,6 +535,8 @@
         const biasStep=ctx.biasStep===null?'—':signed(ctx.biasStep,6);
         const criterion=state.stage===2?Math.abs(ctx.calc.gw):ctx.calc.gradMag;
         const rows=[
+          ['Prior Weight [w(old)]', 'w(old)', num(ctx.wOld,6)],
+          ['Prior Bias [b(old)]', 'b(old)', num(ctx.bOld,6)],
           ['Sum of (differences × 2 × input)', 'Σ[2x(ŷ − y)]', num(sumW,4)],
           ['Weight Gradient', '(1/n)Σ[2x(ŷ − y)]', num(ctx.calc.gw,4)],
           ['Learning Rate × Weight Gradient', 'α × Weight Gradient', ctx.lr===null?'Not used in manual mode':weightStep],
