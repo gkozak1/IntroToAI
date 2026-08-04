@@ -1,772 +1,1762 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gradient Descent Neuron Lab</title>
-  <style>
-    body { margin: 0; padding: 24px; background: #f4f6f8; }
-    main { max-width: 1180px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 18px; }
-    @media (max-width: 600px) { body { padding: 8px; } main { padding: 12px; } }
-  </style>
-</head>
-<body>
-<main>
-<div id="gd-lab" class="gd-lab">
-  <style>
-    #gd-lab {
-      --panel: var(--viz-panel, #ffffff);
-      --card: var(--viz-card, #ffffff);
-      --chip: var(--viz-chip-card, #f6f8fb);
-      --text: var(--viz-text, #18212f);
-      --muted: var(--viz-muted, #667085);
-      --border: var(--viz-border, #d9dee7);
-      --accent: var(--viz-accent, #285f8f);
-      --accent-text: var(--viz-accent-text, #ffffff);
-      --accent-bg: var(--viz-accent-bg, #e8f1f8);
-      --accent-soft: var(--viz-accent-bg-subtle, #f3f7fb);
-      --series-1: var(--viz-series-1, #285f8f);
-      --series-2: var(--viz-series-2, #9b5b42);
-      --series-3: var(--viz-series-3, #6b7f3f);
-      color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      width: 100%;
-    }
-    #gd-lab * { box-sizing: border-box; }
-    #gd-lab button, #gd-lab input, #gd-lab select { font: inherit; }
-    #gd-lab .gd-shell { display: grid; gap: 18px; }
-    #gd-lab .gd-note {
-      background: var(--accent-soft);
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--accent);
-      border-radius: 14px;
-      padding: 13px 15px;
-      line-height: 1.45;
-    }
-    #gd-lab .gd-stage-nav {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-    #gd-lab .gd-stage-btn {
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 11px 10px;
-      text-align: left;
-      cursor: pointer;
-      min-height: 64px;
-    }
-    #gd-lab .gd-stage-btn strong { display: block; font-weight: 650; }
-    #gd-lab .gd-stage-btn span { display: block; margin-top: 3px; color: var(--muted); font-size: 0.82rem; }
-    #gd-lab .gd-stage-btn[aria-selected="true"] {
-      background: var(--accent-bg);
-      border-color: var(--accent);
-      box-shadow: inset 0 0 0 1px var(--accent);
-    }
-    #gd-lab .gd-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1.28fr) minmax(280px, 0.82fr);
-      gap: 18px;
-      align-items: start;
-    }
-    #gd-lab .gd-section { display: grid; gap: 10px; min-width: 0; }
-    #gd-lab .gd-section-head { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
-    #gd-lab h2, #gd-lab h3 { margin: 0; font-weight: 650; }
-    #gd-lab h2 { font-size: 1.05rem; }
-    #gd-lab h3 { font-size: 0.98rem; }
-    #gd-lab .gd-subtle { color: var(--muted); font-size: 0.86rem; line-height: 1.4; }
-    #gd-lab .gd-chart-wrap { min-width: 0; }
-    #gd-lab svg { width: 100%; height: auto; display: block; overflow: visible; }
-    #gd-lab .gd-chart-frame { fill: var(--panel); stroke: var(--border); }
-    #gd-lab .gd-grid { stroke: var(--border); stroke-width: 1; opacity: 0.65; }
-    #gd-lab .gd-axis { stroke: var(--muted); stroke-width: 1.2; }
-    #gd-lab .gd-tick { fill: var(--muted); font-size: 11px; }
-    #gd-lab .gd-axis-label { fill: var(--text); font-size: 12px; font-weight: 600; }
-    #gd-lab .gd-chart-annotation { fill: var(--text); font-size: 11px; font-weight: 600; }
-    #gd-lab .gd-current-line { stroke: var(--series-1); stroke-width: 3; }
-    #gd-lab .gd-opt-line { stroke: var(--series-3); stroke-width: 2; stroke-dasharray: 7 6; }
-    #gd-lab .gd-point { fill: var(--series-2); stroke: var(--panel); stroke-width: 2; }
-    #gd-lab .gd-residual { stroke: var(--series-2); stroke-width: 1.5; stroke-dasharray: 3 3; opacity: 0.75; }
-    #gd-lab .gd-curve { fill: none; stroke: var(--series-1); stroke-width: 2.5; }
-    #gd-lab .gd-tangent { stroke: var(--series-2); stroke-width: 2.1; stroke-dasharray: 7 5; }
-    #gd-lab .gd-marker { fill: var(--series-2); stroke: var(--panel); stroke-width: 2; }
-    #gd-lab .gd-controls {
-      border: 1px solid var(--border);
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px;
-      display: grid;
-      gap: 13px;
-    }
-    #gd-lab .gd-control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    #gd-lab .gd-control { min-width: 0; }
-    #gd-lab label { display: block; font-size: 0.84rem; font-weight: 600; margin-bottom: 6px; }
-    #gd-lab input[type="number"], #gd-lab select {
-      width: 100%;
-      border: 1px solid var(--border);
-      background: var(--panel);
-      color: var(--text);
-      border-radius: 10px;
-      padding: 8px 9px;
-    }
-    #gd-lab input[type="range"] { width: 100%; accent-color: var(--accent); }
-    #gd-lab .gd-combo { display: grid; grid-template-columns: 1fr 92px; gap: 9px; align-items: center; }
-    #gd-lab .gd-button-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    #gd-lab button.gd-button {
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      border-radius: 10px;
-      padding: 9px 12px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    #gd-lab button.gd-button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-    #gd-lab button.gd-button:disabled { opacity: 0.48; cursor: not-allowed; }
-    #gd-lab .gd-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
-    #gd-lab .gd-metric {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--chip);
-      padding: 10px;
-      min-width: 0;
-    }
-    #gd-lab .gd-metric span { display: block; color: var(--muted); font-size: 0.75rem; }
-    #gd-lab .gd-metric strong { display: block; margin-top: 4px; font-size: 1.02rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-    #gd-lab .gd-status {
-      border-radius: 12px;
-      padding: 10px 12px;
-      background: var(--accent-soft);
-      border: 1px solid var(--border);
-      font-size: 0.9rem;
-      line-height: 1.4;
-    }
-    #gd-lab .gd-loss-stack { display: grid; gap: 14px; }
-    #gd-lab .gd-loss-card { border-top: 1px solid var(--border); padding-top: 12px; }
-    #gd-lab .gd-loss-card:first-child { border-top: 0; padding-top: 0; }
-    #gd-lab .gd-loss-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 7px; }
-    #gd-lab .gd-loss-title h3, #gd-lab .gd-loss-slope { margin: 0; font-size: 0.98rem; font-weight: 650; color: var(--text); }
-    #gd-lab details { border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
-    #gd-lab summary { cursor: pointer; padding: 12px 14px; font-weight: 650; }
-    #gd-lab details > div { padding: 0 14px 14px; }
-    #gd-lab .gd-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
-    #gd-lab table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
-    #gd-lab th, #gd-lab td { padding: 8px 9px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
-    #gd-lab th:first-child, #gd-lab td:first-child { text-align: left; }
-    #gd-lab th { background: #214d1d; color: #ffffff; font-weight: 650; }
-    #gd-lab tr:last-child td { border-bottom: 0; }
-    #gd-lab .gd-summary-table th { background: #18212f; }
-    #gd-lab .gd-summary-table td:nth-child(1), #gd-lab .gd-summary-table td:nth-child(2) { text-align: left; white-space: normal; }
-    #gd-lab .gd-summary-table td:nth-child(3) { text-align: right; }
-    #gd-lab .gd-mini-badge { display: inline-block; border-radius: 999px; padding: 3px 8px; background: var(--accent-bg); color: var(--text); font-size: 0.76rem; }
-    #gd-lab .gd-hidden { display: none !important; }
-    #gd-lab .gd-warning { color: #9a3412; font-weight: 600; }
-    #gd-lab .gd-success { color: #216e39; font-weight: 650; }
-    #gd-lab .gd-disabled-control { opacity: 0.52; }
-    #gd-lab .gd-disabled-control input { cursor: not-allowed; }
-    #gd-lab .gd-disabled-loss { opacity: 0.42; filter: grayscale(1); }
-    #gd-lab input[type="number"].gd-converged-input {
-      border-color: #2e7d32 !important;
-      background: #eaf7ed !important;
-      color: #14532d !important;
-      box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.18);
-      opacity: 1;
-    }
-    @media (max-width: 850px) {
-      #gd-lab .gd-layout { grid-template-columns: 1fr; }
-      #gd-lab .gd-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 560px) {
-      #gd-lab .gd-stage-nav { grid-template-columns: 1fr; }
-      #gd-lab .gd-control-grid { grid-template-columns: 1fr; }
-      #gd-lab .gd-combo { grid-template-columns: 1fr 88px; }
-    }
-  </style>
+import {
+  APP_VERSION,
+  BANK_CANDIDATES,
+  BANK_CONTEXTS,
+  BRANCH_CORPUS,
+  CLASS1_BASE_CORPUS,
+  CLASSES,
+  MISCONCEPTIONS,
+  PREDICTOR_LADDER,
+  PROCESS_STAGES,
+  REAL_GUIDED_PROMPTS,
+  REAL_MODEL_CONFIG,
+  TOKEN_EXAMPLES,
+  TOY_LOGITS,
+  TOY_VECTOR_SEQUENCE,
+} from './data.js';
+import {
+  NGramTeachingModel,
+  candidateDistributionFromContext,
+  cumulativeDistribution,
+  detokenizeWords,
+  formatTokenForDisplay,
+  normalizeWeights,
+  percent,
+  round,
+  sampleIndex,
+  stableSoftmax,
+  weightedContextVector,
+  wordTokenize,
+} from './teaching-model.js';
+import {
+  loadState,
+  markStepComplete,
+  resetState,
+  saveState,
+} from './state.js';
+import { RealModelClient } from './real-model-client.js';
 
-  <div class="gd-shell">
-    <nav class="gd-stage-nav" aria-label="Gradient descent stages">
-      <button class="gd-stage-btn" type="button" data-stage="1" aria-selected="true">
-        <strong>1. Fit by eye</strong><span>Adjust weight and bias</span>
-      </button>
-      <button class="gd-stage-btn" type="button" data-stage="2" aria-selected="false">
-        <strong>2. Lock the bias</strong><span>Optimize weight only</span>
-      </button>
-      <button class="gd-stage-btn" type="button" data-stage="3" aria-selected="false">
-        <strong>3. Advanced</strong><span>Optimize both parameters</span>
-      </button>
-    </nav>
+const root = document.querySelector('#screen-root');
+const classNavigation = document.querySelector('#class-navigation');
+const processMap = document.querySelector('#process-map');
+const teacherDialog = document.querySelector('#teacher-dialog');
+const teacherNavContent = document.querySelector('#teacher-nav-content');
+const helpDialog = document.querySelector('#help-dialog');
+const helpContent = document.querySelector('#help-content');
+const modelDialog = document.querySelector('#model-dialog');
+const modelDialogContent = document.querySelector('#model-dialog-content');
+const modelStatusButton = document.querySelector('#model-status-button');
+const modelStatusLabel = document.querySelector('#model-status-label');
+const toastRegion = document.querySelector('#toast-region');
 
-    <div id="stageMessage" class="gd-status" aria-live="polite"></div>
+let state = loadState();
+let currentStep = state.currentStep || 'c1-goal';
+const realModel = new RealModelClient();
+const runtime = {
+  predictorMode: 'overall',
+  bankRemoved: { river: new Set(), finance: new Set() },
+  tokenReveal: false,
+  tokenizerResult: null,
+  tokenizerLoading: false,
+  vectorMatrix: TOY_VECTOR_SEQUENCE.vectors.map((row) => [...row]),
+  softmaxSelected: 0,
+  modelProgress: { progress: 0, file: '', message: 'Not loaded' },
+  modelState: 'idle',
+  loadingKey: null,
+  realResults: {},
+  realErrors: {},
+  openLabHistory: [],
+  openLabPrompt: state.choices.real.lastPrompt || REAL_GUIDED_PROMPTS.openDefault,
+  openLabTemperature: state.choices.temperature || 1,
+  openLabGreedy: false,
+  openLabRandom: 0.62,
+  branchSelected: [],
+  c4AppendRecalculated: false,
+};
 
-    <div class="gd-layout">
-      <section class="gd-section">
-        <div class="gd-section-head">
-          <div>
-            <h2>Model fit</h2>
-            <div id="equationText" class="gd-subtle"></div>
-          </div>
-          <span id="stageBadge" class="gd-mini-badge"></span>
-        </div>
-        <div class="gd-chart-wrap">
-          <svg id="fitChart" viewBox="0 0 680 410" role="img" aria-label="Scatterplot with current regression line"></svg>
-        </div>
+const STEP_META = {
+  'c1-goal': ['Class 1', 'Today’s goal', 'training'],
+  'c1-predict': ['Class 1', 'Predict before the model', 'training'],
+  'c1-checkpoint-1': ['Class 1', 'Teacher checkpoint', 'training'],
+  'c1-corpus': ['Class 1', 'Learn from visible examples', 'training'],
+  'c1-training-bridge': ['Class 1', 'Pretraining and generation', 'training'],
+  'c1-checkpoint-2': ['Class 1', 'Teacher checkpoint', 'training'],
+  'c1-branch': ['Class 1', 'One choice changes the next', 'repeat'],
+  'c1-checkpoint-3': ['Class 1', 'Teacher checkpoint', 'repeat'],
+  'c1-complete': ['Class 1', 'Complete the goal', 'repeat'],
+  'c2-goal': ['Class 2', 'Today’s goal', 'context'],
+  'c2-predictors': ['Class 2', 'Why simple frequency fails', 'context'],
+  'c2-checkpoint-1': ['Class 2', 'Teacher checkpoint', 'context'],
+  'c2-bank-predict': ['Class 2', 'Predict the effect of context', 'context'],
+  'c2-bank-compare': ['Class 2', 'Change earlier context', 'context'],
+  'c2-checkpoint-2': ['Class 2', 'Teacher checkpoint', 'context'],
+  'c2-attention': ['Class 2', 'Attention as weighted influence', 'context'],
+  'c2-real-compare': ['Class 2', 'Test a real transformer', 'probabilities'],
+  'c2-checkpoint-3': ['Class 2', 'Teacher checkpoint', 'context'],
+  'c2-complete': ['Class 2', 'Complete the goal', 'context'],
+  'c3-goal': ['Class 3', 'Today’s goal', 'tokens'],
+  'c3-token-reveal': ['Class 3', 'Words become tokens', 'tokens'],
+  'c3-tokenizer': ['Class 3', 'Inspect a real tokenizer', 'tokens'],
+  'c3-checkpoint-1': ['Class 3', 'Teacher checkpoint', 'tokens'],
+  'c3-vectors': ['Class 3', 'Tokens become numbers', 'tokens'],
+  'c3-logits': ['Class 3', 'The model scores every token', 'scores'],
+  'c3-checkpoint-2': ['Class 3', 'Teacher checkpoint', 'scores'],
+  'c3-softmax': ['Class 3', 'Scores become probabilities', 'probabilities'],
+  'c3-real-probabilities': ['Class 3', 'Inspect authentic probabilities', 'probabilities'],
+  'c3-checkpoint-3': ['Class 3', 'Teacher checkpoint', 'probabilities'],
+  'c3-complete': ['Class 3', 'Complete the goal', 'probabilities'],
+  'c4-goal': ['Class 4', 'Today’s goal', 'selection'],
+  'c4-temperature': ['Class 4', 'Temperature reshapes the distribution', 'probabilities'],
+  'c4-checkpoint-1': ['Class 4', 'Teacher checkpoint', 'probabilities'],
+  'c4-sampling': ['Class 4', 'Sampling selects one token', 'selection'],
+  'c4-checkpoint-2': ['Class 4', 'Teacher checkpoint', 'selection'],
+  'c4-append': ['Class 4', 'Append and recalculate', 'repeat'],
+  'c4-real-context': ['Class 4', 'Guided experiment: context', 'context'],
+  'c4-real-branch': ['Class 4', 'Guided experiment: branching', 'repeat'],
+  'c4-real-temperature': ['Class 4', 'Guided experiment: temperature', 'probabilities'],
+  'c4-checkpoint-3': ['Class 4', 'Teacher checkpoint', 'repeat'],
+  'c4-open-lab': ['Class 4', 'Open laboratory', 'repeat'],
+  'c4-complete': ['Class 4', 'Complete the whole loop', 'repeat'],
+};
 
-        <div class="gd-controls">
-          <div id="manualControls">
-            <div class="gd-control-grid">
-              <div class="gd-control">
-                <label for="manualWeight">Weight <em>w</em></label>
-                <div class="gd-combo">
-                  <input id="manualWeightRange" type="range" min="-0.2" max="1.2" step="0.1" value="0">
-                  <input id="manualWeight" type="number" min="-2" max="3" step="0.001" value="0.000" inputmode="decimal">
-                </div>
-              </div>
-              <div class="gd-control">
-                <label for="manualBias">Bias <em>b</em></label>
-                <div class="gd-combo">
-                  <input id="manualBiasRange" type="range" min="-0.5" max="5.5" step="0.1" value="0">
-                  <input id="manualBias" type="number" min="-5" max="8" step="0.001" value="0.000" inputmode="decimal">
-                </div>
-              </div>
-            </div>
-            <div class="gd-button-row" style="margin-top:12px">
-              <button id="testLine" class="gd-button primary" type="button">Check current line</button>
-              <button id="manualReset" class="gd-button" type="button">Reset</button>
-              <button id="revealSolution" class="gd-button" type="button">Reveal solution</button>
-            </div>
-          </div>
+const STEP_TITLES = Object.fromEntries(Object.entries(STEP_META).map(([id, meta]) => [id, meta[1]]));
 
-          <div id="gradientControls" class="gd-hidden">
-            <div class="gd-control-grid">
-              <div class="gd-control">
-                <label for="gdWeight">Current weight <em>w</em></label>
-                <div class="gd-combo">
-                  <input id="gdWeightRange" type="range" min="-0.2" max="1.2" step="0.1" value="0">
-                  <input id="gdWeight" type="number" min="-2" max="3" step="0.001" value="0.000" inputmode="decimal">
-                </div>
-              </div>
-              <div id="gdBiasControl" class="gd-control">
-                <label id="gdBiasLabel" for="gdBias">Current bias <em>b</em></label>
-                <div class="gd-combo">
-                  <input id="gdBiasRange" type="range" min="-0.5" max="5.5" step="0.1" value="0">
-                  <input id="gdBias" type="number" min="-5" max="8" step="0.001" value="0.000" inputmode="decimal">
-                </div>
-              </div>
-              <div class="gd-control">
-                <label for="runCount">Number of iterations to advance</label>
-                <input id="runCount" type="number" min="1" max="100" step="1" value="5" inputmode="numeric">
-              </div>
-            </div>
-            <div class="gd-button-row" style="margin-top:12px">
-              <button id="stepOnce" class="gd-button primary" type="button">Run one iteration</button>
-              <button id="runMany" class="gd-button" type="button">Advance X</button>
-              <button id="playPause" class="gd-button" type="button">Play</button>
-              <button id="gdReset" class="gd-button" type="button">Reset</button>
-            </div>
-            <div id="rateWarning" class="gd-subtle" style="margin-top:9px"></div>
-          </div>
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
-          <div class="gd-control-grid">
-            <div id="learningRateControl" class="gd-control">
-              <label for="learningRate">Learning rate α</label>
-              <input id="learningRate" type="number" min="0.0001" max="0.05" step="0.0005" value="0.0050" inputmode="decimal">
-              <div class="gd-subtle">Used when gradient descent performs an iteration.</div>
-            </div>
-            <div class="gd-control">
-              <label for="epsilon">Gradient tolerance ε</label>
-              <input id="epsilon" type="number" min="0.001" max="20" step="0.01" value="0.50" inputmode="decimal">
-              <div class="gd-subtle">“Close enough to zero” stopping criterion.</div>
-            </div>
-          </div>
-        </div>
+function tokenHtml(token) {
+  const visible = formatTokenForDisplay(token);
+  return `<span class="math-plain">${escapeHtml(visible)}</span>`;
+}
 
-        <div class="gd-metrics">
-          <div class="gd-metric"><span id="metricLabel1">Attempts</span><strong id="metric1">0</strong></div>
-          <div class="gd-metric"><span>Mean squared error</span><strong id="metric2">—</strong></div>
-          <div class="gd-metric"><span id="metricLabel3">Gradient magnitude</span><strong id="metric3">—</strong></div>
-          <div class="gd-metric"><span id="metricLabel4">Status</span><strong id="metric4">Preview</strong></div>
-        </div>
-      </section>
+function classForStep(stepId = currentStep) {
+  return CLASSES.find((courseClass) => courseClass.steps.includes(stepId)) || CLASSES[0];
+}
 
-      <aside class="gd-section">
-        <div class="gd-section-head">
-          <div>
-            <h2 id="lossHeading">Loss-curve slices</h2>
-            <div id="lossDescription" class="gd-subtle"></div>
-          </div>
-        </div>
-        <div class="gd-loss-stack">
-          <div class="gd-loss-card">
-            <div class="gd-loss-title"><h3>Weight slice</h3><span id="weightGradientText" class="gd-loss-slope"></span></div>
-            <svg id="weightLossChart" viewBox="0 0 430 245" role="img" aria-label="Weight loss curve and tangent"></svg>
-          </div>
-          <div id="biasLossCard" class="gd-loss-card">
-            <div class="gd-loss-title"><h3>Bias slice</h3><span id="biasGradientText" class="gd-loss-slope"></span></div>
-            <svg id="biasLossChart" viewBox="0 0 430 245" role="img" aria-label="Bias loss curve and tangent"></svg>
-          </div>
-        </div>
-        <div class="gd-note" style="font-size:0.86rem">
-          Each curve is a one-dimensional slice through the same bowl-shaped loss surface. The tangent slope is one component of the gradient.
-        </div>
-      </aside>
+function stepIndex(stepId = currentStep) {
+  const courseClass = classForStep(stepId);
+  return courseClass.steps.indexOf(stepId);
+}
+
+function persist() {
+  state.currentStep = currentStep;
+  state.currentClass = classForStep().id;
+  saveState(state);
+}
+
+function navigate(stepId, options = {}) {
+  if (!STEP_META[stepId]) return;
+  if (options.completeCurrent) markStepComplete(state, currentStep);
+  currentStep = stepId;
+  persist();
+  render();
+  document.querySelector('#main-content')?.focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goNext() {
+  const courseClass = classForStep();
+  const index = courseClass.steps.indexOf(currentStep);
+  markStepComplete(state, currentStep);
+  if (index < courseClass.steps.length - 1) {
+    navigate(courseClass.steps[index + 1]);
+  } else {
+    if (!state.completedClasses.includes(courseClass.id)) state.completedClasses.push(courseClass.id);
+    const nextClass = CLASSES.find((item) => item.id === courseClass.id + 1);
+    if (nextClass) navigate(nextClass.steps[0]);
+    else persist();
+  }
+}
+
+function goPrevious() {
+  const courseClass = classForStep();
+  const index = courseClass.steps.indexOf(currentStep);
+  if (index > 0) navigate(courseClass.steps[index - 1]);
+}
+
+function firstIncompleteStep(courseClass) {
+  return courseClass.steps.find((step) => !state.completedSteps.includes(step)) || courseClass.steps[0];
+}
+
+function showToast(message, type = '') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  toastRegion.append(toast);
+  setTimeout(() => toast.remove(), 4200);
+}
+
+function renderNavigation() {
+  classNavigation.innerHTML = CLASSES.map((courseClass) => {
+    const completed = courseClass.steps.filter((step) => state.completedSteps.includes(step)).length;
+    const active = courseClass.id === classForStep().id;
+    return `<button class="class-nav-button ${active ? 'active' : ''}" type="button" data-class-id="${courseClass.id}">
+      <span class="class-nav-number">${courseClass.id}</span>
+      <span class="class-nav-title">${escapeHtml(courseClass.shortTitle)}</span>
+      <span class="class-nav-progress">${completed}/${courseClass.steps.length}</span>
+    </button>`;
+  }).join('');
+
+  classNavigation.querySelectorAll('[data-class-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const courseClass = CLASSES.find((item) => item.id === Number(button.dataset.classId));
+      navigate(firstIncompleteStep(courseClass));
+    });
+  });
+}
+
+function renderProcessMap() {
+  const courseClass = classForStep();
+  const currentStage = STEP_META[currentStep]?.[2];
+  processMap.innerHTML = PROCESS_STAGES.map((stage) => {
+    const active = courseClass.stages.includes(stage.id);
+    return `<div class="process-stage ${active ? 'active' : ''} ${stage.id === currentStage ? 'current' : ''}">
+      ${escapeHtml(stage.label)}
+    </div>`;
+  }).join('');
+}
+
+function screenHeader(title, subtitle = '') {
+  const courseClass = classForStep();
+  const index = stepIndex();
+  return `<div class="screen-header">
+    <div class="screen-title-block">
+      <p class="screen-kicker">Class ${courseClass.id}: ${escapeHtml(courseClass.shortTitle)}</p>
+      <h2>${escapeHtml(title)}</h2>
+      ${subtitle ? `<p class="screen-subtitle">${subtitle}</p>` : ''}
     </div>
+    <div class="step-counter">Step ${index + 1} of ${courseClass.steps.length}</div>
+  </div>`;
+}
 
-    <details open>
-      <summary>Calculations for the current iteration</summary>
-      <div class="gd-section">
-        <div class="gd-subtle" id="calculationCaption"></div>
-        <div class="gd-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Index (i)</th><th>Input</th><th>Correct Output (y)</th><th>Predicted Output (ŷ)</th><th>Error</th><th>Error × 2 × Input</th><th>Error × 2</th><th>Error Squared</th>
-              </tr>
-            </thead>
-            <tbody id="sampleBody"></tbody>
-          </table>
+function actions({ nextLabel = 'Continue', previous = true, next = true, nextDisabled = false, nextId = 'next-button', extra = '' } = {}) {
+  return `<div class="screen-actions">
+    <div class="action-group">
+      ${previous ? '<button id="previous-button" class="secondary-button" type="button">Back</button>' : ''}
+      ${extra}
+    </div>
+    <div class="action-group">
+      ${next ? `<button id="${nextId}" class="primary-button" type="button" ${nextDisabled ? 'disabled' : ''}>${escapeHtml(nextLabel)}</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function bindStandardActions() {
+  document.querySelector('#previous-button')?.addEventListener('click', goPrevious);
+  document.querySelector('#next-button')?.addEventListener('click', goNext);
+}
+
+function goalScreen(courseClass, guidingQuestion, body) {
+  return `<article class="screen">
+    ${screenHeader('Today’s goal', 'Start with the goal. Every activity in this class should help complete it.')}
+    <section class="goal-card">
+      <p class="eyebrow">By the end of class</p>
+      <p class="goal-statement">${escapeHtml(courseClass.goal)}</p>
+      <div class="guiding-question"><span class="question-mark">?</span>${escapeHtml(guidingQuestion)}</div>
+    </section>
+    ${body}
+    ${actions({ previous: courseClass.id !== 1, nextLabel: 'Begin the investigation' })}
+  </article>`;
+}
+
+function checkpointScreen(title, prompts, note = 'Stop here and wait for class discussion.') {
+  return `<article class="screen">
+    ${screenHeader('Teacher checkpoint', 'The app pauses so the class can name the idea before moving deeper.')}
+    <section class="checkpoint-card">
+      <div class="checkpoint-label">⏸ Class discussion</div>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(note)}</p>
+      <ol class="checkpoint-prompts">
+        ${prompts.map((prompt) => `<li>${escapeHtml(prompt)}</li>`).join('')}
+      </ol>
+    </section>
+    ${actions({ nextLabel: 'Continue when your teacher says to proceed' })}
+  </article>`;
+}
+
+function probabilityBars(items, options = {}) {
+  const max = options.scaleToMax ? Math.max(...items.map((item) => item.probability), 0.00001) : 1;
+  const barClass = options.barClass || '';
+  return `<div class="probability-list">
+    ${items.map((item) => `<div class="probability-row">
+      <div class="probability-label">${tokenHtml(item.token)}</div>
+      <div class="probability-track"><div class="probability-bar ${barClass}" style="width:${Math.max(0.2, item.probability / max * 100)}%"></div></div>
+      <div class="probability-value">${percent(item.probability, options.digits ?? 1)}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function dualProbabilityBars(items) {
+  const max = Math.max(...items.flatMap((item) => [item.nativeProbability, item.samplingProbability]), 0.0001);
+  return `<div class="dual-bars">
+    <div class="dual-bar-row small muted"><strong>Token</strong><span>Native T=1</span><span>Sampling</span></div>
+    ${items.map((item) => `<div class="dual-bar-row">
+      <div class="probability-label">${tokenHtml(item.token)}</div>
+      <div class="dual-bar-cell"><div class="probability-track"><div class="probability-bar native" style="width:${item.nativeProbability / max * 100}%"></div></div><span class="probability-value">${percent(item.nativeProbability, 1)}</span></div>
+      <div class="dual-bar-cell"><div class="probability-track"><div class="probability-bar sampling" style="width:${item.samplingProbability / max * 100}%"></div></div><span class="probability-value">${percent(item.samplingProbability, 1)}</span></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function loopDiagram() {
+  const labels = ['Training shaped weights', 'Text becomes tokens', 'Context is processed', 'Logits score tokens', 'SoftMax makes probabilities', 'One token is selected', 'Append and repeat'];
+  return `<div class="loop-diagram">${labels.map((label) => `<div class="loop-node">${escapeHtml(label)}</div>`).join('')}</div>`;
+}
+
+function renderC1Goal() {
+  const courseClass = CLASSES[0];
+  root.innerHTML = goalScreen(courseClass, 'How could a machine have any idea what word should come next?', `
+    <section class="card grid-2">
+      <div>
+        <h3>The useful starting model</h3>
+        <p>An LLM repeatedly asks: <strong>Given everything so far, what should come next?</strong></p>
+      </div>
+      <div>
+        <h3>What we will not assume</h3>
+        <p>The model does not first write a hidden finished paragraph and then reveal it one word at a time.</p>
+      </div>
+    </section>`);
+  bindStandardActions();
+}
+
+function renderC1Predict() {
+  const values = state.choices.firstPredictions || ['', '', ''];
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Predict before the model', 'Begin with your own language instincts before seeing any data.')}
+    <section class="activity-panel stack">
+      <h3>What could come next?</h3>
+      <div class="prompt-box">The soccer player kicked the <span class="prompt-blank">?</span></div>
+      <div class="prediction-inputs">
+        ${values.map((value, index) => `<label class="field">Prediction ${index + 1}
+          <input class="text-input prediction-input" data-index="${index}" value="${escapeHtml(value)}" placeholder="Enter one word">
+        </label>`).join('')}
+      </div>
+      <p class="note">Do not search for one “correct” answer. List plausible continuations and consider which one you expect most often.</p>
+    </section>
+    ${actions({ nextLabel: 'Save my predictions and pause' })}
+  </article>`;
+  document.querySelectorAll('.prediction-input').forEach((input) => {
+    input.addEventListener('input', () => {
+      state.choices.firstPredictions[Number(input.dataset.index)] = input.value.trim();
+      persist();
+    });
+  });
+  bindStandardActions();
+}
+
+function renderC1Checkpoint1() {
+  root.innerHTML = checkpointScreen('Where could a machine’s prediction come from?', [
+    'Which continuation did most people predict?',
+    'What prior experience made that word feel likely?',
+    'How could text examples be converted into a numerical prediction?',
+  ]);
+  bindStandardActions();
+}
+
+function activeClass1Corpus() {
+  return CLASS1_BASE_CORPUS.map((item) => ({
+    ...item,
+    active: state.choices.corpusActive[item.id] ?? item.active,
+  }));
+}
+
+function class1Prediction() {
+  const active = activeClass1Corpus().filter((item) => item.active).map((item) => item.text);
+  const custom = state.choices.customCorpus || [];
+  const model = new NGramTeachingModel([...active, ...custom], 6);
+  return model.predict('The soccer player kicked the', { minOrder: 5, maxOrder: 5 });
+}
+
+function renderC1Corpus() {
+  const corpus = activeClass1Corpus();
+  const result = class1Prediction();
+  const predictions = state.choices.firstPredictions.filter(Boolean);
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Learn from visible examples', 'This transparent teaching model counts what followed the same phrase in a small corpus.')}
+    <section class="grid-2">
+      <div class="model-panel teaching">
+        <h3><span class="model-badge teaching">Teaching Model</span> Visible training examples</h3>
+        <div class="corpus-list">
+          ${corpus.map((item) => `<div class="corpus-item">
+            <input id="corpus-${item.id}" type="checkbox" data-corpus-id="${item.id}" ${item.active ? 'checked' : ''}>
+            <label for="corpus-${item.id}">${escapeHtml(item.text).replace(/(ball|door|ground)/i, '<span class="evidence-word">$1</span>')}</label>
+          </div>`).join('')}
+          ${(state.choices.customCorpus || []).map((sentence, index) => `<div class="corpus-item">
+            <input type="checkbox" checked disabled aria-label="Custom sentence active">
+            <div>${escapeHtml(sentence)} <button class="ghost-button remove-custom" data-index="${index}" type="button">Remove</button></div>
+          </div>`).join('')}
         </div>
-        <div class="gd-scroll">
-          <table class="gd-summary-table">
-            <thead><tr><th>Step in Words</th><th>Step as Formula</th><th>Answer</th></tr></thead>
-            <tbody id="summaryBody"></tbody>
-          </table>
+        <div class="field" style="margin-top:14px">
+          <label for="custom-corpus">Add one more example</label>
+          <div class="inline-row">
+            <input id="custom-corpus" class="text-input" placeholder="The soccer player kicked the ball..." style="flex:1">
+            <button id="add-corpus-button" class="secondary-button" type="button">Add</button>
+          </div>
         </div>
       </div>
-    </details>
-  </div>
+      <div class="model-panel teaching stack">
+        <h3><span class="model-badge teaching">Teaching Model</span> Count → probability</h3>
+        <div class="prompt-box">The soccer player kicked the <span class="prompt-blank">next word</span></div>
+        ${result.candidates.length ? `<table class="count-table">
+          <thead><tr><th>Next word</th><th>Count</th><th>Probability</th></tr></thead>
+          <tbody>${result.candidates.map((candidate) => `<tr><td>${escapeHtml(candidate.token)}</td><td>${candidate.count}</td><td>${percent(candidate.probability, 0)}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><th>Total</th><th>${result.total}</th><th>100%</th></tr></tfoot>
+        </table>` : '<p>No active examples match the phrase.</p>'}
+        <span class="equation">P(next word | text so far) = matching examples ÷ relevant examples</span>
+        ${predictions.length ? `<p class="small muted">Your earlier predictions: ${predictions.map((value) => `<strong>${escapeHtml(value)}</strong>`).join(', ')}</p>` : ''}
+      </div>
+    </section>
+    <p class="note accuracy-note"><strong>Accuracy guardrail:</strong> A real LLM does not search a sentence list and count exact matches. During training, it compresses complicated patterns into numerical weights. This tiny model makes the basic source of probability visible.</p>
+    ${actions({ nextLabel: 'Connect this to pretraining' })}
+  </article>`;
 
-  <script>
-    (() => {
-      const root = document.getElementById('gd-lab');
-      const data = [
-        {i:1,x:1,y:1.695},{i:2,x:2,y:2.656},{i:3,x:3,y:3.156},{i:4,x:4,y:4.120},{i:5,x:5,y:3.474},
-        {i:6,x:6,y:5.526},{i:7,x:7,y:5.682},{i:8,x:8,y:4.877},{i:9,x:9,y:5.766},{i:10,x:10,y:7.398}
-      ];
-      const optimum = { w: 0.536, b: 1.487 };
-      const state = {
-        stage: 1,
-        epsilon: 0.50,
-        playing: false,
-        timer: null,
-        remaining: null,
-        manual: { w: 0, b: 0, attempts: 0, countedW: 0, countedB: 0, revealed: false, lastSubmitted: null },
-        guided: { w: 0, b: optimum.b, startW: 0, iteration: 0, attempts: 0, lr: 0.005, lastStep: null },
-        advanced: { w: 0, b: 0, startW: 0, startB: 0, iteration: 0, lr: 0.005, lastStep: null }
-      };
-
-      const $ = id => root.querySelector('#' + id);
-      const qsa = sel => [...root.querySelectorAll(sel)];
-      const mean = arr => arr.reduce((a,b) => a+b,0) / arr.length;
-      const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
-      const num = (v,d=3) => Number.isFinite(v) ? v.toFixed(d) : '—';
-      const signed = (v,d=3) => Number.isFinite(v) ? (v >= 0 ? '+' : '') + v.toFixed(d) : '—';
-      const parseNumber = (el, fallback) => {
-        const value = Number(el.value);
-        return Number.isFinite(value) ? value : fallback;
-      };
-
-      function calculate(w,b) {
-        const rows = data.map(d => {
-          const predicted = w*d.x + b;
-          const difference = predicted - d.y;
-          return {
-            ...d,
-            predicted,
-            difference,
-            diff2x: difference * 2 * d.x,
-            diff2: difference * 2,
-            squared: difference * difference
-          };
-        });
-        const mse = mean(rows.map(r => r.squared));
-        const gw = mean(rows.map(r => r.diff2x));
-        const gb = mean(rows.map(r => r.diff2));
-        return { rows, mse, gw, gb, gradMag: Math.hypot(gw,gb) };
-      }
-
-      function currentParams() {
-        if (state.stage === 1) return state.manual;
-        if (state.stage === 2) return state.guided;
-        return state.advanced;
-      }
-
-      function svgNode(name, attrs={}) {
-        const node = document.createElementNS('http://www.w3.org/2000/svg', name);
-        Object.entries(attrs).forEach(([k,v]) => node.setAttribute(k,String(v)));
-        return node;
-      }
-
-      function addText(svg, x, y, text, cls, anchor='middle') {
-        const node = svgNode('text',{x,y,class:cls,'text-anchor':anchor});
-        node.textContent = text;
-        svg.appendChild(node);
-        return node;
-      }
-
-      function drawAxes(svg, dims, xDomain, yDomain, xLabel, yLabel, xTicks=6, yTicks=5) {
-        const {W,H,m} = dims;
-        const X = v => m.l + (v-xDomain[0])/(xDomain[1]-xDomain[0])*(W-m.l-m.r);
-        const Y = v => H-m.b - (v-yDomain[0])/(yDomain[1]-yDomain[0])*(H-m.t-m.b);
-        svg.appendChild(svgNode('rect',{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,rx:8,class:'gd-chart-frame'}));
-        for (let i=0;i<=xTicks;i++) {
-          const v=xDomain[0]+i*(xDomain[1]-xDomain[0])/xTicks;
-          const px=X(v);
-          svg.appendChild(svgNode('line',{x1:px,y1:m.t,x2:px,y2:H-m.b,class:'gd-grid'}));
-          addText(svg,px,H-m.b+18,Math.abs(v)<1e-10?'0':Number(v.toFixed(2)).toString(),'gd-tick');
-        }
-        for (let i=0;i<=yTicks;i++) {
-          const v=yDomain[0]+i*(yDomain[1]-yDomain[0])/yTicks;
-          const py=Y(v);
-          svg.appendChild(svgNode('line',{x1:m.l,y1:py,x2:W-m.r,y2:py,class:'gd-grid'}));
-          addText(svg,m.l-8,py+4,Number(v.toFixed(2)).toString(),'gd-tick','end');
-        }
-        svg.appendChild(svgNode('line',{x1:m.l,y1:H-m.b,x2:W-m.r,y2:H-m.b,class:'gd-axis'}));
-        svg.appendChild(svgNode('line',{x1:m.l,y1:m.t,x2:m.l,y2:H-m.b,class:'gd-axis'}));
-        addText(svg,(m.l+W-m.r)/2,H-7,xLabel,'gd-axis-label');
-        const yl=addText(svg,14,(m.t+H-m.b)/2,yLabel,'gd-axis-label');
-        yl.setAttribute('transform',`rotate(-90 14 ${(m.t+H-m.b)/2})`);
-        return {X,Y};
-      }
-
-      function drawFitChart(w,b) {
-        const svg=$('fitChart'); svg.innerHTML='';
-        const dims={W:680,H:410,m:{l:55,r:20,t:18,b:48}};
-        const {X,Y}=drawAxes(svg,dims,[0,11],[0,8.5],'Input x','Target / predicted output',11,8);
-        const calc=calculate(w,b);
-        const x0=0,x1=11;
-        svg.appendChild(svgNode('line',{x1:X(x0),y1:Y(w*x0+b),x2:X(x1),y2:Y(w*x1+b),class:'gd-current-line'}));
-        if (state.manual.revealed) {
-          svg.appendChild(svgNode('line',{x1:X(x0),y1:Y(optimum.w*x0+optimum.b),x2:X(x1),y2:Y(optimum.w*x1+optimum.b),class:'gd-opt-line'}));
-        }
-        data.forEach(d => {
-          const c=svgNode('circle',{cx:X(d.x),cy:Y(d.y),r:6,class:'gd-point'});
-          const title=svgNode('title'); title.textContent=`Example ${d.i}: x=${d.x}, target=${d.y.toFixed(3)}`; c.appendChild(title); svg.appendChild(c);
-        });
-        addText(svg,X(7.2),Y(w*7.2+b)-10,`ŷ = ${w.toFixed(3)}x ${b>=0?'+':'−'} ${Math.abs(b).toFixed(3)}`,'gd-axis-label','start');
-      }
-
-      function lossAt(parameter,value,fixed) {
-        return parameter==='w' ? calculate(value,fixed).mse : calculate(fixed,value).mse;
-      }
-
-      function drawLossChart(svgId, parameter, current, fixed, gradient) {
-        const svg=$(svgId); svg.innerHTML='';
-        const dims={W:430,H:245,m:{l:48,r:14,t:43,b:42}};
-        const domain=parameter==='w'?[-0.2,1.2]:[-0.5,5.5];
-        const samples=[];
-        for(let i=0;i<=100;i++) {
-          const v=domain[0]+(domain[1]-domain[0])*i/100;
-          samples.push({v,l:lossAt(parameter,v,fixed)});
-        }
-        const currentLoss=lossAt(parameter,current,fixed);
-        const maxSample=Math.max(...samples.map(s=>s.l),currentLoss);
-        const minSample=Math.min(...samples.map(s=>s.l));
-        const yMax=Math.max(minSample+1,maxSample*1.03);
-        const {X,Y}=drawAxes(svg,dims,domain,[0,yMax],parameter==='w'?'Weight w':'Bias b','MSE',7,4);
-        const tangentIntercept=currentLoss-gradient*current;
-        const tangentEquation=`y = ${num(gradient,3)}x ${tangentIntercept>=0?'+':'−'} ${num(Math.abs(tangentIntercept),3)}`;
-        addText(svg,dims.m.l,16,`Point: (${num(current,3)}, ${num(currentLoss,3)})`,'gd-chart-annotation','start');
-        addText(svg,dims.m.l,32,`Tangent: ${tangentEquation}`,'gd-chart-annotation','start');
-        const path=svgNode('path',{class:'gd-curve'});
-        path.setAttribute('d',samples.map((s,i)=>(i?'L':'M')+X(s.v)+' '+Y(s.l)).join(' '));
-        svg.appendChild(path);
-        const clipId='clip-'+svgId;
-        const defs=svgNode('defs');
-        const clip=svgNode('clipPath',{id:clipId});
-        clip.appendChild(svgNode('rect',{x:dims.m.l,y:dims.m.t,width:dims.W-dims.m.l-dims.m.r,height:dims.H-dims.m.t-dims.m.b,rx:8}));
-        defs.appendChild(clip); svg.appendChild(defs);
-        const xA=domain[0],xB=domain[1];
-        const yA=currentLoss+gradient*(xA-current),yB=currentLoss+gradient*(xB-current);
-        const tangent=svgNode('line',{x1:X(xA),y1:Y(yA),x2:X(xB),y2:Y(yB),class:'gd-tangent','clip-path':`url(#${clipId})`});
-        svg.appendChild(tangent);
-        svg.appendChild(svgNode('circle',{cx:X(current),cy:Y(currentLoss),r:6,class:'gd-marker'}));
-      }
-
-      function syncManualInputs() {
-        if (document.activeElement !== $('manualWeight')) $('manualWeight').value=state.manual.w.toFixed(3);
-        $('manualWeightRange').value=clamp(state.manual.w,-0.2,1.2);
-        if (document.activeElement !== $('manualBias')) $('manualBias').value=state.manual.b.toFixed(3);
-        $('manualBiasRange').value=clamp(state.manual.b,-0.5,5.5);
-      }
-
-      function syncGradientInputs() {
-        const s=state.stage===2?state.guided:state.advanced;
-        $('gdWeight').value=s.w.toFixed(3);
-        $('gdWeightRange').value=clamp(s.w,-0.2,1.2);
-        $('gdBias').value=s.b.toFixed(3);
-        $('gdBiasRange').value=clamp(s.b,-0.5,5.5);
-      }
-
-      function syncSharedInputs() {
-        const lr=state.stage===3?state.advanced.lr:state.guided.lr;
-        if (document.activeElement !== $('learningRate')) $('learningRate').value=lr.toFixed(4);
-      }
-
-      function getTableContext() {
-        if (state.stage===1) {
-          const c=calculate(state.manual.w,state.manual.b);
-          return {wOld:state.manual.w,bOld:state.manual.b,calc:c,lr:null,weightStep:null,biasStep:null,wNew:null,bNew:null,iteration:null};
-        }
-        const s=state.stage===2?state.guided:state.advanced;
-        if (s.lastStep) return s.lastStep;
-        const c=calculate(s.w,s.b);
-        return {wOld:s.w,bOld:s.b,calc:c,lr:s.lr,weightStep:null,biasStep:null,wNew:null,bNew:null,iteration:s.iteration};
-      }
-
-      function renderCalculationTables() {
-        const ctx=getTableContext();
-        $('sampleBody').innerHTML=ctx.calc.rows.map(r=>`
-          <tr><td>${r.i}</td><td>${num(r.x,1)}</td><td>${num(r.y)}</td><td>${num(r.predicted)}</td><td>${num(r.difference)}</td><td>${num(r.diff2x)}</td><td>${num(r.diff2)}</td><td>${num(r.squared)}</td></tr>`).join('');
-        if (state.stage===1) {
-          $('calculationCaption').textContent='The table uses the current preview line. This stage records human attempts but does not apply a gradient update.';
-        } else if (ctx.weightStep===null) {
-          $('calculationCaption').textContent='These are the calculations that would be used for the next iteration.';
-        } else {
-          $('calculationCaption').textContent=`Completed iteration ${ctx.iteration}: calculations use the old parameter values, multiply each gradient by the learning rate, and subtract that result to produce the new values.`;
-        }
-        const sumW=ctx.calc.rows.reduce((a,r)=>a+r.diff2x,0);
-        const sumB=ctx.calc.rows.reduce((a,r)=>a+r.diff2,0);
-        const lrText=ctx.lr===null?'Not used in manual mode':num(ctx.lr,4);
-        const weightStep=ctx.weightStep===null?'—':signed(ctx.weightStep,6);
-        const bLocked=state.stage===2;
-        const lockedBias=state.stage===2?state.guided.b:ctx.bOld;
-        const biasStep=ctx.biasStep===null?'—':signed(ctx.biasStep,6);
-        const criterion=state.stage===2?Math.abs(ctx.calc.gw):ctx.calc.gradMag;
-        const rows=[
-          ['Prior Weight [w(old)]', 'w(old)', num(ctx.wOld,6)],
-          ['Prior Bias [b(old)]', 'b(old)', num(ctx.bOld,6)],
-          ['Sum of (differences × 2 × input)', 'Σ[2x(ŷ − y)]', num(sumW,4)],
-          ['Weight Gradient', '(1/n)Σ[2x(ŷ − y)]', num(ctx.calc.gw,4)],
-          ['Learning Rate × Weight Gradient', 'α × Weight Gradient', ctx.lr===null?'Not used in manual mode':weightStep],
-          ['New Weight', 'w(new) = w(old) − (Learning Rate × Weight Gradient)', ctx.wNew===null?'Not yet applied':num(ctx.wNew,6)],
-          ['Sum of (differences × 2)', 'Σ[2(ŷ − y)]', num(sumB,4)],
-          ['Bias Gradient', '(1/n)Σ[2(ŷ − y)]', num(ctx.calc.gb,4)],
-          ['Learning Rate × Bias Gradient', bLocked?'Not applied because the bias is fixed':'α × Bias Gradient', bLocked?'0.000000':(ctx.lr===null?'Not used in manual mode':biasStep)],
-          ['New Bias', bLocked?'b(new) = b(old)':'b(new) = b(old) − (Learning Rate × Bias Gradient)', bLocked?num(lockedBias,6):(ctx.bNew===null?'Not yet applied':num(ctx.bNew,6))],
-          ['Stopping check', state.stage===2?'|weight gradient| < ε':'gradient magnitude < ε', `${num(criterion,4)} < ${num(state.epsilon,3)} ? ${criterion<state.epsilon?'Yes':'No'}`],
-          ['Learning rate used', 'α', lrText]
-        ];
-        $('summaryBody').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
-      }
-
-      function convergenceValue(calc) { return state.stage===2 ? Math.abs(calc.gw) : calc.gradMag; }
-
-      function render() {
-        const s=currentParams();
-        const calc=calculate(s.w,s.b);
-        const criterion=convergenceValue(calc);
-        qsa('.gd-stage-btn').forEach(btn=>btn.setAttribute('aria-selected',String(Number(btn.dataset.stage)===state.stage)));
-        $('manualControls').classList.toggle('gd-hidden',state.stage!==1);
-        $('gradientControls').classList.toggle('gd-hidden',state.stage===1);
-        $('biasLossCard').classList.toggle('gd-disabled-loss',state.stage===2);
-        $('epsilon').value=state.epsilon.toFixed(2);
-        if (state.stage===1) syncManualInputs(); else syncGradientInputs();
-        syncSharedInputs();
-        const biasLocked=state.stage===2;
-        $('gdBiasLabel').innerHTML=biasLocked?'Fixed bias <em>b</em> (not updated)':'Current bias <em>b</em>';
-        $('gdBiasControl').classList.toggle('gd-disabled-control',biasLocked);
-        $('gdBiasRange').disabled=biasLocked;
-        $('gdBias').disabled=biasLocked;
-        const learningRateDisabled=state.stage===1;
-        $('learningRateControl').classList.toggle('gd-disabled-control',learningRateDisabled);
-        $('learningRate').disabled=learningRateDisabled;
-
-        if (state.stage===1) {
-          $('stageBadge').textContent='Human estimation';
-          $('stageMessage').innerHTML='<strong>Challenge:</strong> Use the sliders for coarse moves and the number boxes for three-decimal fine-tuning. Every slider movement and each completed number-box change counts as an attempt.';
-          $('lossDescription').textContent='';
-          $('metricLabel1').textContent='Attempts'; $('metric1').textContent=state.manual.attempts;
-          $('metricLabel3').textContent='Gradient magnitude';
-          $('metricLabel4').textContent='Status';
-          $('metric4').innerHTML=state.manual.lastSubmitted ? (criterion<state.epsilon?'<span class="gd-success">Close enough</span>':'Keep adjusting') : 'Preview';
-        } else if (state.stage===2) {
-          $('stageBadge').textContent='Core lesson';
-          $('stageMessage').innerHTML='<strong>Bias revealed and locked:</strong> b = 1.487. Gradient descent changes only the weight, while the inactive bias controls and loss slice remain visible for continuity.';
-          $('lossDescription').textContent='The bias is held constant, so the weight slice is now the complete one-dimensional loss curve.';
-          $('metricLabel1').textContent='Attempts'; $('metric1').textContent=state.guided.attempts;
-          $('metricLabel3').textContent='Gradient magnitude';
-          $('metricLabel4').textContent='Last learning-rate-scaled weight gradient';
-          $('metric4').textContent=state.guided.lastStep?signed(state.guided.lastStep.weightStep,6):'—';
-        } else {
-          $('stageBadge').textContent='Advanced extension';
-          $('stageMessage').innerHTML='<strong>Advanced mode:</strong> Gradient descent updates weight and bias together. The two changing curves are slices through the same bowl-shaped loss surface.';
-          $('lossDescription').textContent='Each update uses both partial derivatives at the current point.';
-          $('metricLabel1').textContent='Iterations'; $('metric1').textContent=state.advanced.iteration;
-          $('metricLabel3').textContent='Gradient magnitude';
-          $('metricLabel4').textContent='Last learning-rate-scaled gradients';
-          $('metric4').textContent=state.advanced.lastStep?`w ${signed(state.advanced.lastStep.weightStep,4)}, b ${signed(state.advanced.lastStep.biasStep,4)}`:'—';
-        }
-
-        $('equationText').textContent=`Current equation: ŷ = ${s.w.toFixed(3)}x ${s.b>=0?'+':'−'} ${Math.abs(s.b).toFixed(3)}`;
-        $('metric2').textContent=num(calc.mse,4);
-        $('metric3').textContent=num(criterion,4);
-        const converged=criterion<state.epsilon;
-        const activeWeightInput=state.stage===1?$('manualWeight'):$('gdWeight');
-        const activeBiasInput=state.stage===1?$('manualBias'):$('gdBias');
-        activeWeightInput.classList.toggle('gd-converged-input',converged);
-        activeBiasInput.classList.toggle('gd-converged-input',converged);
-        if (state.stage===1) {
-          $('gdWeight').classList.remove('gd-converged-input');
-          $('gdBias').classList.remove('gd-converged-input');
-        } else {
-          $('manualWeight').classList.remove('gd-converged-input');
-          $('manualBias').classList.remove('gd-converged-input');
-        }
-        drawFitChart(s.w,s.b);
-        drawLossChart('weightLossChart','w',s.w,s.b,calc.gw);
-        $('weightGradientText').textContent=`slope = ${signed(calc.gw,3)}`;
-        drawLossChart('biasLossChart','b',s.b,s.w,calc.gb);
-        $('biasGradientText').textContent=`slope = ${signed(calc.gb,3)}`;
-        const lr=state.stage===1?null:(state.stage===2?state.guided.lr:state.advanced.lr);
-        if (lr!==null) {
-          const biasNote=state.stage===2 && Math.abs(state.guided.b-optimum.b)>0.0005?' <span class="gd-warning">The fixed bias differs from 1.487, so the best weight will shift.</span>':'';
-          $('rateWarning').innerHTML=(lr>=0.025?'<span class="gd-warning">This learning rate is near or above the stable range and may overshoot.</span>':'Smaller learning rates move more cautiously; larger ones move faster but can overshoot.')+biasNote;
-        }
-        $('playPause').textContent=state.playing?'Pause':'Play';
-        renderCalculationTables();
-      }
-
-      function setStage(stage) {
-        stopPlaying();
-        if (stage===2 && state.stage!==2) {
-          state.guided={w:0,b:optimum.b,startW:0,iteration:0,attempts:0,lr:state.guided.lr,lastStep:null};
-        }
-        if (stage===3 && state.stage!==3) {
-          state.advanced={w:0,b:0,startW:0,startB:0,iteration:0,lr:state.advanced.lr,lastStep:null};
-        }
-        state.stage=stage;
-        render();
-      }
-
-      function recordManualModification(parameter) {
-        state.manual.attempts++;
-        if (parameter === 'w') state.manual.countedW=state.manual.w;
-        if (parameter === 'b') state.manual.countedB=state.manual.b;
-        state.manual.lastSubmitted=calculate(state.manual.w,state.manual.b);
-      }
-
-      function commitManualNumber(parameter) {
-        const current=parameter==='w'?state.manual.w:state.manual.b;
-        const counted=parameter==='w'?state.manual.countedW:state.manual.countedB;
-        if (current!==counted) recordManualModification(parameter);
-        render();
-      }
-
-      function checkCurrentLine() {
-        state.manual.lastSubmitted=calculate(state.manual.w,state.manual.b);
-        render();
-      }
-
-      function runStep(shouldRender=true) {
-        if (state.stage===1) return false;
-        const s=state.stage===2?state.guided:state.advanced;
-        const before=calculate(s.w,s.b);
-        const weightStep=s.lr*before.gw;
-        const biasStep=state.stage===2?0:s.lr*before.gb;
-        const wNew=s.w-weightStep;
-        const bNew=s.b-biasStep;
-        s.iteration++;
-        if (state.stage===2) s.attempts++;
-        s.lastStep={iteration:s.iteration,wOld:s.w,bOld:s.b,calc:before,lr:s.lr,weightStep,biasStep,wNew,bNew};
-        s.w=wNew; s.b=bNew;
-        if (shouldRender) render();
-        const after=calculate(s.w,s.b);
-        return convergenceValue(after)<state.epsilon;
-      }
-
-      function stopPlaying() {
-        state.playing=false;
-        if (state.timer) clearTimeout(state.timer);
-        state.timer=null;
-        state.remaining=null;
-      }
-
-      function advanceMany(count) {
-        stopPlaying();
-        for (let i=0; i<count; i++) runStep(false);
-        render();
-      }
-
-      function scheduleSteps(count=null) {
-        stopPlaying();
-        state.playing=true;
-        state.remaining=count;
-        const tick=()=>{
-          if (!state.playing) return;
-          const converged=runStep();
-          if (state.remaining!==null) state.remaining--;
-          const finiteRun=state.remaining!==null;
-          if ((!finiteRun && converged) || (finiteRun && state.remaining<=0)) {
-            stopPlaying(); render(); return;
-          }
-          state.timer=setTimeout(tick,550);
-        };
-        tick();
-      }
-
-      function resetManual() {
-        state.manual={w:0,b:0,attempts:0,countedW:0,countedB:0,revealed:false,lastSubmitted:null};
-        render();
-      }
-
-      function resetGradient() {
-        stopPlaying();
-        if (state.stage===2) {
-          state.guided={w:0,b:optimum.b,startW:0,iteration:0,attempts:0,lr:parseNumber($('learningRate'),0.005),lastStep:null};
-        } else {
-          state.advanced={w:0,b:0,startW:0,startB:0,iteration:0,lr:parseNumber($('learningRate'),0.005),lastStep:null};
-        }
-        render();
-      }
-
-      qsa('.gd-stage-btn').forEach(btn=>btn.addEventListener('click',()=>setStage(Number(btn.dataset.stage))));
-      $('manualWeightRange').addEventListener('input',e=>{
-        const next=Number(e.target.value);
-        if (Number.isFinite(next) && next!==state.manual.w) { state.manual.w=next; recordManualModification('w'); render(); }
-      });
-      $('manualBiasRange').addEventListener('input',e=>{
-        const next=Number(e.target.value);
-        if (Number.isFinite(next) && next!==state.manual.b) { state.manual.b=next; recordManualModification('b'); render(); }
-      });
-      $('manualWeight').addEventListener('input',e=>{
-        const next=Number(e.target.value);
-        if (e.target.value!=='' && Number.isFinite(next) && next!==state.manual.w) { state.manual.w=next; state.manual.lastSubmitted=null; render(); }
-      });
-      $('manualBias').addEventListener('input',e=>{
-        const next=Number(e.target.value);
-        if (e.target.value!=='' && Number.isFinite(next) && next!==state.manual.b) { state.manual.b=next; state.manual.lastSubmitted=null; render(); }
-      });
-      $('manualWeight').addEventListener('change',()=>commitManualNumber('w'));
-      $('manualBias').addEventListener('change',()=>commitManualNumber('b'));
-      $('manualWeight').addEventListener('blur',render);
-      $('manualBias').addEventListener('blur',render);
-      $('testLine').addEventListener('click',checkCurrentLine);
-      $('manualReset').addEventListener('click',resetManual);
-      $('revealSolution').addEventListener('click',()=>{state.manual.revealed=true;render();});
-
-      $('gdWeightRange').addEventListener('input',e=>{const s=state.stage===2?state.guided:state.advanced;s.w=Number(e.target.value);s.lastStep=null;render();});
-      $('gdBiasRange').addEventListener('input',e=>{const s=state.stage===2?state.guided:state.advanced;s.b=Number(e.target.value);s.lastStep=null;render();});
-      $('gdWeight').addEventListener('change',e=>{const s=state.stage===2?state.guided:state.advanced;s.w=parseNumber(e.target,s.w);s.lastStep=null;render();});
-      $('gdBias').addEventListener('change',e=>{const s=state.stage===2?state.guided:state.advanced;s.b=parseNumber(e.target,s.b);s.lastStep=null;render();});
-      $('learningRate').addEventListener('change',e=>{
-        if (state.stage===1) return;
-        const s=state.stage===2?state.guided:state.advanced;
-        s.lr=clamp(parseNumber(e.target,s.lr),0.0001,0.05);
-        render();
-      });
-      $('stepOnce').addEventListener('click',()=>{stopPlaying();runStep();});
-      $('runMany').addEventListener('click',()=>advanceMany(clamp(Math.round(parseNumber($('runCount'),5)),1,100)));
-      $('playPause').addEventListener('click',()=>{state.playing?stopPlaying():scheduleSteps(null);render();});
-      $('gdReset').addEventListener('click',resetGradient);
-      $('epsilon').addEventListener('change',e=>{state.epsilon=clamp(parseNumber(e.target,state.epsilon),0.001,20);render();});
-
+  document.querySelectorAll('[data-corpus-id]').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+      state.choices.corpusActive[checkbox.dataset.corpusId] = checkbox.checked;
+      persist();
       render();
-    })();
-  </script>
-</div>
+    });
+  });
+  document.querySelector('#add-corpus-button')?.addEventListener('click', () => {
+    const input = document.querySelector('#custom-corpus');
+    const sentence = input.value.trim();
+    if (!sentence) return;
+    state.choices.customCorpus.push(sentence);
+    persist();
+    render();
+  });
+  document.querySelector('#custom-corpus')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') document.querySelector('#add-corpus-button').click();
+  });
+  document.querySelectorAll('.remove-custom').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.choices.customCorpus.splice(Number(button.dataset.index), 1);
+      persist();
+      render();
+    });
+  });
+  bindStandardActions();
+}
 
-</main>
-</body>
-</html>
+function renderC1TrainingBridge() {
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Pretraining and generation use the same basic task', 'The scale changes dramatically, but the central question remains: what comes next?')}
+    <section class="grid-2">
+      <div class="card">
+        <p class="eyebrow">During pretraining</p>
+        <h3>Practice with known text</h3>
+        <ol>
+          <li>Show the model the text before a real next token.</li>
+          <li>Ask it to assign probabilities.</li>
+          <li>Compare the distribution with the actual token.</li>
+          <li>Use error, backpropagation, and gradient descent to adjust weights.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <p class="eyebrow">During generation</p>
+        <h3>Use the trained weights</h3>
+        <ol>
+          <li>Give the model a prompt and generated text so far.</li>
+          <li>Calculate a next-token distribution.</li>
+          <li>Select and append one token.</li>
+          <li>Run the process again.</li>
+        </ol>
+      </div>
+    </section>
+    <section class="explanation-panel">
+      <h3>Connect this to your gradient-descent work</h3>
+      <p>In regression, you adjusted weights to reduce prediction error. Pretraining an LLM follows the same broad principle, but the model has vastly more weights and practices on vastly more token-prediction examples.</p>
+      <div class="inline-row">
+        <span class="model-badge teaching">Pretrained</span><span>how the model learned to predict</span>
+        <span aria-hidden="true">→</span>
+        <span class="model-badge real">Generative</span><span>how it uses that ability to create output</span>
+      </div>
+    </section>
+    ${actions({ nextLabel: 'Pause for discussion' })}
+  </article>`;
+  bindStandardActions();
+}
+
+function renderC1Checkpoint2() {
+  root.innerHTML = checkpointScreen('What is stored after training?', [
+    'Does a real LLM need to search the original documents during ordinary generation?',
+    'What role do loss, backpropagation, and gradient descent play during pretraining?',
+    'How are “pretrained” and “generative” connected?',
+  ]);
+  bindStandardActions();
+}
+
+function branchModel() {
+  return new NGramTeachingModel(BRANCH_CORPUS, 7);
+}
+
+function branchContext(branchTokens) {
+  return detokenizeWords([...wordTokenize('The dog ran toward the'), ...branchTokens]);
+}
+
+function branchCandidates(branchTokens) {
+  return branchModel().predict(branchContext(branchTokens), { maxOrder: 7, minOrder: 1 }).candidates.slice(0, 6);
+}
+
+function renderBranchColumn(branchId, tokens) {
+  const candidates = branchCandidates(tokens);
+  const label = branchId === 'A' ? 'Branch A' : 'Branch B';
+  return `<section class="branch-column">
+    <div class="branch-label"><strong>${label}</strong><button class="ghost-button reset-branch" data-branch="${branchId}" type="button">Reset</button></div>
+    <div class="branch-text">${escapeHtml(branchContext(tokens))}</div>
+    <div class="choice-grid">
+      ${tokens.length < 5 && candidates.length ? candidates.map((candidate) => `<button class="choice-button branch-choice" data-branch="${branchId}" data-token="${escapeHtml(candidate.token)}" type="button">${escapeHtml(candidate.token)} <span class="small muted">${percent(candidate.probability, 0)}</span></button>`).join('') : '<span class="small muted">This short branch is complete. Compare it with the other path.</span>'}
+    </div>
+  </section>`;
+}
+
+function renderC1Branch() {
+  const branchA = state.choices.branchA || [];
+  const branchB = state.choices.branchB || [];
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('One choice changes the next prediction', 'Build two continuations from the same starting context.')}
+    <section class="activity-panel branch-board">
+      <div class="branch-origin">The dog ran toward the …</div>
+      <div class="branch-columns">
+        ${renderBranchColumn('A', branchA)}
+        ${renderBranchColumn('B', branchB)}
+      </div>
+      <p class="note">Each button shows the Teaching Model’s probability for the current branch. After you choose, that word becomes part of the next input.</p>
+    </section>
+    <section class="card">
+      <h3>Watch the consequence</h3>
+      <p>The model does not preserve the old distribution. It recalculates after every selected word because the context has changed.</p>
+    </section>
+    ${actions({ nextLabel: 'Pause and compare the branches', nextDisabled: branchA.length < 2 || branchB.length < 2 })}
+  </article>`;
+  document.querySelectorAll('.branch-choice').forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = button.dataset.branch === 'A' ? state.choices.branchA : state.choices.branchB;
+      target.push(button.dataset.token);
+      persist();
+      render();
+    });
+  });
+  document.querySelectorAll('.reset-branch').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.branch === 'A') state.choices.branchA = [];
+      else state.choices.branchB = [];
+      persist();
+      render();
+    });
+  });
+  bindStandardActions();
+}
+
+function renderC1Checkpoint3() {
+  root.innerHTML = checkpointScreen('Did the model plan either full sentence?', [
+    'At what point did your two branches begin to diverge?',
+    'Why did the probability distribution change after each choice?',
+    'How can repeated local choices create output that appears planned?',
+  ]);
+  bindStandardActions();
+}
+
+function renderC1Complete() {
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Complete the Class 1 goal', 'Return to the goal and name the complete idea in plain language.')}
+    <section class="complete-card">
+      <h3>The Class 1 explanation</h3>
+      <p>An LLM is pretrained by repeatedly practicing next-token prediction and adjusting its weights when its predictions are poor. During generation, it uses those learned weights to produce a distribution, selects one next unit, appends it, and predicts again.</p>
+    </section>
+    ${loopDiagram()}
+    <p class="note accuracy-note">For now, “next word” is a useful model. In Class 3, the app will reveal why “next token” is more accurate.</p>
+    ${actions({ nextLabel: 'Finish Class 1 and open Class 2' })}
+  </article>`;
+  bindStandardActions();
+  document.querySelector('#next-button')?.addEventListener('click', () => {
+    if (!state.completedClasses.includes(1)) state.completedClasses.push(1);
+  }, { once: true });
+}
+
+function savedBranchSummary() {
+  const tokens = state.choices.branchA?.length ? state.choices.branchA : ['park', 'where', 'children', 'played'];
+  return branchContext(tokens);
+}
+
+function renderC2Goal() {
+  const courseClass = CLASSES[1];
+  root.innerHTML = goalScreen(courseClass, 'Why can the same final words lead to different next predictions?', `
+    <section class="card">
+      <h3>Your Class 1 choice became context</h3>
+      <div class="prompt-box">${escapeHtml(savedBranchSummary())}</div>
+      <p>The words you selected did not disappear. They became evidence used for every later prediction.</p>
+    </section>`);
+  bindStandardActions();
+}
+
+function renderC2Predictors() {
+  const modes = [
+    ['overall', 'General frequency', 'Which words are common anywhere?'],
+    ['short', 'Last few words', 'What often follows the final phrase?'],
+    ['broad', 'Broader context', 'What fits the meaning and structure of the passage?'],
+  ];
+  const data = PREDICTOR_LADDER[runtime.predictorMode];
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Why simple frequency is not enough', 'Compare increasingly capable prediction strategies.')}
+    <section class="activity-panel stack">
+      <div class="prompt-box">${escapeHtml(PREDICTOR_LADDER.prompt)} <span class="prompt-blank">?</span></div>
+      <div class="choice-grid">
+        ${modes.map(([id, title, description]) => `<button class="choice-button predictor-mode ${runtime.predictorMode === id ? 'selected' : ''}" data-mode="${id}" type="button"><strong>${title}</strong><br><span class="small">${description}</span></button>`).join('')}
+      </div>
+      ${probabilityBars(data, { scaleToMax: false, barClass: 'teaching' })}
+    </section>
+    <section class="grid-3">
+      ${modes.map(([id, title, description], index) => `<div class="card">
+        <p class="eyebrow">Predictor ${index + 1}</p>
+        <h3>${title}</h3><p>${description}</p>
+        <p class="small muted">${id === 'overall' ? 'Too general to produce a coherent local continuation.' : id === 'short' ? 'Better locally, but can miss the topic established earlier.' : 'Uses earlier evidence to make the final position context-sensitive.'}</p>
+      </div>`).join('')}
+    </section>
+    <p class="note">A real transformer does not literally switch among these three predictors. The comparison creates the need for a mechanism that uses broader context.</p>
+    ${actions({ nextLabel: 'Pause before naming attention' })}
+  </article>`;
+  document.querySelectorAll('.predictor-mode').forEach((button) => {
+    button.addEventListener('click', () => {
+      runtime.predictorMode = button.dataset.mode;
+      render();
+    });
+  });
+  bindStandardActions();
+}
+
+function renderC2Checkpoint1() {
+  root.innerHTML = checkpointScreen('What information is missing from the short predictor?', [
+    'Why are “the” and “a” common but usually unhelpful as a complete prediction strategy?',
+    'Which words in the astronomy prompt establish its topic?',
+    'What kind of mechanism would let distant words influence the blank?',
+  ]);
+  bindStandardActions();
+}
+
+function renderC2BankPredict() {
+  const values = state.choices.bankPrediction || { river: '', finance: '' };
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Predict the effect of context', 'The final clause is nearly identical. Earlier words establish two different meanings of “bank.”')}
+    <section class="grid-2">
+      ${Object.entries(BANK_CONTEXTS).map(([id, context]) => `<div class="card stack">
+        <p class="eyebrow">${escapeHtml(context.label)}</p>
+        <div class="prompt-box">${escapeHtml(context.text)} <span class="prompt-blank">?</span></div>
+        <label class="field">Your likely next word
+          <input class="text-input bank-prediction" data-context="${id}" value="${escapeHtml(values[id] || '')}" placeholder="One likely word">
+        </label>
+      </div>`).join('')}
+    </section>
+    <section class="card">
+      <h3>Before the reveal</h3>
+      <p>Identify two earlier words in each prompt that you expect to change the final distribution. The ending by itself does not explain the difference.</p>
+    </section>
+    ${actions({ nextLabel: 'Reveal and manipulate the context' })}
+  </article>`;
+  document.querySelectorAll('.bank-prediction').forEach((input) => {
+    input.addEventListener('input', () => {
+      state.choices.bankPrediction[input.dataset.context] = input.value.trim();
+      persist();
+    });
+  });
+  bindStandardActions();
+}
+
+function contextToyResult(contextId, removedSet = new Set()) {
+  const context = BANK_CONTEXTS[contextId];
+  const importance = context.defaultImportance.map((value, index) => removedSet.has(index) ? 0 : value);
+  const { vector, weights } = weightedContextVector(context.cueVectors, importance);
+  return { vector, weights, distribution: candidateDistributionFromContext(vector, BANK_CANDIDATES) };
+}
+
+function promptWithCueButtons(contextId) {
+  const context = BANK_CONTEXTS[contextId];
+  let html = escapeHtml(context.text);
+  context.cueWords.forEach((word, index) => {
+    const removed = runtime.bankRemoved[contextId].has(index);
+    const button = `<button class="context-word ${removed ? 'removed' : ''}" data-context="${contextId}" data-cue-index="${index}" type="button" aria-pressed="${removed}">${escapeHtml(word)}</button>`;
+    html = html.replace(new RegExp(`\\b${word}\\b`, 'i'), button);
+  });
+  return html;
+}
+
+function renderC2BankCompare() {
+  const river = contextToyResult('river', runtime.bankRemoved.river);
+  const finance = contextToyResult('finance', runtime.bankRemoved.finance);
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Change earlier context and watch the distribution move', 'Click a cue word to erase or restore its contribution in the Teaching Model.')}
+    <section class="grid-2">
+      <div class="model-panel teaching stack">
+        <h3><span class="model-badge teaching">Teaching Model</span> River context</h3>
+        <div class="prompt-box">${promptWithCueButtons('river')}</div>
+        ${probabilityBars(river.distribution.slice(0, 6), { scaleToMax: false, barClass: 'teaching' })}
+      </div>
+      <div class="model-panel teaching stack">
+        <h3><span class="model-badge teaching">Teaching Model</span> Financial context</h3>
+        <div class="prompt-box">${promptWithCueButtons('finance')}</div>
+        ${probabilityBars(finance.distribution.slice(0, 6), { scaleToMax: false, barClass: 'teaching' })}
+      </div>
+    </section>
+    <p class="note accuracy-note"><strong>Controlled comparison:</strong> The final phrase stays essentially the same. The earlier context changes the numerical expectations at the blank.</p>
+    ${actions({ nextLabel: 'Pause before the attention math' })}
+  </article>`;
+  document.querySelectorAll('.context-word').forEach((button) => {
+    button.addEventListener('click', () => {
+      const set = runtime.bankRemoved[button.dataset.context];
+      const index = Number(button.dataset.cueIndex);
+      if (set.has(index)) set.delete(index); else set.add(index);
+      render();
+    });
+  });
+  bindStandardActions();
+}
+
+function renderC2Checkpoint2() {
+  root.innerHTML = checkpointScreen('How can a computer represent “this earlier word matters more”?', [
+    'Which cue words caused the largest changes when removed?',
+    'Why is the effect numerical rather than a dictionary label attached to “bank”?',
+    'How could weights totaling 1 represent different amounts of contribution?',
+  ]);
+  bindStandardActions();
+}
+
+function attentionState() {
+  const contextId = state.choices.attention.context || 'river';
+  const context = BANK_CONTEXTS[contextId];
+  const importance = state.choices.attention.importance || [...context.defaultImportance];
+  return { contextId, context, importance };
+}
+
+function renderC2Attention() {
+  const { contextId, context, importance } = attentionState();
+  const { vector, weights } = weightedContextVector(context.cueVectors, importance);
+  const distribution = candidateDistributionFromContext(vector, BANK_CANDIDATES);
+  const riverShare = vector[0] / Math.max(0.0001, vector[0] + vector[1]);
+  const financeShare = 1 - riverShare;
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Attention as weighted contextual influence', 'This exact toy calculation is designed to explain the idea—not to reproduce every internal operation of a real transformer.')}
+    <section class="model-panel teaching stack">
+      <div class="split-row">
+        <h3><span class="model-badge teaching">Teaching Model</span> Which context?</h3>
+        <select id="attention-context" class="select-input" style="width:auto">
+          <option value="river" ${contextId === 'river' ? 'selected' : ''}>River context</option>
+          <option value="finance" ${contextId === 'finance' ? 'selected' : ''}>Financial context</option>
+        </select>
+      </div>
+      <div class="prompt-box">${escapeHtml(context.text)}</div>
+      <div class="attention-grid">
+        ${context.cueWords.map((word, index) => `<div class="attention-row">
+          <span class="attention-word">${escapeHtml(word)}</span>
+          <input class="attention-slider" data-index="${index}" type="range" min="0" max="100" value="${importance[index]}">
+          <span>${percent(weights[index], 1)}</span>
+        </div>`).join('')}
+      </div>
+      <div class="context-meter" aria-label="Simplified contextual direction">
+        <div class="context-river" style="width:${riverShare * 100}%">River ${percent(riverShare, 0)}</div>
+        <div class="context-finance" style="width:${financeShare * 100}%">Finance ${percent(financeShare, 0)}</div>
+      </div>
+      <span class="equation">Contextual information = ${weights.map((weight, index) => `${round(weight, 2)}v<sub>${index + 1}</sub>`).join(' + ')}</span>
+    </section>
+    <section class="grid-2">
+      <div class="card">
+        <h3>What the weights mean</h3>
+        <p>For this simplified calculation, each earlier word contributes a different share. The normalized weights always total 1.</p>
+      </div>
+      <div class="card">
+        <h3>What the weights do not mean</h3>
+        <p>They are not the real model’s thoughts. Real transformers use many heads and layers, plus other neural-network operations.</p>
+      </div>
+    </section>
+    <section class="activity-panel">
+      <h3>Resulting next-token distribution</h3>
+      ${probabilityBars(distribution, { scaleToMax: false, barClass: 'teaching' })}
+    </section>
+    ${actions({ nextLabel: 'Test the context effect with a real model' })}
+  </article>`;
+  document.querySelector('#attention-context')?.addEventListener('change', (event) => {
+    state.choices.attention.context = event.target.value;
+    state.choices.attention.importance = [...BANK_CONTEXTS[event.target.value].defaultImportance];
+    persist();
+    render();
+  });
+  document.querySelectorAll('.attention-slider').forEach((slider) => {
+    slider.addEventListener('input', () => {
+      if (!state.choices.attention.importance) state.choices.attention.importance = [...context.defaultImportance];
+      state.choices.attention.importance[Number(slider.dataset.index)] = Number(slider.value);
+      persist();
+      render();
+    });
+  });
+  bindStandardActions();
+}
+
+function modelLoadingHtml(key) {
+  const isLoading = runtime.loadingKey === key;
+  const progress = Number(runtime.modelProgress.progress || 0);
+  return `<div class="loading-box">
+    <p>${isLoading ? escapeHtml(runtime.modelProgress.message || 'Loading…') : 'The first run downloads a quantized model. Later visits normally use the browser cache.'}</p>
+    <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
+    <div class="loading-file">${escapeHtml(runtime.modelProgress.file || '')}</div>
+  </div>`;
+}
+
+function realResultHtml(result, options = {}) {
+  if (!result) return '';
+  const candidates = options.limit ? result.candidates.slice(0, options.limit) : result.candidates;
+  return `<div class="real-results">
+    <div class="real-meta">
+      <span class="meta-chip">${escapeHtml(result.modelId)}</span>
+      <span class="meta-chip">${escapeHtml(result.device).toUpperCase()}</span>
+      <span class="meta-chip">${escapeHtml(result.dtype)}</span>
+      <span class="meta-chip">${result.inputTokenCount} input tokens</span>
+      <span class="meta-chip">${Number(result.vocabularySize).toLocaleString()} vocabulary tokens</span>
+    </div>
+    ${options.showTokens ? `<div class="token-strip">${result.inputTokens.map((token) => `<span class="token-chip"><span>${escapeHtml(formatTokenForDisplay(token.text))}</span><span class="token-id">${token.id}</span></span>`).join('')}</div>` : ''}
+    <div class="candidate-table-wrap"><table class="candidate-table">
+      <thead><tr><th>Rank</th><th>Token</th><th>Logit</th><th>Native T=1</th><th>Sampling</th></tr></thead>
+      <tbody>${candidates.map((candidate) => `<tr class="${candidate.selected ? 'selected-row' : ''}">
+        <td>${candidate.rank}</td><td>${tokenHtml(candidate.token)}</td><td>${round(candidate.logit, 2)}</td><td>${percent(candidate.nativeProbability, 2)}</td><td>${percent(candidate.samplingProbability, 2)}</td>
+      </tr>`).join('')}
+      <tr><td>—</td><td>All other tokens</td><td>—</td><td>—</td><td>${percent(result.otherProbability, 2)}</td></tr>
+      </tbody>
+    </table></div>
+    ${options.showSelected !== false ? `<p class="note real-note"><strong>Selected:</strong> ${tokenHtml(result.selected.token)} — rank ${result.selected.rank}, sampling probability ${percent(result.selected.samplingProbability, 2)}.</p>` : ''}
+  </div>`;
+}
+
+async function runRealPrediction(key, prompt, options = {}) {
+  runtime.loadingKey = key;
+  runtime.realErrors[key] = null;
+  runtime.modelState = 'loading';
+  runtime.modelProgress = { progress: 0, file: '', message: 'Starting model…' };
+  updateModelStatus();
+  render();
+  try {
+    const result = await realModel.predict(prompt, options);
+    runtime.realResults[key] = result;
+    runtime.modelState = 'ready';
+    state.choices.real.loadedOnce = true;
+    persist();
+    showToast('Real model prediction complete.', 'success');
+    return result;
+  } catch (error) {
+    runtime.realErrors[key] = error.message;
+    runtime.modelState = 'error';
+    showToast(error.message, 'error');
+    return null;
+  } finally {
+    runtime.loadingKey = null;
+    updateModelStatus();
+    render();
+  }
+}
+
+function renderC2RealCompare() {
+  const river = runtime.realResults.c2river;
+  const finance = runtime.realResults.c2finance;
+  const loading = runtime.loadingKey === 'c2river' || runtime.loadingKey === 'c2finance';
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Test the context effect with a real transformer', 'The probability shifts are authentic outputs from a small model running in this browser.')}
+    <section class="model-panel real stack">
+      <h3><span class="model-badge real">Real Browser Model</span> Matched context comparison</h3>
+      ${!river || !finance ? `<div class="grid-2">
+        <div class="card"><strong>River context</strong><p class="small">${escapeHtml(BANK_CONTEXTS.river.text)}</p></div>
+        <div class="card"><strong>Financial context</strong><p class="small">${escapeHtml(BANK_CONTEXTS.finance.text)}</p></div>
+      </div>
+      ${modelLoadingHtml(loading ? runtime.loadingKey : 'c2compare')}
+      <button id="run-real-compare" class="primary-button" type="button" ${loading ? 'disabled' : ''}>${loading ? 'Working…' : 'Run both real predictions'}</button>` : `
+      <div class="grid-2">
+        <div class="card"><h3>River context</h3>${probabilityBars(river.candidates.slice(0, 7).map((item) => ({ token: item.token, probability: item.nativeProbability })), { barClass: 'real' })}</div>
+        <div class="card"><h3>Financial context</h3>${probabilityBars(finance.candidates.slice(0, 7).map((item) => ({ token: item.token, probability: item.nativeProbability })), { barClass: 'real' })}</div>
+      </div>
+      <p class="note real-note">Exact tokens and rankings may differ from the Teaching Model. The robust observation is that changing earlier context changes the genuine distribution.</p>`}
+      ${runtime.realErrors.c2river || runtime.realErrors.c2finance ? `<p class="note warning-note">${escapeHtml(runtime.realErrors.c2river || runtime.realErrors.c2finance)} Use the Teaching Model results or the teacher laptop if needed.</p>` : ''}
+    </section>
+    ${actions({ nextLabel: 'Pause and name the evidence', nextDisabled: !river || !finance })}
+  </article>`;
+  document.querySelector('#run-real-compare')?.addEventListener('click', async () => {
+    await runRealPrediction('c2river', REAL_GUIDED_PROMPTS.river, { temperature: 1, greedy: true, topN: 10 });
+    if (runtime.realResults.c2river) await runRealPrediction('c2finance', REAL_GUIDED_PROMPTS.finance, { temperature: 1, greedy: true, topN: 10 });
+  });
+  bindStandardActions();
+}
+
+function renderC2Checkpoint3() {
+  root.innerHTML = checkpointScreen('Explain context first, then attention', [
+    'What changed in the real probability distributions?',
+    'Why is the context eraser stronger evidence than merely highlighting a word?',
+    'What does the weighted Teaching Model explain, and what does it intentionally simplify?',
+  ]);
+  bindStandardActions();
+}
+
+function renderC2Complete() {
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Complete the Class 2 goal', 'State the idea without treating attention as a human-like spotlight.')}
+    <section class="complete-card">
+      <h3>The Class 2 explanation</h3>
+      <p>A transformer does not predict only from the last word. It builds context-sensitive numerical representations using relationships across the available sequence. Attention is one mathematical mechanism that lets different prior tokens contribute different amounts of information.</p>
+    </section>
+    <section class="grid-2">
+      <div class="card"><h3>Good shorthand</h3><p>“Attention helps the model use relevant context.”</p></div>
+      <div class="card"><h3>Important qualification</h3><p>Real transformers use many heads and layers. One weight display is not the model’s full reasoning.</p></div>
+    </section>
+    ${actions({ nextLabel: 'Finish Class 2 and open Class 3' })}
+  </article>`;
+  bindStandardActions();
+}
+
+function renderC3Goal() {
+  const courseClass = CLASSES[2];
+  root.innerHTML = goalScreen(courseClass, 'How can text and meaning become calculations a computer can perform?', `
+    <section class="card">
+      <h3>Return to your generated text</h3>
+      <div class="prompt-box">${escapeHtml(savedBranchSummary())}</div>
+      <p>So far, we have treated this as words and meaning. Today we reveal the numerical pipeline underneath it.</p>
+    </section>`);
+  bindStandardActions();
+}
+
+function illustrativeTokens(text) {
+  const example = TOKEN_EXAMPLES.find((item) => item.text === text);
+  return example?.illustration || wordTokenize(text);
+}
+
+function renderC3TokenReveal() {
+  // Use a deliberately selected sentence so the first token reveal visibly differs
+  // from whole-word segmentation before students inspect the authentic tokenizer.
+  const text = TOKEN_EXAMPLES[0].text;
+  const words = wordTokenize(text);
+  const illustrative = runtime.tokenReveal ? illustrativeTokens(text) : [];
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('The useful “next word” model becomes “next token”', 'The basic mechanism stays the same; the actual pieces are more flexible than words.')}
+    <section class="activity-panel stack">
+      <div class="split-row"><h3>What unit does the model receive?</h3><button id="toggle-token-reveal" class="primary-button" type="button">${runtime.tokenReveal ? 'Hide token view' : 'Reveal token view'}</button></div>
+      <div class="token-strip">
+        ${(runtime.tokenReveal ? illustrative : words).map((token, index) => `<span class="token-chip"><span>${escapeHtml(formatTokenForDisplay(token))}</span><span class="token-id">${runtime.tokenReveal ? `piece ${index + 1}` : 'word'}</span></span>`).join('')}
+      </div>
+      ${runtime.tokenReveal ? `<p class="note accuracy-note">This first reveal is illustrative. The next screen loads the actual tokenizer and shows the model’s real token IDs and boundaries.</p>` : '<p>We have used whole words because they make the core prediction loop easy to understand.</p>'}
+    </section>
+    <section class="grid-2">
+      <div class="card"><h3>Useful first model</h3><p>An LLM predicts the next word.</p></div>
+      <div class="card"><h3>Technically accurate model</h3><p>An LLM predicts the next token: a word, word piece, punctuation mark, space pattern, or control token.</p></div>
+    </section>
+    ${actions({ nextLabel: 'Inspect a real tokenizer' })}
+  </article>`;
+  document.querySelector('#toggle-token-reveal')?.addEventListener('click', () => {
+    runtime.tokenReveal = !runtime.tokenReveal;
+    render();
+  });
+  bindStandardActions();
+}
+
+async function runTokenizer(text) {
+  runtime.tokenizerLoading = true;
+  runtime.tokenizerResult = null;
+  runtime.modelState = 'loading';
+  runtime.modelProgress = { progress: 0, file: '', message: 'Loading tokenizer…' };
+  updateModelStatus();
+  render();
+  try {
+    const result = await realModel.tokenize(text);
+    runtime.tokenizerResult = result;
+    runtime.modelState = realModel.ready ? 'ready' : 'tokenizer';
+    showToast('Tokenizer ready.', 'success');
+  } catch (error) {
+    runtime.modelState = 'error';
+    showToast(error.message, 'error');
+  } finally {
+    runtime.tokenizerLoading = false;
+    updateModelStatus();
+    render();
+  }
+}
+
+function renderC3Tokenizer() {
+  const text = state.choices.tokenText || 'unbelievable';
+  const result = runtime.tokenizerResult;
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Inspect a real tokenizer', 'The tokenizer is authentic and much smaller to load than the complete model.')}
+    <section class="model-panel real stack">
+      <h3><span class="model-badge real">Real Tokenizer</span> What does the model actually receive?</h3>
+      <label class="field">Text to tokenize
+        <textarea id="tokenizer-text" class="textarea">${escapeHtml(text)}</textarea>
+      </label>
+      <div class="choice-grid">
+        ${TOKEN_EXAMPLES.map((example) => `<button class="choice-button tokenizer-example" data-text="${escapeHtml(example.text)}" type="button">${escapeHtml(example.label)}: ${escapeHtml(example.text)}</button>`).join('')}
+      </div>
+      ${runtime.tokenizerLoading ? modelLoadingHtml('tokenizer') : `<button id="run-tokenizer" class="primary-button" type="button">Tokenize this text</button>`}
+      ${result ? `<div class="token-strip">${result.tokens.map((token) => `<span class="token-chip"><span>${escapeHtml(formatTokenForDisplay(token.text))}</span><span class="token-id">ID ${token.id}</span></span>`).join('')}</div>
+        <p class="small muted">${result.tokenCount} tokens. Visible spaces are shown as ␠.</p>` : ''}
+    </section>
+    <p class="note">Token boundaries are model-specific. A different tokenizer may divide the same text differently.</p>
+    ${actions({ nextLabel: 'Pause after the token surprise', nextDisabled: !result })}
+  </article>`;
+  document.querySelector('#tokenizer-text')?.addEventListener('input', (event) => {
+    state.choices.tokenText = event.target.value;
+    persist();
+  });
+  document.querySelectorAll('.tokenizer-example').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.choices.tokenText = button.dataset.text;
+      runtime.tokenizerResult = null;
+      persist();
+      render();
+    });
+  });
+  document.querySelector('#run-tokenizer')?.addEventListener('click', () => runTokenizer(state.choices.tokenText));
+  bindStandardActions();
+}
+
+function renderC3Checkpoint1() {
+  root.innerHTML = checkpointScreen('Why use reusable token pieces?', [
+    'Which examples became one token, and which split into several?',
+    'Why would a finite vocabulary use pieces rather than contain every possible word and misspelling?',
+    'What remains the same about generation even when a token is only part of a word?',
+  ]);
+  bindStandardActions();
+}
+
+function renderC3Vectors() {
+  const matrix = runtime.vectorMatrix;
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Tokens become numerical vectors', 'A computer cannot directly calculate with definitions; it calculates with numbers arranged in vectors and matrices.')}
+    <section class="activity-panel stack">
+      <h3>A deliberately tiny representation</h3>
+      <div class="matrix-wrap"><table class="matrix-table">
+        <thead><tr><th>Token</th>${TOY_VECTOR_SEQUENCE.axes.map((axis) => `<th>${axis}</th>`).join('')}</tr></thead>
+        <tbody>${TOY_VECTOR_SEQUENCE.tokens.map((token, rowIndex) => `<tr><th>${escapeHtml(token)}</th>${matrix[rowIndex].map((value, colIndex) => `<td>${round(value, 2)}${rowIndex === 1 && colIndex === 1 ? `<br><input id="vector-slider" type="range" min="0" max="1" step="0.01" value="${value}" aria-label="Change one toy vector value">` : ''}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>
+      <p class="note accuracy-note">The three axes are intentionally unlabeled. Real learned dimensions usually do not correspond neatly to one human concept such as “animal” or “noun.”</p>
+    </section>
+    <section class="grid-3">
+      <div class="card"><h3>Token ID</h3><p>Chooses a row from the learned embedding table.</p></div>
+      <div class="card"><h3>Vector</h3><p>A list of numerical values used by the network.</p></div>
+      <div class="card"><h3>Matrix</h3><p>The sequence becomes rows of vectors that can be processed together.</p></div>
+    </section>
+    ${actions({ nextLabel: 'See how the output layer creates scores' })}
+  </article>`;
+  document.querySelector('#vector-slider')?.addEventListener('input', (event) => {
+    runtime.vectorMatrix[1][1] = Number(event.target.value);
+    render();
+  });
+  bindStandardActions();
+}
+
+function toyLogits() {
+  if (!state.choices.toyLogits) state.choices.toyLogits = TOY_LOGITS.map((item) => item.logit);
+  return state.choices.toyLogits;
+}
+
+function renderLogitBars(logits) {
+  const min = Math.min(...logits);
+  const max = Math.max(...logits);
+  const range = Math.max(0.001, max - min);
+  return `<div class="probability-list">${TOY_LOGITS.map((item, index) => {
+    const width = 12 + (logits[index] - min) / range * 88;
+    return `<div class="probability-row"><div class="probability-label">${tokenHtml(item.token)}</div><div class="probability-track"><div class="probability-bar teaching" style="width:${width}%"></div></div><div class="probability-value">${round(logits[index], 2)}</div></div>`;
+  }).join('')}</div>`;
+}
+
+function renderC3Logits() {
+  const logits = toyLogits();
+  const selected = runtime.softmaxSelected;
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('The model gives every possible token a score', 'The output layer turns a context-sensitive vector into one logit for every vocabulary token.')}
+    <section class="model-panel teaching stack">
+      <h3><span class="model-badge teaching">Teaching Model</span> Context vector → output scores</h3>
+      <span class="equation">z = W<sub>out</sub>h + b</span>
+      ${renderLogitBars(logits)}
+      <div class="grid-2">
+        <label class="field">Candidate to adjust
+          <select id="logit-token" class="select-input">${TOY_LOGITS.map((item, index) => `<option value="${index}" ${index === selected ? 'selected' : ''}>${escapeHtml(formatTokenForDisplay(item.token))}</option>`).join('')}</select>
+        </label>
+        <label class="range-field">Logit score: <strong>${round(logits[selected], 2)}</strong>
+          <input id="logit-slider" type="range" min="-2" max="6" step="0.1" value="${logits[selected]}">
+        </label>
+      </div>
+    </section>
+    <section class="grid-3">
+      <div class="card"><h3>Not a percentage</h3><p>A logit is an unnormalized model score.</p></div>
+      <div class="card"><h3>Can be negative</h3><p>Only relative differences among all logits determine probability.</p></div>
+      <div class="card"><h3>One per vocabulary token</h3><p>The real model scores tens of thousands of possibilities.</p></div>
+    </section>
+    ${actions({ nextLabel: 'Pause before SoftMax' })}
+  </article>`;
+  document.querySelector('#logit-token')?.addEventListener('change', (event) => {
+    runtime.softmaxSelected = Number(event.target.value);
+    render();
+  });
+  document.querySelector('#logit-slider')?.addEventListener('input', (event) => {
+    state.choices.toyLogits[selected] = Number(event.target.value);
+    persist();
+    render();
+  });
+  bindStandardActions();
+}
+
+function renderC3Checkpoint2() {
+  root.innerHTML = checkpointScreen('Why are logits not probabilities yet?', [
+    'What does a larger logit tell us?',
+    'Why can a logit be negative without being an impossible probability?',
+    'Why must all possible next tokens compete for one total of 100%?',
+  ]);
+  bindStandardActions();
+}
+
+function renderC3Softmax() {
+  const logits = toyLogits();
+  const probabilities = stableSoftmax(logits, 1);
+  const total = probabilities.reduce((sum, value) => sum + value, 0);
+  const selected = runtime.softmaxSelected;
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('SoftMax turns competing scores into one probability distribution', 'Change one logit and watch every probability respond.')}
+    <section class="model-panel teaching stack">
+      <h3><span class="model-badge teaching">Teaching Model</span> Logits → probabilities</h3>
+      <span class="equation">P<sub>i</sub> = e<sup>zᵢ</sup> ÷ Σe<sup>zⱼ</sup></span>
+      <div class="grid-2">
+        <label class="field">Candidate to adjust
+          <select id="softmax-token" class="select-input">${TOY_LOGITS.map((item, index) => `<option value="${index}" ${index === selected ? 'selected' : ''}>${escapeHtml(formatTokenForDisplay(item.token))}</option>`).join('')}</select>
+        </label>
+        <label class="range-field">Logit score: <strong>${round(logits[selected], 2)}</strong>
+          <input id="softmax-slider" type="range" min="-2" max="6" step="0.1" value="${logits[selected]}">
+        </label>
+      </div>
+      <div class="candidate-table-wrap"><table class="candidate-table">
+        <thead><tr><th>Token</th><th>Logit z</th><th>e<sup>z</sup></th><th>Probability</th></tr></thead>
+        <tbody>${TOY_LOGITS.map((item, index) => `<tr><td>${tokenHtml(item.token)}</td><td>${round(logits[index], 2)}</td><td>${round(Math.exp(logits[index]), 2)}</td><td>${percent(probabilities[index], 2)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><th>Total</th><th>—</th><th>—</th><th>${percent(total, 2)}</th></tr></tfoot>
+      </table></div>
+      ${probabilityBars(TOY_LOGITS.map((item, index) => ({ token: item.token, probability: probabilities[index] })), { barClass: 'teaching' })}
+    </section>
+    <p class="note accuracy-note">SoftMax normalizes scores. It does not check truth, correctness, or whether a sentence is safe.</p>
+    ${actions({ nextLabel: 'Compare with a real model' })}
+  </article>`;
+  document.querySelector('#softmax-token')?.addEventListener('change', (event) => {
+    runtime.softmaxSelected = Number(event.target.value);
+    render();
+  });
+  document.querySelector('#softmax-slider')?.addEventListener('input', (event) => {
+    state.choices.toyLogits[selected] = Number(event.target.value);
+    persist();
+    render();
+  });
+  bindStandardActions();
+}
+
+function renderC3RealProbabilities() {
+  const key = 'c3prob';
+  const result = runtime.realResults[key];
+  const prompt = savedBranchSummary();
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Inspect authentic next-token probabilities', 'The real model calculates across its complete vocabulary; the table shows only the leading tokens plus the hidden remainder.')}
+    <section class="model-panel real stack">
+      <h3><span class="model-badge real">Real Browser Model</span> T = 1 distribution</h3>
+      <div class="prompt-box">${escapeHtml(prompt)}</div>
+      ${runtime.loadingKey === key ? modelLoadingHtml(key) : !result ? `<button id="run-c3-real" class="primary-button" type="button">Run the real model</button>` : realResultHtml(result, { showTokens: true, showSelected: false, limit: 10 })}
+      ${runtime.realErrors[key] ? `<p class="note warning-note">${escapeHtml(runtime.realErrors[key])}</p>` : ''}
+    </section>
+    <p class="note real-note">These are the probabilities produced by this quantized browser model for this exact tokenized context. They are not probabilities that the continuation is true.</p>
+    ${actions({ nextLabel: 'Pause and trace the numerical chain', nextDisabled: !result })}
+  </article>`;
+  document.querySelector('#run-c3-real')?.addEventListener('click', () => runRealPrediction(key, prompt, { temperature: 1, greedy: true, topN: 12 }));
+  bindStandardActions();
+}
+
+function renderC3Checkpoint3() {
+  root.innerHTML = checkpointScreen('Trace one link at a time', [
+    'How did ordinary text become token IDs and vectors?',
+    'What is the difference between a logit and a probability?',
+    'Why does changing one logit change every SoftMax probability?',
+    'What does “all other tokens” prevent us from misunderstanding?',
+  ]);
+  bindStandardActions();
+}
+
+function renderC3Complete() {
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Complete the Class 3 goal', 'Put the numerical stages in the correct order.')}
+    <section class="complete-card">
+      <h3>The Class 3 explanation</h3>
+      <p>The tokenizer converts text into token IDs. Learned embedding vectors and transformer operations create context-sensitive numerical representations. The output layer gives every possible next token a logit. SoftMax converts the complete set of logits into probabilities totaling 100%.</p>
+    </section>
+    <div class="loop-diagram">
+      ${['Text', 'Tokens', 'Vectors / matrix', 'Contextual representation', 'Logits', 'SoftMax', 'Probability distribution'].map((label) => `<div class="loop-node">${label}</div>`).join('')}
+    </div>
+    ${actions({ nextLabel: 'Finish Class 3 and open Class 4' })}
+  </article>`;
+  bindStandardActions();
+}
+
+function renderC4Goal() {
+  const courseClass = CLASSES[3];
+  root.innerHTML = goalScreen(courseClass, 'Once probabilities exist, how does one candidate become the next token?', `
+    <section class="card">
+      <h3>What is already fixed before today’s new idea?</h3>
+      <p>The context and trained model have produced logits. SoftMax can turn them into a native T=1 distribution. Today we separate <strong>reshaping</strong> from <strong>selection</strong>.</p>
+    </section>`);
+  bindStandardActions();
+}
+
+function temperatureData() {
+  const logits = toyLogits();
+  const native = stableSoftmax(logits, 1);
+  const greedy = state.choices.temperature === 'greedy';
+  const temperature = greedy ? 1 : Number(state.choices.temperature || 1);
+  const sampling = stableSoftmax(logits, greedy ? 0 : temperature);
+  return {
+    logits,
+    native,
+    sampling,
+    greedy,
+    temperature,
+    items: TOY_LOGITS.map((item, index) => ({ token: item.token, nativeProbability: native[index], samplingProbability: sampling[index] })),
+  };
+}
+
+function renderC4Temperature() {
+  const data = temperatureData();
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Temperature reshapes the distribution', 'The logits remain fixed. No token has been selected yet.')}
+    <section class="temperature-grid">
+      <div class="model-panel teaching stack">
+        <h3><span class="model-badge teaching">Teaching Model</span> Controls</h3>
+        <label class="range-field">Temperature: <strong>${data.greedy ? 'Greedy' : round(data.temperature, 1)}</strong>
+          <input id="temperature-slider" type="range" min="0.2" max="2.5" step="0.1" value="${data.temperature}" ${data.greedy ? 'disabled' : ''}>
+        </label>
+        <label class="checkbox-row"><input id="greedy-toggle" type="checkbox" ${data.greedy ? 'checked' : ''}><span>Greedy mode: always choose the highest logit</span></label>
+        <div class="metric-grid" style="grid-template-columns:1fr">
+          <div class="metric-card"><div class="metric-label">Underlying logits changed?</div><div class="metric-value">No</div></div>
+          <div class="metric-card"><div class="metric-label">Distribution reshaped?</div><div class="metric-value">${data.greedy ? 'Replaced by top choice' : Math.abs(data.temperature - 1) < 0.001 ? 'No' : 'Yes'}</div></div>
+          <div class="metric-card"><div class="metric-label">Token selected?</div><div class="metric-value">Not yet</div></div>
+        </div>
+      </div>
+      <div class="activity-panel">
+        <h3>Native probability versus sampling probability</h3>
+        ${dualProbabilityBars(data.items)}
+      </div>
+    </section>
+    <span class="equation">P<sub>i</sub>(T) = e<sup>zᵢ/T</sup> ÷ Σe<sup>zⱼ/T</sup></span>
+    <p class="note">Low temperature concentrates probability on the leaders. High temperature makes lower-ranked candidates more competitive. It does not add knowledge or guarantee creativity.</p>
+    ${actions({ nextLabel: 'Pause before any selection occurs' })}
+  </article>`;
+  document.querySelector('#temperature-slider')?.addEventListener('input', (event) => {
+    state.choices.temperature = Number(event.target.value);
+    persist();
+    render();
+  });
+  document.querySelector('#greedy-toggle')?.addEventListener('change', (event) => {
+    state.choices.temperature = event.target.checked ? 'greedy' : 1;
+    persist();
+    render();
+  });
+  bindStandardActions();
+}
+
+function renderC4Checkpoint1() {
+  root.innerHTML = checkpointScreen('Has temperature selected anything yet?', [
+    'What stayed fixed while the probability bars changed?',
+    'Which candidates become more competitive as temperature rises?',
+    'Why is Greedy a separate mode rather than ordinary division by T = 0?',
+  ]);
+  bindStandardActions();
+}
+
+function renderCumulative(items, probabilities, randomValue) {
+  const cumulative = cumulativeDistribution(probabilities);
+  const selected = sampleIndex(probabilities, randomValue);
+  return `<div class="cumulative-line">
+    ${items.map((item, index) => `<div class="interval" style="width:${probabilities[index] * 100}%"><span>${formatTokenForDisplay(item.token)}</span><span>${percent(probabilities[index], 0)}</span></div>`).join('')}
+    <div class="random-marker" style="left:${randomValue * 100}%" data-label="r=${round(randomValue, 2)}"></div>
+  </div>
+  <p class="note"><strong>Selected:</strong> ${tokenHtml(items[selected].token)} because its cumulative interval is the first to reach or pass r.</p>
+  <div class="candidate-table-wrap"><table class="candidate-table">
+    <thead><tr><th>Token</th><th>Probability</th><th>Interval starts</th><th>Interval ends</th></tr></thead>
+    <tbody>${items.map((item, index) => `<tr class="${index === selected ? 'selected-row' : ''}"><td>${tokenHtml(item.token)}</td><td>${percent(probabilities[index], 2)}</td><td>${round(cumulative[index].start, 3)}</td><td>${round(cumulative[index].end, 3)}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderC4Sampling() {
+  const data = temperatureData();
+  const randomValue = Number(state.choices.randomValue ?? 0.62);
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Sampling uses a random value to select one interval', 'Hold r fixed while changing temperature to separate reshaping from selection.')}
+    <section class="model-panel teaching stack">
+      <h3><span class="model-badge teaching">Teaching Model</span> Cumulative probability line</h3>
+      <div class="grid-2">
+        <label class="range-field">Temperature: <strong>${data.greedy ? 'Greedy' : round(data.temperature, 1)}</strong>
+          <input id="sampling-temperature" type="range" min="0.2" max="2.5" step="0.1" value="${data.temperature}" ${data.greedy ? 'disabled' : ''}>
+        </label>
+        <label class="range-field">Random value r: <strong>${round(randomValue, 2)}</strong>
+          <input id="random-slider" type="range" min="0.001" max="0.999" step="0.001" value="${randomValue}" ${data.greedy ? 'disabled' : ''}>
+        </label>
+      </div>
+      ${data.greedy ? `<p class="note">Greedy mode skips random sampling and chooses ${tokenHtml(TOY_LOGITS[data.sampling.indexOf(1)].token)}.</p>` : renderCumulative(TOY_LOGITS, data.sampling, randomValue)}
+    </section>
+    <section class="grid-2">
+      <div class="card"><h3>Temperature</h3><p>Changes interval widths by reshaping the distribution.</p></div>
+      <div class="card"><h3>Random value r</h3><p>Determines which interval is selected from that distribution.</p></div>
+    </section>
+    ${actions({ nextLabel: 'Pause after one token is selected' })}
+  </article>`;
+  document.querySelector('#sampling-temperature')?.addEventListener('input', (event) => {
+    state.choices.temperature = Number(event.target.value);
+    persist();
+    render();
+  });
+  document.querySelector('#random-slider')?.addEventListener('input', (event) => {
+    state.choices.randomValue = Number(event.target.value);
+    persist();
+    render();
+  });
+  bindStandardActions();
+}
+
+function renderC4Checkpoint2() {
+  root.innerHTML = checkpointScreen('Why can a lower-ranked token be selected?', [
+    'Does sampling a surprising token mean the probability distribution was wrong?',
+    'What is the exact role of r?',
+    'Which calculations become outdated as soon as the selected token is appended?',
+  ]);
+  bindStandardActions();
+}
+
+function nextToyDistribution(selectedToken) {
+  const map = {
+    ' water': [{ token: ' flowing', logit: 4.0 }, { token: ' nearby', logit: 3.1 }, { token: ' shimmered', logit: 2.6 }, { token: ' and', logit: 2.1 }, { token: '.', logit: 0.4 }],
+    ' boat': [{ token: ' tied', logit: 4.1 }, { token: ' drifting', logit: 3.3 }, { token: ' near', logit: 2.7 }, { token: ' and', logit: 2.2 }, { token: '.', logit: 0.5 }],
+    ' tree': [{ token: ' leaning', logit: 3.8 }, { token: ' beside', logit: 3.2 }, { token: ' covered', logit: 2.5 }, { token: ' and', logit: 2.1 }, { token: '.', logit: 0.6 }],
+    ' teller': [{ token: ' smiling', logit: 4.0 }, { token: ' standing', logit: 3.3 }, { token: ' behind', logit: 3.0 }, { token: ' who', logit: 2.4 }, { token: '.', logit: 0.3 }],
+    ' mortgage': [{ token: ' officer', logit: 4.2 }, { token: ' application', logit: 3.4 }, { token: ' desk', logit: 2.8 }, { token: ' sign', logit: 2.0 }, { token: '.', logit: 0.2 }],
+  };
+  return map[selectedToken] || map[' water'];
+}
+
+function renderC4Append() {
+  const data = temperatureData();
+  const selectedIndex = data.greedy ? data.sampling.indexOf(1) : sampleIndex(data.sampling, Number(state.choices.randomValue));
+  const selectedToken = TOY_LOGITS[selectedIndex].token;
+  const next = nextToyDistribution(selectedToken);
+  const nextProbabilities = stableSoftmax(next.map((item) => item.logit), 1);
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Append the token and recalculate everything', 'The distribution from the previous step no longer applies to the new context.')}
+    <section class="activity-panel stack">
+      <div class="prompt-box">At the bank, the traveler saw a <span class="model-badge selected">${tokenHtml(selectedToken)}</span></div>
+      <div class="loop-diagram">
+        ${['Token appended', 'Retokenize / extend IDs', 'Process new context', 'New logits', 'New probabilities', 'New selection'].map((label, index) => `<div class="loop-node" style="${runtime.c4AppendRecalculated || index === 0 ? 'border-color:var(--accent);background:var(--accent-soft)' : ''}">${label}</div>`).join('')}
+      </div>
+      <button id="recalculate-button" class="primary-button" type="button">${runtime.c4AppendRecalculated ? 'Recalculated' : 'Recalculate the next step'}</button>
+      ${runtime.c4AppendRecalculated ? `<div><h3>New T=1 distribution after ${tokenHtml(selectedToken)}</h3>${probabilityBars(next.map((item, index) => ({ token: item.token, probability: nextProbabilities[index] })), { barClass: 'teaching' })}</div>` : ''}
+    </section>
+    <p class="note">The previous probabilities answered an old question. After appending the token, the model must answer a new question using a new context.</p>
+    ${actions({ nextLabel: 'Begin the real-model investigations', nextDisabled: !runtime.c4AppendRecalculated })}
+  </article>`;
+  document.querySelector('#recalculate-button')?.addEventListener('click', () => {
+    runtime.c4AppendRecalculated = true;
+    render();
+  });
+  bindStandardActions();
+}
+
+function renderC4RealContext() {
+  const river = runtime.realResults.c4river;
+  const finance = runtime.realResults.c4finance;
+  const loading = ['c4river', 'c4finance'].includes(runtime.loadingKey);
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Guided experiment 1: change earlier context', 'Predict the direction of change before running the real model.')}
+    <section class="model-panel real stack">
+      <h3><span class="model-badge real">Real Browser Model</span> Same ending, different earlier evidence</h3>
+      <div class="grid-2"><div class="card"><strong>River</strong><p class="small">${escapeHtml(REAL_GUIDED_PROMPTS.river)}</p></div><div class="card"><strong>Finance</strong><p class="small">${escapeHtml(REAL_GUIDED_PROMPTS.finance)}</p></div></div>
+      ${!river || !finance ? `${modelLoadingHtml(loading ? runtime.loadingKey : 'c4context')}<button id="run-c4-context" class="primary-button" type="button" ${loading ? 'disabled' : ''}>Run the controlled comparison</button>` : `<div class="grid-2"><div class="card"><h3>River top tokens</h3>${probabilityBars(river.candidates.slice(0, 6).map((item) => ({ token: item.token, probability: item.nativeProbability })), { barClass: 'real' })}</div><div class="card"><h3>Finance top tokens</h3>${probabilityBars(finance.candidates.slice(0, 6).map((item) => ({ token: item.token, probability: item.nativeProbability })), { barClass: 'real' })}</div></div>`}
+    </section>
+    <p class="note">Question to answer: How did the changed context alter the distribution—not merely the final selected token?</p>
+    ${actions({ nextLabel: 'Guided experiment 2: branch', nextDisabled: !river || !finance })}
+  </article>`;
+  document.querySelector('#run-c4-context')?.addEventListener('click', async () => {
+    await runRealPrediction('c4river', REAL_GUIDED_PROMPTS.river, { temperature: 1, greedy: true, topN: 10 });
+    if (runtime.realResults.c4river) await runRealPrediction('c4finance', REAL_GUIDED_PROMPTS.finance, { temperature: 1, greedy: true, topN: 10 });
+  });
+  bindStandardActions();
+}
+
+function renderC4RealBranch() {
+  const base = runtime.realResults.c4branchBase;
+  const branchA = runtime.realResults.c4branchA;
+  const branchB = runtime.realResults.c4branchB;
+  const loading = runtime.loadingKey?.startsWith('c4branch');
+  const selected = runtime.branchSelected;
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Guided experiment 2: branch from two real candidates', 'One selected token becomes the new context and redirects every later probability.')}
+    <section class="model-panel real stack">
+      <h3><span class="model-badge real">Real Browser Model</span> ${escapeHtml(REAL_GUIDED_PROMPTS.branch)}</h3>
+      ${!base ? `${modelLoadingHtml('c4branchBase')}<button id="run-branch-base" class="primary-button" type="button" ${loading ? 'disabled' : ''}>Reveal the candidate tokens</button>` : `
+        <p>Select two different candidates:</p>
+        <div class="choice-grid">${base.candidates.slice(0, 8).map((candidate) => `<button class="token-choice real-branch-token ${selected.some((item) => item.id === candidate.id) ? 'selected' : ''}" data-id="${candidate.id}" type="button">${tokenHtml(candidate.token)} <span class="small">${percent(candidate.nativeProbability, 1)}</span></button>`).join('')}</div>
+        <button id="run-both-branches" class="primary-button" type="button" ${selected.length !== 2 || loading ? 'disabled' : ''}>Continue both branches one step</button>
+        ${branchA && branchB ? `<div class="grid-2"><div class="card"><h3>Branch A: ${tokenHtml(selected[0]?.token)}</h3>${probabilityBars(branchA.candidates.slice(0, 5).map((item) => ({ token: item.token, probability: item.nativeProbability })), { barClass: 'real' })}</div><div class="card"><h3>Branch B: ${tokenHtml(selected[1]?.token)}</h3>${probabilityBars(branchB.candidates.slice(0, 5).map((item) => ({ token: item.token, probability: item.nativeProbability })), { barClass: 'real' })}</div></div>` : ''}
+      `}
+    </section>
+    <p class="note">Question to answer: Where did the branches first diverge, and why did the old distribution become irrelevant?</p>
+    ${actions({ nextLabel: 'Guided experiment 3: temperature', nextDisabled: !branchA || !branchB })}
+  </article>`;
+  document.querySelector('#run-branch-base')?.addEventListener('click', () => runRealPrediction('c4branchBase', REAL_GUIDED_PROMPTS.branch, { temperature: 1, greedy: true, topN: 12 }));
+  document.querySelectorAll('.real-branch-token').forEach((button) => {
+    button.addEventListener('click', () => {
+      const candidate = base.candidates.find((item) => item.id === Number(button.dataset.id));
+      const existing = runtime.branchSelected.findIndex((item) => item.id === candidate.id);
+      if (existing >= 0) runtime.branchSelected.splice(existing, 1);
+      else if (runtime.branchSelected.length < 2) runtime.branchSelected.push(candidate);
+      runtime.realResults.c4branchA = null;
+      runtime.realResults.c4branchB = null;
+      render();
+    });
+  });
+  document.querySelector('#run-both-branches')?.addEventListener('click', async () => {
+    const [a, b] = runtime.branchSelected;
+    await runRealPrediction('c4branchA', REAL_GUIDED_PROMPTS.branch + a.token, { temperature: 1, greedy: true, topN: 8 });
+    if (runtime.realResults.c4branchA) await runRealPrediction('c4branchB', REAL_GUIDED_PROMPTS.branch + b.token, { temperature: 1, greedy: true, topN: 8 });
+  });
+  bindStandardActions();
+}
+
+function renderC4RealTemperature() {
+  const low = runtime.realResults.c4tempLow;
+  const high = runtime.realResults.c4tempHigh;
+  const loading = runtime.loadingKey?.startsWith('c4temp');
+  const r = 0.62;
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Guided experiment 3: hold the prompt and r constant', 'Only temperature changes between the two runs.')}
+    <section class="model-panel real stack">
+      <h3><span class="model-badge real">Real Browser Model</span> ${escapeHtml(REAL_GUIDED_PROMPTS.temperature)}</h3>
+      <div class="metric-grid">
+        <div class="metric-card"><div class="metric-label">Prompt</div><div class="metric-value">Same</div></div>
+        <div class="metric-card"><div class="metric-label">Random r</div><div class="metric-value">${r}</div></div>
+        <div class="metric-card"><div class="metric-label">Changed variable</div><div class="metric-value">Temperature</div></div>
+      </div>
+      ${!low || !high ? `${modelLoadingHtml(loading ? runtime.loadingKey : 'c4temperature')}<button id="run-real-temperature" class="primary-button" type="button" ${loading ? 'disabled' : ''}>Run T = 0.5 and T = 1.8</button>` : `<div class="grid-2">
+        <div class="card"><h3>T = 0.5</h3>${probabilityBars(low.candidates.slice(0, 7).map((item) => ({ token: item.token, probability: item.samplingProbability })), { barClass: 'real' })}<p><strong>Selected:</strong> ${tokenHtml(low.selected.token)}</p></div>
+        <div class="card"><h3>T = 1.8</h3>${probabilityBars(high.candidates.slice(0, 7).map((item) => ({ token: item.token, probability: item.samplingProbability })), { barClass: 'real' })}<p><strong>Selected:</strong> ${tokenHtml(high.selected.token)}</p></div>
+      </div>`}
+    </section>
+    <p class="note">Question to answer: Did temperature alter the logits, the sampling probabilities, the selection, or all three?</p>
+    ${actions({ nextLabel: 'Pause before open exploration', nextDisabled: !low || !high })}
+  </article>`;
+  document.querySelector('#run-real-temperature')?.addEventListener('click', async () => {
+    await runRealPrediction('c4tempLow', REAL_GUIDED_PROMPTS.temperature, { temperature: 0.5, greedy: false, randomValue: r, topN: 10 });
+    if (runtime.realResults.c4tempLow) await runRealPrediction('c4tempHigh', REAL_GUIDED_PROMPTS.temperature, { temperature: 1.8, greedy: false, randomValue: r, topN: 10 });
+  });
+  bindStandardActions();
+}
+
+function renderC4Checkpoint3() {
+  root.innerHTML = checkpointScreen('Explain the entire loop before opening the lab', [
+    'Which stage used the earlier context?',
+    'Which stage produced logits, and which stage converted them to probabilities?',
+    'What did temperature change?',
+    'What did sampling change?',
+    'Why must the entire prediction be recalculated after one token is appended?',
+  ]);
+  bindStandardActions();
+}
+
+function openLabResultHtml(result) {
+  if (!result) return '';
+  return `${realResultHtml(result, { showTokens: true, showSelected: true, limit: 12 })}
+    <div class="choice-grid">
+      <button id="append-sampled" class="primary-button" type="button">Append sampled token ${tokenHtml(result.selected.token)}</button>
+      ${result.candidates.slice(0, 6).map((candidate) => `<button class="token-choice append-candidate" data-id="${candidate.id}" type="button">Append ${tokenHtml(candidate.token)}</button>`).join('')}
+    </div>`;
+}
+
+function renderC4OpenLab() {
+  const result = runtime.realResults.openLab;
+  const loading = runtime.loadingKey === 'openLab';
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Open laboratory: investigate one variable at a time', 'State what you are changing and what you predict before running the model.')}
+    <section class="model-panel real stack">
+      <h3><span class="model-badge real">Real Browser Model</span> Next-token microscope</h3>
+      <label class="field">Prompt or generated text so far
+        <textarea id="open-lab-prompt" class="textarea">${escapeHtml(runtime.openLabPrompt)}</textarea>
+      </label>
+      <div class="grid-3">
+        <label class="range-field">Temperature: <strong>${round(runtime.openLabTemperature, 1)}</strong>
+          <input id="open-lab-temperature" type="range" min="0.2" max="2.5" step="0.1" value="${runtime.openLabTemperature}" ${runtime.openLabGreedy ? 'disabled' : ''}>
+        </label>
+        <label class="range-field">Random r: <strong>${round(runtime.openLabRandom, 2)}</strong>
+          <input id="open-lab-r" type="range" min="0.001" max="0.999" step="0.001" value="${runtime.openLabRandom}" ${runtime.openLabGreedy ? 'disabled' : ''}>
+        </label>
+        <label class="checkbox-row"><input id="open-lab-greedy" type="checkbox" ${runtime.openLabGreedy ? 'checked' : ''}><span>Greedy mode</span></label>
+      </div>
+      <div class="inline-row">
+        <button id="new-r" class="secondary-button" type="button">Generate a new r</button>
+        <button id="run-open-lab" class="primary-button" type="button" ${loading ? 'disabled' : ''}>${loading ? 'Working…' : 'Calculate the next token'}</button>
+        <button id="reset-open-lab" class="ghost-button" type="button">Reset prompt</button>
+      </div>
+      ${loading ? modelLoadingHtml('openLab') : openLabResultHtml(result)}
+    </section>
+    <p class="note warning-note"><strong>Investigation rule:</strong> Change one variable, predict its effect, run the model, and explain the result. Random prompt play hides causation.</p>
+    ${runtime.openLabHistory.length ? `<section class="card"><h3>Generation history</h3><ol>${runtime.openLabHistory.map((item) => `<li>${escapeHtml(item.prompt)} <strong>+ ${formatTokenForDisplay(item.token)}</strong></li>`).join('')}</ol></section>` : ''}
+    ${actions({ nextLabel: 'Complete the four-class explanation', nextDisabled: !result })}
+  </article>`;
+  document.querySelector('#open-lab-prompt')?.addEventListener('input', (event) => {
+    runtime.openLabPrompt = event.target.value;
+    state.choices.real.lastPrompt = runtime.openLabPrompt;
+    persist();
+  });
+  document.querySelector('#open-lab-temperature')?.addEventListener('input', (event) => {
+    runtime.openLabTemperature = Number(event.target.value);
+    render();
+  });
+  document.querySelector('#open-lab-r')?.addEventListener('input', (event) => {
+    runtime.openLabRandom = Number(event.target.value);
+    render();
+  });
+  document.querySelector('#open-lab-greedy')?.addEventListener('change', (event) => {
+    runtime.openLabGreedy = event.target.checked;
+    render();
+  });
+  document.querySelector('#new-r')?.addEventListener('click', () => {
+    runtime.openLabRandom = Math.random();
+    render();
+  });
+  document.querySelector('#reset-open-lab')?.addEventListener('click', () => {
+    runtime.openLabPrompt = REAL_GUIDED_PROMPTS.openDefault;
+    runtime.realResults.openLab = null;
+    runtime.openLabHistory = [];
+    render();
+  });
+  document.querySelector('#run-open-lab')?.addEventListener('click', () => runRealPrediction('openLab', runtime.openLabPrompt, {
+    temperature: runtime.openLabTemperature,
+    randomValue: runtime.openLabRandom,
+    greedy: runtime.openLabGreedy,
+    topN: 12,
+  }));
+  document.querySelector('#append-sampled')?.addEventListener('click', () => appendOpenLabToken(result.selected.token));
+  document.querySelectorAll('.append-candidate').forEach((button) => {
+    button.addEventListener('click', () => {
+      const candidate = result.candidates.find((item) => item.id === Number(button.dataset.id));
+      appendOpenLabToken(candidate.token);
+    });
+  });
+  bindStandardActions();
+}
+
+function appendOpenLabToken(token) {
+  runtime.openLabHistory.push({ prompt: runtime.openLabPrompt, token });
+  runtime.openLabPrompt += token;
+  state.choices.real.lastPrompt = runtime.openLabPrompt;
+  runtime.realResults.openLab = null;
+  persist();
+  render();
+}
+
+function renderC4Complete() {
+  root.innerHTML = `<article class="screen">
+    ${screenHeader('Complete the whole LLM generation loop', 'This is the durable mental model the four classes were designed to build.')}
+    <section class="complete-card">
+      <h3>A complete honors-level explanation</h3>
+      <p>During pretraining, an LLM repeatedly predicts the next token and uses error, backpropagation, and gradient descent to adjust its weights. During use, text is tokenized and converted into numerical vectors. Transformer layers use context and attention, along with other neural-network operations, to create context-sensitive representations. The model gives every possible next token a logit. Temperature and SoftMax create the distribution used for selection. Sampling or greedy decoding chooses one token, the token is appended, and the process repeats.</p>
+    </section>
+    ${loopDiagram()}
+    <section class="grid-2">
+      <div class="card"><h3>Probability is not truth</h3><p>A high probability means a token fits this model’s learned patterns in this context. It does not verify the claim.</p></div>
+      <div class="card"><h3>“Next-token predictor” is simple but powerful</h3><p>Repeated context-sensitive predictions can produce long, structured, useful—and sometimes incorrect—responses.</p></div>
+    </section>
+    ${actions({ nextLabel: 'Return to Class 1', nextId: 'restart-tour-button', extra: '<button id="open-lab-again" class="secondary-button" type="button">Return to Open Lab</button>' })}
+  </article>`;
+  document.querySelector('#previous-button')?.addEventListener('click', goPrevious);
+  document.querySelector('#restart-tour-button')?.addEventListener('click', () => navigate('c1-goal'));
+  document.querySelector('#open-lab-again')?.addEventListener('click', () => navigate('c4-open-lab'));
+  if (!state.completedClasses.includes(4)) state.completedClasses.push(4);
+  markStepComplete(state, currentStep);
+  persist();
+}
+
+const RENDERERS = {
+  'c1-goal': renderC1Goal,
+  'c1-predict': renderC1Predict,
+  'c1-checkpoint-1': renderC1Checkpoint1,
+  'c1-corpus': renderC1Corpus,
+  'c1-training-bridge': renderC1TrainingBridge,
+  'c1-checkpoint-2': renderC1Checkpoint2,
+  'c1-branch': renderC1Branch,
+  'c1-checkpoint-3': renderC1Checkpoint3,
+  'c1-complete': renderC1Complete,
+  'c2-goal': renderC2Goal,
+  'c2-predictors': renderC2Predictors,
+  'c2-checkpoint-1': renderC2Checkpoint1,
+  'c2-bank-predict': renderC2BankPredict,
+  'c2-bank-compare': renderC2BankCompare,
+  'c2-checkpoint-2': renderC2Checkpoint2,
+  'c2-attention': renderC2Attention,
+  'c2-real-compare': renderC2RealCompare,
+  'c2-checkpoint-3': renderC2Checkpoint3,
+  'c2-complete': renderC2Complete,
+  'c3-goal': renderC3Goal,
+  'c3-token-reveal': renderC3TokenReveal,
+  'c3-tokenizer': renderC3Tokenizer,
+  'c3-checkpoint-1': renderC3Checkpoint1,
+  'c3-vectors': renderC3Vectors,
+  'c3-logits': renderC3Logits,
+  'c3-checkpoint-2': renderC3Checkpoint2,
+  'c3-softmax': renderC3Softmax,
+  'c3-real-probabilities': renderC3RealProbabilities,
+  'c3-checkpoint-3': renderC3Checkpoint3,
+  'c3-complete': renderC3Complete,
+  'c4-goal': renderC4Goal,
+  'c4-temperature': renderC4Temperature,
+  'c4-checkpoint-1': renderC4Checkpoint1,
+  'c4-sampling': renderC4Sampling,
+  'c4-checkpoint-2': renderC4Checkpoint2,
+  'c4-append': renderC4Append,
+  'c4-real-context': renderC4RealContext,
+  'c4-real-branch': renderC4RealBranch,
+  'c4-real-temperature': renderC4RealTemperature,
+  'c4-checkpoint-3': renderC4Checkpoint3,
+  'c4-open-lab': renderC4OpenLab,
+  'c4-complete': renderC4Complete,
+};
+
+function renderTeacherNavigation() {
+  teacherNavContent.innerHTML = CLASSES.map((courseClass) => `<section class="stack" style="margin-bottom:18px">
+    <h3>Class ${courseClass.id}: ${escapeHtml(courseClass.title)}</h3>
+    <div class="teacher-step-list">${courseClass.steps.map((step, index) => `<button class="teacher-step-button" data-step="${step}" type="button"><span>${index + 1}. ${escapeHtml(STEP_TITLES[step])}</span><span>${state.completedSteps.includes(step) ? '✓' : ''}</span></button>`).join('')}</div>
+  </section>`).join('');
+  teacherNavContent.querySelectorAll('[data-step]').forEach((button) => {
+    button.addEventListener('click', () => {
+      teacherDialog.close();
+      navigate(button.dataset.step);
+    });
+  });
+}
+
+function renderHelp() {
+  const terms = [
+    ['Pretraining', 'Learning by repeatedly predicting known next tokens and adjusting weights when predictions are poor.'],
+    ['Token', 'A unit the model processes and generates; it may be a word, word piece, punctuation, space pattern, or control token.'],
+    ['Vector', 'An ordered list of numbers used to represent and process a token.'],
+    ['Attention', 'A mathematical mechanism that lets token representations incorporate different amounts of information from other positions.'],
+    ['Logit', 'An unnormalized model score for one possible next token.'],
+    ['SoftMax', 'A function that converts competing logits into probabilities totaling 100%.'],
+    ['Temperature', 'A value that sharpens or flattens the probability distribution used for sampling.'],
+    ['Greedy decoding', 'Selecting the highest-scoring token without random sampling.'],
+    ['Sampling', 'Selecting one token according to the probability distribution.'],
+  ];
+  helpContent.innerHTML = `<section class="stack">
+    <div class="glossary-grid">${terms.map(([term, definition]) => `<div class="glossary-term">${term}</div><div>${definition}</div>`).join('')}</div>
+    <h3>Misconceptions the app is designed to prevent</h3>
+    <div class="grid-2">${MISCONCEPTIONS.map(([wrong, better]) => `<div class="card"><strong>Not quite:</strong> ${escapeHtml(wrong)}<br><strong>Better:</strong> ${escapeHtml(better)}</div>`).join('')}</div>
+    <p class="note real-note">Privacy: the real model runs locally after model files download from Hugging Face. Student text is not sent to a paid inference API. Progress is stored only in this browser’s local storage.</p>
+  </section>`;
+}
+
+function updateModelStatus() {
+  modelStatusButton.classList.remove('loading', 'ready', 'error');
+  if (runtime.modelState === 'loading') {
+    modelStatusButton.classList.add('loading');
+    modelStatusLabel.textContent = 'Model loading';
+  } else if (runtime.modelState === 'ready' || realModel.ready) {
+    modelStatusButton.classList.add('ready');
+    modelStatusLabel.textContent = realModel.modelInfo ? `${realModel.modelInfo.device.toUpperCase()} model ready` : 'Real model ready';
+  } else if (runtime.modelState === 'tokenizer') {
+    modelStatusButton.classList.add('ready');
+    modelStatusLabel.textContent = 'Tokenizer ready';
+  } else if (runtime.modelState === 'error') {
+    modelStatusButton.classList.add('error');
+    modelStatusLabel.textContent = 'Model needs attention';
+  } else {
+    modelStatusLabel.textContent = 'Real model not loaded';
+  }
+  renderModelDialog();
+}
+
+function renderModelDialog() {
+  const info = realModel.modelInfo;
+  modelDialogContent.innerHTML = `<div class="stack">
+    <p><strong>Model:</strong> ${escapeHtml(info?.modelId || REAL_MODEL_CONFIG.modelId)}</p>
+    <p><strong>Status:</strong> ${escapeHtml(runtime.modelProgress.message || realModel.status || 'Not loaded')}</p>
+    ${info ? `<p><strong>Device:</strong> ${escapeHtml(info.device).toUpperCase()} &nbsp; <strong>Quantization:</strong> ${escapeHtml(info.dtype)}</p>` : ''}
+    <div class="progress-track"><div class="progress-fill" style="width:${runtime.modelProgress.progress || 0}%"></div></div>
+    <p class="loading-file">${escapeHtml(runtime.modelProgress.file || '')}</p>
+    <p class="note real-note">No OpenAI, Gemini, or other paid API is used. The first load downloads a quantized open model. Inference then runs in this browser.</p>
+    <p class="small muted">WebGPU is preferred. A CPU/WASM fallback may be much slower on Chromebooks.</p>
+  </div>`;
+  document.querySelector('#load-model-dialog-button').disabled = runtime.modelState === 'loading';
+}
+
+function render() {
+  renderNavigation();
+  renderProcessMap();
+  const renderer = RENDERERS[currentStep] || renderC1Goal;
+  renderer();
+  updateModelStatus();
+}
+
+realModel.addEventListener('progress', (event) => {
+  runtime.modelProgress.progress = Number(event.detail.progress || 0);
+  runtime.modelProgress.file = event.detail.file || '';
+  if (event.detail.status) runtime.modelProgress.message = event.detail.status;
+  updateModelStatus();
+  const fill = document.querySelector('.progress-fill');
+  if (fill) fill.style.width = `${runtime.modelProgress.progress}%`;
+  const file = document.querySelector('.loading-file');
+  if (file) file.textContent = runtime.modelProgress.file;
+});
+realModel.addEventListener('status', (event) => {
+  runtime.modelProgress.message = event.detail.message;
+  updateModelStatus();
+});
+realModel.addEventListener('model-ready', () => {
+  runtime.modelState = 'ready';
+  updateModelStatus();
+});
+realModel.addEventListener('tokenizer-ready', () => {
+  if (!realModel.ready) runtime.modelState = 'tokenizer';
+  updateModelStatus();
+});
+realModel.addEventListener('warning', (event) => showToast(event.detail.message, 'error'));
+realModel.addEventListener('error', (event) => {
+  runtime.modelState = 'error';
+  showToast(event.detail.message, 'error');
+  updateModelStatus();
+});
+
+document.querySelector('#teacher-nav-button').addEventListener('click', () => {
+  renderTeacherNavigation();
+  teacherDialog.showModal();
+});
+document.querySelector('#help-button').addEventListener('click', () => {
+  renderHelp();
+  helpDialog.showModal();
+});
+modelStatusButton.addEventListener('click', () => {
+  renderModelDialog();
+  modelDialog.showModal();
+});
+document.querySelector('#load-model-dialog-button').addEventListener('click', () => {
+  runtime.modelState = 'loading';
+  runtime.modelProgress.message = 'Starting model download…';
+  realModel.initModel();
+  updateModelStatus();
+});
+document.querySelector('#reset-progress-button').addEventListener('click', () => {
+  const confirmed = window.confirm('Reset all Next Token Lab progress and choices stored in this browser?');
+  if (!confirmed) return;
+  state = resetState();
+  currentStep = 'c1-goal';
+  runtime.realResults = {};
+  runtime.openLabHistory = [];
+  teacherDialog.close();
+  render();
+  showToast('Local progress reset.', 'success');
+});
+
+window.addEventListener('beforeunload', () => persist());
+
+render();
