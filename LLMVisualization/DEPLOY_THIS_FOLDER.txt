@@ -1,3 +1,0 @@
-Replace the contents of IntroToAI/LLMVisualization/ with every file in this folder.
-The critical entry file is index.html. It must contain HTML beginning with <!doctype html>.
-Do not rename app.js to index.html and do not paste app.js into index.html.
