@@ -1,58 +1,102 @@
-# Gradient Descent Neuron Lab
+# The Next Token Lab
 
-A self-contained classroom application for exploring linear regression and gradient descent through three connected stages:
+A guided, browser-based lab for an Intro to AI course. It answers one recurring
+question — **"Given everything the model has so far, what should come next?"** —
+across four classes, building from a simple "next word" picture to the full
+token → context → logits → probabilities → selection → append loop.
 
-1. Fit a regression line manually by changing weight and bias.
-2. Lock the known bias and optimize only the weight.
-3. Optimize weight and bias together as an advanced extension.
+- **Teaching Model** — transparent, inspectable math (corpus counts, toy
+  attention, logits, SoftMax, temperature, cumulative sampling). Runs entirely
+  offline in the browser. This is the core and always works.
+- **Real Browser Model** — an *optional* small causal language model
+  (Transformers.js + ONNX, WebGPU when available) for authentic tokenization and
+  next-token probabilities. Loaded only when a student asks for it.
 
-## Repository files
+No accounts, no logins, no server, no paid API. Anonymous progress is saved in
+`localStorage` on the same device.
 
-- `index.html` — the complete application. It contains all HTML, CSS, JavaScript, and sample data.
-- `.nojekyll` — tells GitHub Pages to publish the static files without Jekyll processing.
+## Deploy on GitHub Pages
 
-No installation, package manager, build process, database, or external service is required.
+This is a static site. To publish it at
+`https://gkozak1.github.io/IntroToAI/LLMVisualization/`:
 
-## Test locally
+1. Copy the contents of this folder into a `LLMVisualization/` folder at the
+   root of your existing **IntroToAI** repository:
 
-You can open `index.html` directly in a modern browser.
+   ```
+   IntroToAI/
+     LLMVisualization/
+       index.html
+       app.css
+       app.js
+       tests.html
+       README.md
+       js/
+         teaching-model.js
+         curriculum.js
+         state-store.js
+         real-model-client.js
+         model-worker.js
+   ```
 
-For a local web server, open a terminal in this folder and run:
+2. Commit and push. If GitHub Pages is already enabled for the repo (Settings →
+   Pages), the app appears at the URL above within a minute or two.
 
-```bash
-python -m http.server 8000
+3. Open the URL. Confirm the Teaching Model works on a school Chromebook. Then
+   open `…/LLMVisualization/tests.html` — every self test should pass.
+
+> The app uses ES modules and a Web Worker, so it must be **served over
+> https/http** (GitHub Pages does this). Opening `index.html` directly from the
+> file system will not work; use a local server for testing
+> (`python3 -m http.server` from the folder).
+
+## Teacher quick-start
+
+- **Top bar** switches between Class 1–4, the Glossary, and **Teacher**
+  navigation (jump to any step or checkpoint, start a class fresh, or reset all
+  progress — no password).
+- **Checkpoints** are marked stops for discussion. The "Continue" button stays
+  visible but is framed as *"Continue when your teacher says to proceed."* The
+  app never forces the class forward.
+- **Process map** (left rail) shows the seven-stage pipeline with the current
+  stage highlighted.
+- **Real-model steps** (2.6, 3.6, 4.5, and Open Lab) are optional. If a
+  Chromebook can't run the model, the Teaching Model still covers every concept;
+  run the real-model portions on a teacher laptop with WebGPU.
+
+## The Real Browser Model is a benchmark decision
+
+Per the design spec, the exact model and quantization are **not fixed** — they
+should be chosen after testing real school Chromebooks (spec §6.2, §11.3). The
+defaults live at the top of `js/model-worker.js`:
+
+```js
+const DEFAULT_MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct";
+const DEFAULT_DTYPE = "q4";
 ```
 
-Then open:
+Swap these for the smallest model that gives clear, stable instructional
+contrasts, exposes the tokenizer/logits interface, and loads reliably on the
+target devices (e.g. an `onnx-community` Qwen2.5-0.5B variant). First load
+downloads model files from Hugging Face and is cached by the browser; offline
+use is not a first-version requirement.
 
-```text
-http://localhost:8000
-```
+## What is and isn't built here
 
-## Publish with GitHub Pages
+Built (Teaching Model core — spec build Phase 1, verified by `tests.html`):
+- All four class paths and every step, the app shell, process map, checkpoints.
+- Versioned `localStorage` with graceful in-memory fallback, resume, and reset.
+- Teacher direct navigation. Glossary. Open Lab.
+- Real-model integration wired to the inference contract (§9.4), with WebGPU
+  detection and teacher-laptop fallback messaging.
 
-1. Create a new GitHub repository.
-2. Upload `index.html`, `.nojekyll`, and this `README.md` to the repository root.
-3. Commit the files to the `main` branch.
-4. Open the repository's **Settings**.
-5. Select **Pages** under **Code and automation**.
-6. Under **Build and deployment**, choose **Deploy from a branch**.
-7. Select the `main` branch and the `/(root)` folder, then save.
-8. GitHub will display the published site address after deployment finishes.
+Deferred to prototyping (spec §11.3), and intentionally left tunable:
+- Final model + quantization after Chromebook benchmarking.
+- Exact guided real-model prompts after distribution testing on the chosen model.
+- Optional query–key–value "Go Deeper" attention extension.
 
-For a normal project repository, the address usually follows this pattern:
+## Editing content
 
-```text
-https://YOUR-USERNAME.github.io/REPOSITORY-NAME/
-```
-
-## Updating the lab
-
-Replace `index.html` with a revised version and commit the change. GitHub Pages will republish the site automatically.
-
-## Privacy and technical notes
-
-- All calculations run in the student's browser.
-- The application does not transmit or store student answers.
-- Refreshing or closing the page clears the current session.
-- The application is designed for current desktop and mobile browsers with JavaScript enabled.
+Curriculum content is data, not code — tune wording, corpora, and examples in
+`js/curriculum.js` without touching the engine. The transparent math lives in
+`js/teaching-model.js` and is covered by `tests.html`.
