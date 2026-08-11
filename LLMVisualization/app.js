@@ -395,12 +395,34 @@ function formatR(value) {
   return Number(value).toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
 
+const TOKEN_SELECTION_STYLES = [
+  { background: '#00B050', foreground: '#FFFFFF' }, // Top 20% — green
+  { background: '#C6EFCE', foreground: '#006100' }, // Next 20% — light green
+  { background: '#FFEB9C', foreground: '#9C5700' }, // Middle 20% — yellow
+  { background: '#FFC7CE', foreground: '#9C0006' }, // Next 20% — light red
+  { background: '#FF0000', foreground: '#FFFFFF' }  // Bottom 20% — red
+];
+
+function selectionStyle(rank, k) {
+  if (k <= 1) return TOKEN_SELECTION_STYLES[0];
+
+  // Spread the eligible ranks evenly across five visual bands. This keeps
+  // rank 1 in the green band and rank K in the red band for every Top-K size.
+  const position = (rank - 1) / (k - 1);
+  let band = 4;
+  if (position < 0.2) band = 0;
+  else if (position < 0.4) band = 1;
+  else if (position < 0.6) band = 2;
+  else if (position < 0.8) band = 3;
+  return TOKEN_SELECTION_STYLES[band];
+}
+
 function selectionColor(rank, k) {
-  if (k <= 1) return 'hsl(120 60% 38%)';
-  const t = (rank - 1) / (k - 1);
-  const hue = 120 * (1 - t);
-  const lightness = 38 + 25 * Math.sin(Math.PI * t);
-  return `hsl(${hue.toFixed(1)} 68% ${lightness.toFixed(1)}%)`;
+  return selectionStyle(rank, k).background;
+}
+
+function selectionTextColor(rank, k) {
+  return selectionStyle(rank, k).foreground;
 }
 
 function renderDistribution() {
@@ -515,16 +537,7 @@ function renderSentence() {
   let html = `<span class="prompt-fragment">${escapeHtml(prompt)}</span>`;
   state.history.forEach((record, index) => {
     const color = selectionColor(record.selected.rank, record.settings.topK);
-/*    
-    const foreground = record.selected.rank === Math.ceil(record.settings.topK / 2) && record.settings.topK > 2 ? '#2c2a17' : '#111';
-*/  
-    const position =
-      record.settings.topK <= 1
-        ? 0
-        : (record.selected.rank - 1) / (record.settings.topK - 1);
-    const foreground = position >= 0.9 ? '#fff' : '#111';
-    
-    
+    const foreground = selectionTextColor(record.selected.rank, record.settings.topK);
     html += `<button type="button" class="generated-token" data-history-index="${index}" style="background:${color};color:${foreground}" title="Token ${index + 1}: rank ${record.selected.rank} of ${record.settings.topK}; ${formatProbability(record.selected.probability, 2)}">${escapeHtml(record.selected.rawToken)}</button>`;
   });
   els.sentenceOutput.innerHTML = html;
