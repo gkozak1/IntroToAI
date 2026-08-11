@@ -79,6 +79,21 @@
       </div>
     </section>
 
+    <section class="card sentence-card" aria-labelledby="sentenceHeading">
+      <div class="section-heading-row">
+        <div>
+          <h2 id="sentenceHeading">Progressive completion</h2>
+          <p class="section-help">Generated tokens are colored by selection rank within Top-K. Click any generated token to inspect its selection.</p>
+        </div>
+        <div class="rank-legend" aria-label="Token rank color legend">
+          <span class="legend-swatch green"></span><span>Near top</span>
+          <span class="legend-swatch yellow"></span><span>Middle</span>
+          <span class="legend-swatch red"></span><span>Lower</span>
+        </div>
+      </div>
+      <div id="sentenceOutput" class="sentence-output"></div>
+    </section>
+
     <main class="main-grid">
       <section class="card table-card" aria-labelledby="candidateHeading">
         <div class="section-heading-row">
@@ -136,20 +151,7 @@
         <p class="chart-note">Each block contains 12 separate attention heads. This chart averages those 12 distributions for readability; it is not a separate attention head.</p>
       </section>
 
-      <section class="card sentence-card" aria-labelledby="sentenceHeading">
-        <div class="section-heading-row">
-          <div>
-            <h2 id="sentenceHeading">Progressive completion</h2>
-            <p class="section-help">Generated tokens are colored by selection rank within Top-K. Click any generated token to inspect its selection.</p>
-          </div>
-          <div class="rank-legend" aria-label="Token rank color legend">
-            <span class="legend-swatch green"></span><span>Near top</span>
-            <span class="legend-swatch yellow"></span><span>Middle</span>
-            <span class="legend-swatch red"></span><span>Lower</span>
-          </div>
-        </div>
-        <div id="sentenceOutput" class="sentence-output"></div>
-      </section>
+
     </main>
 
     <footer>
