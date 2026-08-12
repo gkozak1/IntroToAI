@@ -521,7 +521,7 @@ function makeBarChartSvg({ items, valueMax, valueFormatter, barClass }) {
   const barW = Math.max(4, Math.min(62, step * 0.72));
   const safeMax = valueMax || 1;
   const ticks = 4;
-  const labelFont = items.length > 38 ? 8 : items.length > 24 ? 9 : 10;
+  const labelFont = items.length > 44 ? 11 : items.length > 32 ? 12.5 : items.length > 20 ? 14 : 16;
   let svg = `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" width="100%" role="img" preserveAspectRatio="xMidYMid meet">`;
   for (let t = 0; t <= ticks; t += 1) {
     const frac = t / ticks;
@@ -537,7 +537,7 @@ function makeBarChartSvg({ items, valueMax, valueFormatter, barClass }) {
     svg += `<rect class="${cls}" x="${x}" y="${y}" width="${barW}" height="${h}" rx="2"><title>${escapeHtml(item.tooltip || '')}</title></rect>`;
     const labelX = x + barW / 2;
     const labelY = margin.top + plotH + 11;
-    svg += `<text class="chart-token-text" style="font-size:${labelFont}px" transform="translate(${labelX},${labelY}) rotate(58)" text-anchor="start">${escapeHtml(trimLabel(item.label, items.length > 30 ? 12 : 18))}</text>`;
+    svg += `<text class="chart-token-text" style="font-size:${labelFont}px" transform="translate(${labelX},${labelY}) rotate(58)" text-anchor="start">${escapeHtml(trimLabel(item.label, items.length > 44 ? 8 : items.length > 32 ? 10 : items.length > 20 ? 12 : 16))}</text>`;
   });
   svg += '</svg>';
   return svg;

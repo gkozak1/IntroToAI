@@ -134,40 +134,6 @@ textarea:read-only { background: var(--surface-2); color: #3f4754; }
 .workbench-card { height: clamp(420px, calc(100vh - 248px), 500px); display: flex; flex-direction: column; overflow: hidden; }
 .workbench-heading { min-height: 30px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
 
-.selection-bridge {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 5;
-}
-.selection-bridge-line {
-  position: absolute;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--bridge-color, var(--accent)) 65%, white), var(--bridge-color, var(--accent)));
-  transform-origin: left center;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.35);
-  opacity: 0;
-}
-.selection-bridge-line::after {
-  content: "";
-  position: absolute;
-  right: -1px;
-  top: 50%;
-  transform: translateY(-50%);
-  border-left: 9px solid var(--bridge-color, var(--accent));
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-}
-.selection-bridge.active .selection-bridge-line {
-  animation: bridgeFlow .68s ease-out forwards;
-}
-@keyframes bridgeFlow {
-  0% { opacity: 0; transform: scaleX(.12); }
-  20% { opacity: 1; }
-  72% { opacity: 1; transform: scaleX(1); }
-  100% { opacity: 0; transform: scaleX(1); }
-}
 
 .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
 .candidate-table-wrap { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; }
@@ -238,10 +204,10 @@ tbody tr.selected-row td:nth-child(2)::after {
 .section-heading-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
 .compact-heading { margin-bottom: 6px; }
 .chart-host {
-  width: 100%; min-height: 240px; overflow: hidden;
+  width: 100%; min-height: 205px; overflow: hidden;
   border: 1px solid var(--border); border-radius: 8px; background: #fff;
 }
-.responsive-chart { min-height: 240px; }
+.responsive-chart { min-height: 205px; }
 .placeholder-chart { display: grid; place-items: center; color: var(--muted); font-size: 0.8rem; background: var(--surface-2); }
 .chart-svg { display: block; width: 100%; height: auto; min-width: 0; }
 .chart-grid-line { stroke: #e7ebf0; stroke-width: 1; }
@@ -250,7 +216,7 @@ tbody tr.selected-row td:nth-child(2)::after {
 .probability-bar { fill: #307fce; }
 .probability-bar.selected { fill: var(--accent); }
 .attention-bar { fill: #7d67d8; }
-.chart-note { margin-top: 5px; }
+.chart-note { margin-top: 2px; }
 
 .attention-heading { align-items: center; }
 .block-nav { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
@@ -269,7 +235,7 @@ tbody tr.selected-row td:nth-child(2)::after {
   background: white; color: #8a94a4; font-size: 1.12rem; line-height: 1; display: grid; place-items: center; padding: 0;
 }
 .icon-button:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
-.attention-chart { min-height: 240px; }
+.attention-chart { min-height: 205px; }
 
 footer { display: none; }
 
@@ -300,7 +266,6 @@ footer { display: none; }
   .app-shell { padding: 9px; }
   .compact-controls { grid-template-columns: 1fr 1fr; row-gap: 6px; }
   .workbench-grid { grid-template-columns: 1fr; }
-  .selection-bridge { display: none; }
   .workbench-card { height: auto; min-height: 410px; }
   .completion-card { min-height: 290px; }
   .completion-stage { min-height: 230px; }
@@ -387,7 +352,7 @@ footer { display: none; }
           <h2 id="promptHeading">Input</h2>
           <span class="mini-help" title="The prompt locks after generation starts. Reset to edit it again.">Locks after generation starts</span>
         </div>
-        <textarea id="promptInput" rows="2" spellcheck="true">The banker walked out of the bank and</textarea>
+        <textarea id="promptInput" rows="2" spellcheck="true">The banker left the bank, sat on the left river bank</textarea>
       </div>
 
       <div class="action-row compact-actions">
@@ -455,7 +420,6 @@ footer { display: none; }
             <span>Click a generated token to inspect its exact r-value, candidates, and attention.</span>
           </div>
         </section>
-        <div id="selectionBridge" class="selection-bridge" aria-hidden="true"></div>
       </section>
 
       <section class="deep-dive" aria-label="Visualizations">
@@ -467,7 +431,6 @@ footer { display: none; }
             </div>
           </div>
           <div id="probabilityChart" class="chart-host responsive-chart placeholder-chart">Probability bars will appear here.</div>
-          <p class="chart-note" id="probabilityChartNote"></p>
         </section>
 
         <section class="card attention-card full-width-card" aria-labelledby="attentionHeading">
@@ -484,7 +447,6 @@ footer { display: none; }
             </div>
           </div>
           <div id="attentionChart" class="chart-host attention-chart responsive-chart placeholder-chart">Attention bars will appear here.</div>
-          <p class="chart-note">The chart is an average of the 12 separate heads in the selected block; it is not a separate attention head.</p>
         </section>
       </section>
     </main>
@@ -595,10 +557,7 @@ const els = {
   candidateTableBody: $('candidateTableBody'),
   candidateTableNote: $('candidateTableNote'),
   selectionCallout: $('selectionCallout'),
-  workbenchGrid: $('workbenchGrid'),
-  selectionBridge: $('selectionBridge'),
   probabilityChart: $('probabilityChart'),
-  probabilityChartNote: $('probabilityChartNote'),
   attentionChart: $('attentionChart'),
   blockNumber: $('blockNumber'),
   prevBlockBtn: $('prevBlockBtn'),
@@ -989,7 +948,6 @@ function renderDistribution() {
   renderProbabilityChart(state.currentDistribution, els.probabilityChart, null);
   renderAttention();
   els.selectionCallout.textContent = '';
-  clearSelectionBridge();
   updateRoundStatus();
 }
 
@@ -1012,10 +970,6 @@ function renderCandidateTable(distribution, selectedTokenId = null) {
 
 function renderProbabilityChart(distribution, host, selectedTokenId) {
   const eligible = distribution.filter((d) => d.probability > 0);
-  const noteTarget = host === els.probabilityChart ? els.probabilityChartNote : null;
-  if (noteTarget) {
-    noteTarget.textContent = `${eligible.length} token${eligible.length === 1 ? '' : 's'} eligible for sampling · all fit to the chart width.`;
-  }
   host.classList.remove('placeholder-chart');
   host.innerHTML = makeBarChartSvg({
     items: eligible.map((d) => ({ label: d.token, value: d.probability, selected: d.tokenId === selectedTokenId, tooltip: `${d.token}: ${formatProbability(d.probability, 3)} · rank ${d.rank}` })),
@@ -1054,19 +1008,19 @@ function renderAttention() {
 }
 
 function makeBarChartSvg({ items, valueMax, valueFormatter, barClass }) {
-  if (!items.length) return '<div class="placeholder-chart" style="height:240px">No values to display.</div>';
+  if (!items.length) return '<div class="placeholder-chart" style="height:205px">No values to display.</div>';
   // Use a fixed viewBox and width:100% so every bar always fits the available
   // screen width. As the number of tokens grows, bars narrow rather than scroll.
   const width = 1200;
-  const height = 250;
-  const margin = { top: 15, right: 12, bottom: 80, left: 45 };
+  const height = 215;
+  const margin = { top: 12, right: 12, bottom: 56, left: 45 };
   const plotW = width - margin.left - margin.right;
   const plotH = height - margin.top - margin.bottom;
   const step = plotW / items.length;
   const barW = Math.max(4, Math.min(62, step * 0.72));
   const safeMax = valueMax || 1;
   const ticks = 4;
-  const labelFont = items.length > 38 ? 8 : items.length > 24 ? 9 : 10;
+  const labelFont = items.length > 44 ? 11 : items.length > 32 ? 12.5 : items.length > 20 ? 14 : 16;
   let svg = `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" width="100%" role="img" preserveAspectRatio="xMidYMid meet">`;
   for (let t = 0; t <= ticks; t += 1) {
     const frac = t / ticks;
@@ -1082,7 +1036,7 @@ function makeBarChartSvg({ items, valueMax, valueFormatter, barClass }) {
     svg += `<rect class="${cls}" x="${x}" y="${y}" width="${barW}" height="${h}" rx="2"><title>${escapeHtml(item.tooltip || '')}</title></rect>`;
     const labelX = x + barW / 2;
     const labelY = margin.top + plotH + 11;
-    svg += `<text class="chart-token-text" style="font-size:${labelFont}px" transform="translate(${labelX},${labelY}) rotate(58)" text-anchor="start">${escapeHtml(trimLabel(item.label, items.length > 30 ? 12 : 18))}</text>`;
+    svg += `<text class="chart-token-text" style="font-size:${labelFont}px" transform="translate(${labelX},${labelY}) rotate(58)" text-anchor="start">${escapeHtml(trimLabel(item.label, items.length > 44 ? 8 : items.length > 32 ? 10 : items.length > 20 ? 12 : 16))}</text>`;
   });
   svg += '</svg>';
   return svg;
@@ -1091,47 +1045,6 @@ function makeBarChartSvg({ items, valueMax, valueFormatter, barClass }) {
 function trimLabel(text, max) {
   const s = String(text);
   return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
-}
-
-function clearSelectionBridge() {
-  const bridge = els.selectionBridge;
-  if (!bridge) return;
-  window.clearTimeout(state.bridgeTimer);
-  bridge.classList.remove('active');
-  bridge.innerHTML = '';
-}
-
-function animateSelectionBridge(record) {
-  const bridge = els.selectionBridge;
-  const container = els.workbenchGrid;
-  if (!bridge || !container) return;
-  if (window.innerWidth <= 760) {
-    bridge.classList.remove('active');
-    bridge.innerHTML = '';
-    return;
-  }
-  requestAnimationFrame(() => {
-    const row = els.candidateTableBody.querySelector('tr.selected-row');
-    const token = els.sentenceOutput.querySelector('.generated-token.just-added') || els.sentenceOutput;
-    if (!row || !token) return;
-    const containerRect = container.getBoundingClientRect();
-    const rowRect = row.getBoundingClientRect();
-    const tokenRect = token.getBoundingClientRect();
-    const startX = rowRect.right - containerRect.left - 10;
-    const endX = tokenRect.left - containerRect.left - 12;
-    const width = Math.max(28, endX - startX);
-    const y = ((rowRect.top + rowRect.bottom) / 2) - containerRect.top - 2;
-    bridge.style.setProperty('--bridge-color', selectionColor(record.selected.rank, record.settings.topK));
-    bridge.innerHTML = `<div class="selection-bridge-line" style="left:${startX}px;top:${y}px;width:${width}px"></div>`;
-    bridge.classList.remove('active');
-    void bridge.offsetWidth;
-    bridge.classList.add('active');
-    window.clearTimeout(state.bridgeTimer);
-    state.bridgeTimer = window.setTimeout(() => {
-      bridge.classList.remove('active');
-      bridge.innerHTML = '';
-    }, 720);
-  });
 }
 
 function renderSentence() {
@@ -1226,7 +1139,6 @@ async function chooseNextToken(forFinish = false) {
     ? `Selected #${selected.rank}: “${selected.token}”`
     : `Selected #${selected.rank} (outside top 20): “${selected.token}”`;
   renderSentence();
-  animateSelectionBridge(record);
   updateGenerationStatus();
 
   if (!els.autoRToggle.checked) els.rValueInput.value = '';
@@ -1350,7 +1262,6 @@ function backOneToken() {
   if (!els.autoRToggle.checked) els.rValueInput.value = '';
   renderDistribution();
   renderSentence();
-  clearSelectionBridge();
   updateGenerationStatus();
   updateControls();
   setStatus('Ready', 'ready');
@@ -1386,8 +1297,6 @@ function renderEmptyData() {
   els.selectionCallout.textContent = '';
   els.probabilityChart.className = 'chart-host placeholder-chart';
   els.probabilityChart.textContent = 'Probability bars will appear here.';
-  els.probabilityChartNote.textContent = '';
-  clearSelectionBridge();
   els.attentionChart.className = 'chart-host attention-chart placeholder-chart';
   els.attentionChart.textContent = 'Attention bars will appear here.';
 }
@@ -1531,7 +1440,6 @@ async function init() {
   }
   wireEvents();
   renderSentence();
-  clearSelectionBridge();
   updateGenerationStatus();
   els.temperatureValue.textContent = '1.0';
   els.topKValue.textContent = String(currentTopK());
