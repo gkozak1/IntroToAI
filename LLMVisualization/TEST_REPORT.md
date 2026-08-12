@@ -1,36 +1,32 @@
-# Test report
+# Interface Test Report — August 11, 2026
 
-## Automated browser tests
+## Scope
 
-The app was tested in headless Chromium using its built-in `?mock=1` deterministic test engine. The test exercised the same UI, state management, sampling logic, charts, history, and navigation used by production mode.
+Automated browser tests were run against the standalone mock-engine build. The GPT-2 model/sampling math was not changed by this interface revision; this pass focused on layout, controls, playback, selection highlighting, charts, and history interaction.
 
-Passed checks:
+## Tested successfully
 
-- Model-ready state and initial prompt analysis
-- 20-row next-token calculation table
-- Probability chart and attention chart rendering
-- Top-K filtering (`K=5` produces five eligible bars; rank 6 is `−∞` / 0%)
-- Manual r-value validation
-- Manual `r=0.999999` selecting rank 5 of Top-K 5
-- Generated-token history dialog, candidate list, selected-row highlight, and attention history
-- Back restores the previous prediction round
-- Automatic Finish reaches exactly 50 generated tokens
-- Final selection remains highlighted in the table and probability chart
-- Transformer Block navigation 1 → 2
-- Reset returns to zero generated tokens and unlocks the prompt
-- Temperature 1.0 display behavior
-- Stop interrupts Finish before 50 tokens
-- Responsive layout smoke test at 390 px viewport width
-- No JavaScript console or page errors during the automated test
+- 20 candidate rows render and all 20 fit without vertical scrolling at a 1366×768 viewport.
+- Input/control area plus side-by-side candidate/completion workspace fits above y=720 at 1366×768.
+- Selected candidate row is highlighted before the table advances to the next prediction round.
+- The selected-row badge uses the same rank-band color as the appended completion token.
+- Progressive completion appends one token per round and remains independently scrollable if needed.
+- Pause-between-tokens slider updates correctly at all discrete settings.
+- Finish switches to Pause while playing and Resume while paused.
+- Finish button changes to Pause/Resume and controls playback.
+- Token count remains unchanged while playback is paused.
+- Finish reaches exactly 50 generated tokens.
+- Top-K=50 probability chart displays all 50 eligible token bars without horizontal scrolling.
+- Attention chart fits a 60+ token context without horizontal scrolling.
+- Transformer block buttons navigate directly from Block 1 through Block 12.
+- Historical token dialog opens and displays the candidate list for the selected token.
+- Manual r-value mode can select candidates outside the visible top-20 table; the interface reports the selected rank in the callout.
+- No JavaScript console errors or page errors occurred in the tested mock flows.
 
-## Static checks
+## Production-model note
 
-- `app.js` passes `node --check` syntax validation.
-- Production constants are pinned to ONNX Runtime Web 1.23.0 and `@xenova/transformers` 2.17.2.
-- Production model output names and sampling calculations were checked against the current Transformer Explainer source.
+The production browser loader still uses the existing GPT-2 ONNX runtime/model path. This execution environment cannot perform the full external production-model download, so final deployment should be smoke-tested against Transformer Explainer using the same prompt, temperature, and Top-K settings.
 
-## Production-engine limitation of this test environment
+## Playback timing revision
 
-This sandbox cannot resolve external hosts, so it cannot perform the roughly 626 MB first-time download of Transformer Explainer's 63 GPT-2 model chunks. Therefore the full production model could not be executed end-to-end here. The production loader was instead checked against Transformer Explainer's current public source structure and ONNX output names, while all application behavior was tested with the deterministic mock engine.
-
-Before classroom use, open the deployed production page on a target Chromebook, wait for **GPT-2 ready**, and compare one prompt's first-round logits against Transformer Explainer. That is the final environment-specific acceptance check.
+The token-delay implementation now starts the next GPT-2 inference immediately after a token is selected and counts that inference time toward the selected interval. This avoids deliberately adding model latency on top of the slider value. Actual timing can still exceed the setting when inference takes longer than the selected interval.

@@ -10,62 +10,59 @@
 <body>
   <div id="app" class="app-shell">
     <header class="site-header">
-      <div>
+      <div class="header-title-row">
         <h1>GPT-2 Next Token Explorer</h1>
-        <p class="subtitle">See how logits become probabilities, then sample one token at a time.</p>
+        <button class="info-dot" type="button" title="Explore how GPT-2 logits become probabilities and sampled tokens.">i</button>
       </div>
-      <div class="model-badge" id="modelBadge">GPT-2 · Transformer Explainer model</div>
-    </header>
-
-    <section class="card controls-card" aria-labelledby="promptHeading">
-      <div class="section-heading-row">
-        <div>
-          <h2 id="promptHeading">Input prompt</h2>
-          <p class="section-help">The prompt is locked while a continuation is in progress. Reset to edit it again.</p>
-        </div>
+      <div class="header-status-row">
+        <div class="model-badge" id="modelBadge">GPT-2 · Transformer Explainer model</div>
         <div class="status-pill" id="modelStatus">Preparing…</div>
       </div>
+    </header>
 
-      <textarea id="promptInput" rows="3" spellcheck="true">The banker walked out of the bank and</textarea>
-
-      <div class="controls-grid">
-        <div class="control-block">
-          <div class="control-label-row">
-            <label for="temperatureSlider">Temperature</label>
-            <output id="temperatureValue">1.0</output>
-          </div>
+    <section class="card setup-card" aria-labelledby="promptHeading">
+      <div class="compact-controls" aria-label="Sampling controls">
+        <div class="compact-control">
+          <div class="compact-label"><label for="temperatureSlider">Temperature</label><output id="temperatureValue">1.0</output></div>
           <input id="temperatureSlider" type="range" min="0" max="17" step="1" value="8" />
-          <div class="range-endpoints"><span>0.2</span><span>10</span></div>
+          <div class="compact-endpoints"><span>0.2</span><span>10</span></div>
         </div>
 
-        <div class="control-block">
-          <div class="control-label-row">
-            <label for="topKSlider">Top-K</label>
-            <output id="topKValue">10</output>
-          </div>
+        <div class="compact-control">
+          <div class="compact-label"><label for="topKSlider">Top-K</label><output id="topKValue">10</output></div>
           <input id="topKSlider" type="range" min="1" max="50" step="1" value="10" />
-          <div class="range-endpoints"><span>1</span><span>50</span></div>
+          <div class="compact-endpoints"><span>1</span><span>50</span></div>
         </div>
 
-        <div class="control-block r-control">
-          <div class="control-label-row">
-            <label for="autoRToggle">Automatically generate r-value</label>
-            <span id="rModeText" class="mode-label">On</span>
-          </div>
-          <label class="switch-row">
-            <input id="autoRToggle" type="checkbox" checked />
-            <span class="switch" aria-hidden="true"></span>
-            <span class="switch-copy">Use a random value for each selection</span>
-          </label>
-          <div class="r-input-row">
-            <label for="rValueInput">r-value</label>
-            <input id="rValueInput" type="number" min="0" max="0.999999999999" step="0.001" placeholder="Generated on Next" disabled />
+        <div class="compact-control auto-r-control">
+          <div class="compact-label"><label for="autoRToggle">Auto r-value</label><span id="rModeText" class="mode-label">On</span></div>
+          <div class="auto-r-row">
+            <label class="switch-row compact-switch" title="When on, a fresh random r-value is used for each token selection.">
+              <input id="autoRToggle" type="checkbox" checked />
+              <span class="switch" aria-hidden="true"></span>
+            </label>
+            <label class="inline-r" for="rValueInput">r</label>
+            <input id="rValueInput" type="number" min="0" max="0.999999999999" step="0.001" placeholder="auto" disabled />
           </div>
           <div id="rValidation" class="validation-message" role="alert"></div>
         </div>
+
+        <div class="compact-control playback-control">
+          <div class="compact-label"><label for="playbackSlider">Pause between tokens</label><output id="playbackValue">1.0s</output></div>
+          <input id="playbackSlider" type="range" min="0" max="5" step="1" value="3" />
+          <div class="compact-endpoints"><span>0</span><span>4s</span></div>
+        </div>
       </div>
 
-      <div class="action-row">
+      <div class="prompt-row">
+        <div class="prompt-label-row">
+          <h2 id="promptHeading">Input</h2>
+          <span class="mini-help" title="The prompt locks after generation starts. Reset to edit it again.">Locks after generation starts</span>
+        </div>
+        <textarea id="promptInput" rows="2" spellcheck="true">The banker walked out of the bank and</textarea>
+      </div>
+
+      <div class="action-row compact-actions">
         <button id="resetBtn" class="button secondary" type="button">Reset</button>
         <button id="backBtn" class="button secondary" type="button" disabled>‹ Back</button>
         <button id="nextBtn" class="button primary" type="button" disabled>Next ›</button>
@@ -79,79 +76,86 @@
       </div>
     </section>
 
-    <section class="card sentence-card" aria-labelledby="sentenceHeading">
-      <div class="section-heading-row">
-        <div>
-          <h2 id="sentenceHeading">Progressive completion</h2>
-          <p class="section-help">Generated tokens are colored by selection rank within Top-K. Click any generated token to inspect its selection.</p>
-        </div>
-        <div class="rank-legend" aria-label="Token rank color legend">
-          <span class="legend-swatch green"></span><span>Near top</span>
-          <span class="legend-swatch yellow"></span><span>Middle</span>
-          <span class="legend-swatch red"></span><span>Lower</span>
-        </div>
-      </div>
-      <div id="sentenceOutput" class="sentence-output"></div>
-    </section>
-
-    <main class="main-grid">
-      <section class="card table-card" aria-labelledby="candidateHeading">
-        <div class="section-heading-row">
-          <div>
-            <h2 id="candidateHeading">Current next-token calculation</h2>
-            <p class="section-help">Top 20 tokens, sorted by the original GPT-2 logit.</p>
+    <main>
+      <section id="workbenchGrid" class="workbench-grid" aria-label="Token selection workspace">
+        <section class="card table-card workbench-card" aria-labelledby="candidateHeading">
+          <div class="workbench-heading">
+            <div>
+              <h2 id="candidateHeading">Next-token candidates</h2>
+              <span class="microcopy">Top 20 · selected row is highlighted before it is appended</span>
+            </div>
+            <div id="roundStatus" class="small-status">Waiting for model</div>
           </div>
-          <div id="roundStatus" class="small-status">Waiting for model</div>
-        </div>
 
-        <div class="table-wrap">
-          <table id="candidateTable">
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Token</th>
-                <th>Logit</th>
-                <th>Scaled Logit</th>
-                <th>After Top-K</th>
-                <th>Softmax</th>
-              </tr>
-            </thead>
-            <tbody id="candidateTableBody">
-              <tr><td colspan="6" class="placeholder-cell">The table will appear after the model analyzes the prompt.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="table-note" id="candidateTableNote"></p>
+          <div class="table-wrap candidate-table-wrap">
+            <table id="candidateTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Token</th>
+                  <th>Logit</th>
+                  <th>Scaled</th>
+                  <th>Top-K</th>
+                  <th>Prob.</th>
+                </tr>
+              </thead>
+              <tbody id="candidateTableBody">
+                <tr><td colspan="6" class="placeholder-cell">The table will appear after the model analyzes the prompt.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="candidate-footer">
+            <p class="table-note" id="candidateTableNote"></p>
+            <div id="selectionCallout" class="selection-callout" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="card completion-card workbench-card" aria-labelledby="sentenceHeading">
+          <div class="workbench-heading">
+            <div>
+              <h2 id="sentenceHeading">Progressive completion</h2>
+              <span class="microcopy">Watch the chosen token arrive from the candidate list</span>
+            </div>
+            <div class="rank-legend compact-legend" aria-label="Token rank color legend" title="Color indicates where the selected token ranked within Top-K.">
+              <span class="legend-swatch green"></span>
+              <span class="legend-swatch yellow"></span>
+              <span class="legend-swatch red"></span>
+            </div>
+          </div>
+          <div id="sentenceOutput" class="sentence-output completion-stage"></div>
+          <div class="completion-footer">
+            <span>Click a generated token to inspect its exact r-value, candidates, and attention.</span>
+          </div>
+        </section>
       </section>
 
-      <section class="card chart-card" aria-labelledby="probabilityHeading">
-        <div class="section-heading-row">
-          <div>
-            <h2 id="probabilityHeading">Sampling probabilities</h2>
-            <p class="section-help">Only tokens that survive Top-K filtering are eligible to be selected.</p>
+      <section class="deep-dive" aria-label="Visualizations">
+        <section class="card chart-card full-width-card" aria-labelledby="probabilityHeading">
+          <div class="section-heading-row compact-heading">
+            <div>
+              <h2 id="probabilityHeading">Sampling probabilities</h2>
+              <p class="section-help">All Top-K-eligible tokens are fit across the chart. Hover a bar for the exact value.</p>
+            </div>
           </div>
-        </div>
-        <div id="probabilityChart" class="chart-host placeholder-chart">Probability bars will appear here.</div>
-        <p class="chart-note" id="probabilityChartNote"></p>
+          <div id="probabilityChart" class="chart-host responsive-chart placeholder-chart">Probability bars will appear here.</div>
+        </section>
+
+        <section class="card attention-card full-width-card" aria-labelledby="attentionHeading">
+          <div class="section-heading-row attention-heading compact-heading">
+            <div>
+              <h2 id="attentionHeading">Attention to earlier tokens</h2>
+              <p class="section-help">Final context token's attention, averaged across the 12 heads in one transformer block.</p>
+            </div>
+            <div class="block-nav block-stepper" aria-label="Transformer block navigation">
+              <button id="prevBlockBtn" class="icon-button" type="button" aria-label="Previous transformer block">‹</button>
+              <div id="blockButtons" class="block-buttons" aria-label="Select transformer block"></div>
+              <button id="nextBlockBtn" class="icon-button" type="button" aria-label="Next transformer block">›</button>
+              <span class="block-label">Block <strong id="blockNumber">1</strong> / 12</span>
+            </div>
+          </div>
+          <div id="attentionChart" class="chart-host attention-chart responsive-chart placeholder-chart">Attention bars will appear here.</div>
+        </section>
       </section>
-
-      <section class="card attention-card" aria-labelledby="attentionHeading">
-        <div class="section-heading-row attention-heading">
-          <div>
-            <h2 id="attentionHeading">Attention to earlier tokens</h2>
-            <p class="section-help">Attention from the final context token, averaged across all 12 heads in the selected transformer block.</p>
-          </div>
-          <div class="block-nav" aria-label="Transformer block navigation">
-            <button id="prevBlockBtn" class="icon-button" type="button" aria-label="Previous transformer block">‹</button>
-            <div class="block-label">Transformer Block <strong id="blockNumber">1</strong></div>
-            <button id="nextBlockBtn" class="icon-button" type="button" aria-label="Next transformer block">›</button>
-          </div>
-        </div>
-        <div id="attentionChart" class="chart-host attention-chart placeholder-chart">Attention bars will appear here.</div>
-        <p class="chart-note">Each block contains 12 separate attention heads. This chart averages those 12 distributions for readability; it is not a separate attention head.</p>
-      </section>
-
-
     </main>
 
     <footer>

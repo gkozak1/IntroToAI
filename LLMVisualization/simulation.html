@@ -1,3 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>GPT-2 Next Token Explorer</title>
+  <style>
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #dce2ea;
+  --border-strong: #c8d0db;
+  --text: #18202d;
+  --muted: #687386;
+  --accent: #5b38d1;
+  --accent-dark: #4528b3;
+  --accent-soft: #eee9ff;
+  --blue: #2878d6;
+  --shadow: 0 2px 10px rgba(20, 31, 48, 0.055);
+  --radius: 11px;
+}
+
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.35;
+}
+button, input, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.45; }
+
+.app-shell { max-width: 1480px; margin: 0 auto; padding: 8px 12px 14px; }
+.site-header {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.header-title-row, .header-status-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+h1 { font-size: clamp(1.18rem, 1.65vw, 1.55rem); margin: 0; letter-spacing: -0.025em; line-height: 1.1; }
+h2 { font-size: 0.98rem; margin: 0; letter-spacing: -0.01em; }
+h3 { font-size: 1rem; margin: 0 0 10px; }
+p { margin: 0; }
+.section-help, .chart-note, .table-note, footer, .microcopy, .mini-help, .completion-footer { color: var(--muted); }
+.section-help { margin-top: 2px; font-size: 0.75rem; }
+.microcopy { display: inline-block; font-size: 0.69rem; margin-top: 1px; }
+.mini-help { font-size: 0.68rem; }
+.info-dot {
+  width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 50%;
+  background: white; color: var(--muted); padding: 0; font-size: 0.7rem; font-weight: 750;
+}
+
+.model-badge, .status-pill, .small-status {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 999px;
+  padding: 4px 8px; color: var(--muted); font-size: 0.69rem; white-space: nowrap;
+}
+.model-badge { color: var(--accent-dark); background: var(--accent-soft); border-color: #d8cdfb; }
+.status-pill.ready { color: #1e6a37; border-color: #badfc5; background: #f1fbf4; }
+.status-pill.error { color: #a52c2c; border-color: #f0c4c4; background: #fff4f4; }
+
+.card {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 9px 11px;
+}
+.setup-card { margin-bottom: 8px; padding: 7px 10px; }
+
+.compact-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.95fr 1fr;
+  gap: 14px;
+  align-items: start;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #edf0f4;
+}
+.compact-control { min-width: 0; }
+.compact-label { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.73rem; font-weight: 700; height: 18px; }
+.compact-label output, .mode-label { color: var(--accent); font-variant-numeric: tabular-nums; }
+.compact-control input[type="range"] { display: block; width: 100%; height: 15px; margin: 1px 0 0; accent-color: var(--accent); }
+.compact-endpoints { display: flex; justify-content: space-between; color: #9099a7; font-size: 0.59rem; margin-top: -3px; }
+
+.auto-r-row { display: grid; grid-template-columns: 39px 12px minmax(55px, 1fr); gap: 6px; align-items: center; height: 21px; }
+.switch-row { display: inline-flex; align-items: center; cursor: pointer; }
+.switch-row input { position: absolute; opacity: 0; pointer-events: none; }
+.switch { width: 36px; height: 20px; border-radius: 999px; background: #b9c1ce; position: relative; flex: 0 0 auto; transition: .18s ease; }
+.switch::after { content: ""; width: 14px; height: 14px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: .18s ease; }
+.switch-row input:checked + .switch { background: var(--accent); }
+.switch-row input:checked + .switch::after { transform: translateX(16px); }
+.inline-r { font-size: 0.7rem; color: var(--muted); font-weight: 700; }
+.auto-r-row input[type="number"] { width: 100%; min-width: 0; height: 22px; border: 1px solid var(--border-strong); border-radius: 6px; padding: 2px 6px; font-size: 0.69rem; }
+.auto-r-row input:disabled { background: var(--surface-2); color: var(--muted); }
+.validation-message { color: #ad2f2f; min-height: 9px; font-size: 0.62rem; line-height: 1.05; }
+
+.prompt-row { padding-top: 4px; }
+.prompt-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 3px; }
+textarea {
+  width: 100%; resize: none; min-height: 38px; height: 38px;
+  border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 10px;
+  color: var(--text); background: white; outline: none; line-height: 1.3; font-size: 0.86rem;
+}
+textarea:focus, input:focus { border-color: #8c74df; box-shadow: 0 0 0 3px rgba(91,56,209,0.11); }
+textarea:read-only { background: var(--surface-2); color: #3f4754; }
+
+.action-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.button { border: 1px solid transparent; border-radius: 7px; padding: 5px 10px; font-weight: 680; font-size: 0.75rem; line-height: 1.15; }
+.button.primary { background: var(--accent); color: white; }
+.button.primary:hover:not(:disabled) { background: var(--accent-dark); }
+.button.secondary { background: white; color: #3c4655; border-color: var(--border-strong); }
+.button.secondary:hover:not(:disabled) { background: var(--surface-2); }
+.generation-status { margin-left: 6px; color: var(--muted); font-size: 0.7rem; font-variant-numeric: tabular-nums; }
+
+.load-progress { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; color: var(--muted); font-size: 0.68rem; }
+.load-progress-track { width: 100%; height: 5px; border-radius: 999px; overflow: hidden; background: #e8ecf2; margin-bottom: 4px; }
+.load-progress-bar { height: 100%; width: 0%; background: var(--accent); transition: width .2s ease; }
+
+.workbench-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.workbench-card { height: clamp(420px, calc(100vh - 248px), 500px); display: flex; flex-direction: column; overflow: hidden; }
+.workbench-heading { min-height: 30px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+
+.selection-bridge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.selection-bridge-line {
+  position: absolute;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--bridge-color, var(--accent)) 65%, white), var(--bridge-color, var(--accent)));
+  transform-origin: left center;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.35);
+  opacity: 0;
+}
+.selection-bridge-line::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left: 9px solid var(--bridge-color, var(--accent));
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+.selection-bridge.active .selection-bridge-line {
+  animation: bridgeFlow .68s ease-out forwards;
+}
+@keyframes bridgeFlow {
+  0% { opacity: 0; transform: scaleX(.12); }
+  20% { opacity: 1; }
+  72% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1); }
+}
+
+.table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.candidate-table-wrap { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 0.705rem; table-layout: fixed; }
+th {
+  position: sticky; top: 0; z-index: 1; background: #f4f6f9; color: #526075;
+  font-weight: 700; text-align: right; border-bottom: 1px solid var(--border);
+  padding: 4px 5px; white-space: nowrap; height: 24px;
+}
+th:nth-child(1), th:nth-child(2) { text-align: left; }
+th:nth-child(1) { width: 5%; } th:nth-child(2) { width: 28%; }
+th:nth-child(3) { width: 16%; } th:nth-child(4) { width: 17%; }
+th:nth-child(5) { width: 17%; } th:nth-child(6) { width: 17%; }
+td {
+  border-bottom: 1px solid #edf0f4; padding: 2px 5px; height: 18px;
+  text-align: right; font-variant-numeric: tabular-nums; line-height: 1.05;
+}
+td:nth-child(1), td:nth-child(2) { text-align: left; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr.filtered { color: #9aa3b1; background: #fbfcfd; }
+tbody tr.selected-row {
+  background: #f6f4ff;
+  box-shadow: inset 4px 0 0 var(--rank-color, var(--accent)), inset 0 0 0 1px rgba(91,56,209,.16);
+  color: #211752;
+  font-weight: 760;
+}
+tbody tr.selected-row td:nth-child(2)::after {
+  content: "  SELECTED"; font-family: inherit; font-size: 0.54rem; letter-spacing: .04em;
+  color: var(--rank-text, white); background: var(--rank-color, var(--accent)); border: 0; border-radius: 999px; padding: 1px 4px;
+}
+.token-cell { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; color: inherit; overflow: hidden; text-overflow: ellipsis; }
+.placeholder-cell { color: var(--muted); text-align: center !important; padding: 26px !important; }
+.candidate-footer { min-height: 23px; display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+
+.table-note, .chart-note { font-size: 0.64rem; }
+.table-note { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selection-callout { flex: 0 0 auto; color: var(--accent-dark); font-size: 0.66rem; font-weight: 700; min-height: 15px; text-align: right; }
+
+.completion-stage {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fcfcfd;
+  padding: 12px 13px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.02rem;
+  line-height: 1.48;
+}
+.prompt-fragment { white-space: pre-wrap; }
+.generated-token {
+  display: inline; white-space: pre-wrap; border: 0; padding: 2px 1px; margin: 0;
+  border-radius: 4px; font: inherit; cursor: pointer;
+  text-decoration: underline; text-decoration-color: rgba(0,0,0,.14); text-underline-offset: 3px;
+  transition: outline-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.generated-token:hover, .generated-token:focus { outline: 2px solid rgba(91,56,209,.4); outline-offset: 1px; }
+.generated-token.just-added { outline: 3px solid rgba(91,56,209,.5); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(91,56,209,.08); }
+.completion-footer { min-height: 22px; padding-top: 5px; font-size: 0.64rem; }
+.rank-legend { display: flex; align-items: center; gap: 3px; }
+.legend-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.legend-swatch.green { background: #00B050; }
+.legend-swatch.yellow { background: #FFEB9C; }
+.legend-swatch.red { background: #FF0000; }
+
+.deep-dive { display: grid; gap: 10px; margin-top: 10px; }
+.full-width-card { width: 100%; }
+.section-heading-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+.compact-heading { margin-bottom: 6px; }
+.chart-host {
+  width: 100%; min-height: 240px; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 8px; background: #fff;
+}
+.responsive-chart { min-height: 240px; }
+.placeholder-chart { display: grid; place-items: center; color: var(--muted); font-size: 0.8rem; background: var(--surface-2); }
+.chart-svg { display: block; width: 100%; height: auto; min-width: 0; }
+.chart-grid-line { stroke: #e7ebf0; stroke-width: 1; }
+.chart-axis-text { fill: #7a8494; font-size: 11px; }
+.chart-token-text { fill: #505a69; font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.probability-bar { fill: #307fce; }
+.probability-bar.selected { fill: var(--accent); }
+.attention-bar { fill: #7d67d8; }
+.chart-note { margin-top: 5px; }
+
+.attention-heading { align-items: center; }
+.block-nav { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.block-stepper { flex-wrap: wrap; justify-content: flex-end; }
+.block-buttons { display: flex; align-items: center; gap: 3px; }
+.block-button {
+  width: 24px; height: 24px; display: grid; place-items: center; padding: 0;
+  border-radius: 999px; border: 1px solid var(--border); background: white;
+  color: #778192; font-size: 0.63rem; font-weight: 700;
+}
+.block-button:hover { background: var(--surface-2); color: var(--text); }
+.block-button.active { background: var(--accent); color: white; border-color: var(--accent); }
+.block-label { font-size: 0.68rem; color: #778192; min-width: 68px; text-align: center; }
+.icon-button {
+  width: 25px; height: 25px; border-radius: 7px; border: 1px solid var(--border);
+  background: white; color: #8a94a4; font-size: 1.12rem; line-height: 1; display: grid; place-items: center; padding: 0;
+}
+.icon-button:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.attention-chart { min-height: 240px; }
+
+footer { display: none; }
+
+.history-dialog { width: min(980px, calc(100vw - 30px)); max-height: calc(100vh - 30px); border: 0; padding: 0; border-radius: 14px; box-shadow: 0 18px 60px rgba(17,25,39,.25); }
+.history-dialog::backdrop { background: rgba(20, 28, 40, .48); }
+.dialog-shell { padding: 20px; overflow: auto; max-height: calc(100vh - 30px); }
+.dialog-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+.eyebrow { text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-size: .68rem; font-weight: 700; margin-bottom: 3px; }
+.dialog-close { width: 35px; height: 35px; border: 0; background: var(--surface-2); border-radius: 8px; font-size: 1.5rem; color: #667085; }
+.dialog-summary { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; margin: 14px 0; }
+.summary-stat { border: 1px solid var(--border); border-radius: 8px; padding: 9px; background: var(--surface-2); }
+.summary-stat .label { color: var(--muted); font-size: .68rem; }
+.summary-stat .value { margin-top: 2px; font-size: .88rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.dialog-section { margin-top: 18px; }
+.dialog-table-wrap { max-height: 360px; }
+.dialog-table-wrap table { font-size: 0.79rem; table-layout: auto; }
+.dialog-table-wrap th { padding: 9px 10px; height: auto; }
+.dialog-table-wrap td { padding: 7px 10px; height: auto; }
+
+@media (max-width: 1120px) {
+  .compact-controls { grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+  .workbench-grid { grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr); }
+  .keyboard-hint { display: none; }
+  table { font-size: 0.69rem; }
+}
+
+@media (max-width: 760px) {
+  .app-shell { padding: 9px; }
+  .compact-controls { grid-template-columns: 1fr 1fr; row-gap: 6px; }
+  .workbench-grid { grid-template-columns: 1fr; }
+  .selection-bridge { display: none; }
+  .workbench-card { height: auto; min-height: 410px; }
+  .completion-card { min-height: 290px; }
+  .completion-stage { min-height: 230px; }
+  .site-header { align-items: flex-start; }
+  .header-status-row { flex-wrap: wrap; justify-content: flex-end; }
+  .block-stepper { justify-content: flex-start; }
+  .dialog-summary { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+@media (max-width: 620px) {
+  .site-header { flex-direction: column; gap: 5px; }
+  .header-status-row { justify-content: flex-start; }
+  .compact-controls { grid-template-columns: 1fr; }
+  .action-row { flex-wrap: wrap; }
+  .generation-status { margin-left: auto; }
+  .section-heading-row, .attention-heading { flex-direction: column; align-items: stretch; }
+  .block-buttons { flex-wrap: wrap; }
+  .block-stepper { align-items: flex-start; }
+}
+
+
+@media (max-width: 620px) {
+  .site-header { flex-direction: column; gap: 5px; }
+  .header-status-row { justify-content: flex-start; }
+  .compact-controls { grid-template-columns: 1fr; }
+  .action-row { flex-wrap: wrap; }
+  .generation-status { margin-left: auto; }
+  .section-heading-row, .attention-heading { flex-direction: column; align-items: stretch; }
+  .block-buttons { flex-wrap: wrap; }
+  .block-stepper { align-items: flex-start; }
+}
+
+</style>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="site-header">
+      <div class="header-title-row">
+        <h1>GPT-2 Next Token Explorer</h1>
+        <button class="info-dot" type="button" title="Explore how GPT-2 logits become probabilities and sampled tokens.">i</button>
+      </div>
+      <div class="header-status-row">
+        <div class="model-badge" id="modelBadge">GPT-2 · Transformer Explainer model</div>
+        <div class="status-pill" id="modelStatus">Preparing…</div>
+      </div>
+    </header>
+
+    <section class="card setup-card" aria-labelledby="promptHeading">
+      <div class="compact-controls" aria-label="Sampling controls">
+        <div class="compact-control">
+          <div class="compact-label"><label for="temperatureSlider">Temperature</label><output id="temperatureValue">1.0</output></div>
+          <input id="temperatureSlider" type="range" min="0" max="17" step="1" value="8" />
+          <div class="compact-endpoints"><span>0.2</span><span>10</span></div>
+        </div>
+
+        <div class="compact-control">
+          <div class="compact-label"><label for="topKSlider">Top-K</label><output id="topKValue">10</output></div>
+          <input id="topKSlider" type="range" min="1" max="50" step="1" value="10" />
+          <div class="compact-endpoints"><span>1</span><span>50</span></div>
+        </div>
+
+        <div class="compact-control auto-r-control">
+          <div class="compact-label"><label for="autoRToggle">Auto r-value</label><span id="rModeText" class="mode-label">On</span></div>
+          <div class="auto-r-row">
+            <label class="switch-row compact-switch" title="When on, a fresh random r-value is used for each token selection.">
+              <input id="autoRToggle" type="checkbox" checked />
+              <span class="switch" aria-hidden="true"></span>
+            </label>
+            <label class="inline-r" for="rValueInput">r</label>
+            <input id="rValueInput" type="number" min="0" max="0.999999999999" step="0.001" placeholder="auto" disabled />
+          </div>
+          <div id="rValidation" class="validation-message" role="alert"></div>
+        </div>
+
+        <div class="compact-control playback-control">
+          <div class="compact-label"><label for="playbackSlider">Pause between tokens</label><output id="playbackValue">1.0s</output></div>
+          <input id="playbackSlider" type="range" min="0" max="5" step="1" value="3" />
+          <div class="compact-endpoints"><span>0</span><span>4s</span></div>
+        </div>
+      </div>
+
+      <div class="prompt-row">
+        <div class="prompt-label-row">
+          <h2 id="promptHeading">Input</h2>
+          <span class="mini-help" title="The prompt locks after generation starts. Reset to edit it again.">Locks after generation starts</span>
+        </div>
+        <textarea id="promptInput" rows="2" spellcheck="true">The banker walked out of the bank and</textarea>
+      </div>
+
+      <div class="action-row compact-actions">
+        <button id="resetBtn" class="button secondary" type="button">Reset</button>
+        <button id="backBtn" class="button secondary" type="button" disabled>‹ Back</button>
+        <button id="nextBtn" class="button primary" type="button" disabled>Next ›</button>
+        <button id="finishBtn" class="button primary" type="button" disabled>Finish</button>
+        <div class="generation-status" id="generationStatus">Generated: 0 / 50 tokens</div>
+      </div>
+
+      <div class="load-progress" id="loadProgress" hidden>
+        <div class="load-progress-track"><div class="load-progress-bar" id="loadProgressBar"></div></div>
+        <div id="loadProgressText">Loading model…</div>
+      </div>
+    </section>
+
+    <main>
+      <section id="workbenchGrid" class="workbench-grid" aria-label="Token selection workspace">
+        <section class="card table-card workbench-card" aria-labelledby="candidateHeading">
+          <div class="workbench-heading">
+            <div>
+              <h2 id="candidateHeading">Next-token candidates</h2>
+              <span class="microcopy">Top 20 · selected row is highlighted before it is appended</span>
+            </div>
+            <div id="roundStatus" class="small-status">Waiting for model</div>
+          </div>
+
+          <div class="table-wrap candidate-table-wrap">
+            <table id="candidateTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Token</th>
+                  <th>Logit</th>
+                  <th>Scaled</th>
+                  <th>Top-K</th>
+                  <th>Prob.</th>
+                </tr>
+              </thead>
+              <tbody id="candidateTableBody">
+                <tr><td colspan="6" class="placeholder-cell">The table will appear after the model analyzes the prompt.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="candidate-footer">
+            <p class="table-note" id="candidateTableNote"></p>
+            <div id="selectionCallout" class="selection-callout" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="card completion-card workbench-card" aria-labelledby="sentenceHeading">
+          <div class="workbench-heading">
+            <div>
+              <h2 id="sentenceHeading">Progressive completion</h2>
+              <span class="microcopy">Watch the chosen token arrive from the candidate list</span>
+            </div>
+            <div class="rank-legend compact-legend" aria-label="Token rank color legend" title="Color indicates where the selected token ranked within Top-K.">
+              <span class="legend-swatch green"></span>
+              <span class="legend-swatch yellow"></span>
+              <span class="legend-swatch red"></span>
+            </div>
+          </div>
+          <div id="sentenceOutput" class="sentence-output completion-stage"></div>
+          <div class="completion-footer">
+            <span>Click a generated token to inspect its exact r-value, candidates, and attention.</span>
+          </div>
+        </section>
+        <div id="selectionBridge" class="selection-bridge" aria-hidden="true"></div>
+      </section>
+
+      <section class="deep-dive" aria-label="Visualizations">
+        <section class="card chart-card full-width-card" aria-labelledby="probabilityHeading">
+          <div class="section-heading-row compact-heading">
+            <div>
+              <h2 id="probabilityHeading">Sampling probabilities</h2>
+              <p class="section-help">All Top-K-eligible tokens are fit across the chart. Hover a bar for the exact value.</p>
+            </div>
+          </div>
+          <div id="probabilityChart" class="chart-host responsive-chart placeholder-chart">Probability bars will appear here.</div>
+          <p class="chart-note" id="probabilityChartNote"></p>
+        </section>
+
+        <section class="card attention-card full-width-card" aria-labelledby="attentionHeading">
+          <div class="section-heading-row attention-heading compact-heading">
+            <div>
+              <h2 id="attentionHeading">Attention to earlier tokens</h2>
+              <p class="section-help">Final context token's attention, averaged across the 12 heads in one transformer block.</p>
+            </div>
+            <div class="block-nav block-stepper" aria-label="Transformer block navigation">
+              <button id="prevBlockBtn" class="icon-button" type="button" aria-label="Previous transformer block">‹</button>
+              <div id="blockButtons" class="block-buttons" aria-label="Select transformer block"></div>
+              <button id="nextBlockBtn" class="icon-button" type="button" aria-label="Next transformer block">›</button>
+              <span class="block-label">Block <strong id="blockNumber">1</strong> / 12</span>
+            </div>
+          </div>
+          <div id="attentionChart" class="chart-host attention-chart responsive-chart placeholder-chart">Attention bars will appear here.</div>
+          <p class="chart-note">The chart is an average of the 12 separate heads in the selected block; it is not a separate attention head.</p>
+        </section>
+      </section>
+    </main>
+
+    <footer>
+      <p>Educational interface built around the GPT-2 inference model used by Transformer Explainer. Model computation happens in your browser.</p>
+    </footer>
+  </div>
+
+  <dialog id="historyDialog" class="history-dialog">
+    <form method="dialog" class="dialog-shell">
+      <div class="dialog-header">
+        <div>
+          <div class="eyebrow" id="dialogRound">Token selection</div>
+          <h2 id="dialogTitle">Selected token</h2>
+        </div>
+        <button class="dialog-close" value="close" aria-label="Close">×</button>
+      </div>
+      <div id="dialogSummary" class="dialog-summary"></div>
+      <div class="dialog-section">
+        <h3>Probability distribution used for this selection</h3>
+        <div id="dialogProbabilityChart" class="chart-host"></div>
+      </div>
+      <div class="dialog-section">
+        <h3>r-value selection ranges</h3>
+        <div class="table-wrap dialog-table-wrap">
+          <table>
+            <thead><tr><th>Rank</th><th>Token</th><th>Probability</th><th>Cumulative r-range</th></tr></thead>
+            <tbody id="dialogCandidateBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="dialog-section">
+        <div class="section-heading-row attention-heading">
+          <div>
+            <h3>Attention before this token was selected</h3>
+            <p class="section-help">Average of all 12 heads in the selected transformer block.</p>
+          </div>
+          <div class="block-nav">
+            <button id="dialogPrevBlockBtn" class="icon-button" type="button">‹</button>
+            <div class="block-label">Transformer Block <strong id="dialogBlockNumber">1</strong></div>
+            <button id="dialogNextBlockBtn" class="icon-button" type="button">›</button>
+          </div>
+        </div>
+        <div id="dialogAttentionChart" class="chart-host attention-chart"></div>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module">
 /*
  * GPT-2 Next Token Explorer
  * Educational static web app designed to align with Transformer Explainer's
@@ -13,7 +550,7 @@ const TOP_CANDIDATES = 50;
 const TABLE_ROWS = 20;
 const BLOCK_COUNT = 12;
 const HEADS_PER_BLOCK = 12;
-const MOCK_MODE = new URLSearchParams(window.location.search).get('mock') === '1';
+const MOCK_MODE = true;
 
 const CDN = {
   ortScript: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js',
@@ -58,7 +595,10 @@ const els = {
   candidateTableBody: $('candidateTableBody'),
   candidateTableNote: $('candidateTableNote'),
   selectionCallout: $('selectionCallout'),
+  workbenchGrid: $('workbenchGrid'),
+  selectionBridge: $('selectionBridge'),
   probabilityChart: $('probabilityChart'),
+  probabilityChartNote: $('probabilityChartNote'),
   attentionChart: $('attentionChart'),
   blockNumber: $('blockNumber'),
   prevBlockBtn: $('prevBlockBtn'),
@@ -449,6 +989,7 @@ function renderDistribution() {
   renderProbabilityChart(state.currentDistribution, els.probabilityChart, null);
   renderAttention();
   els.selectionCallout.textContent = '';
+  clearSelectionBridge();
   updateRoundStatus();
 }
 
@@ -471,6 +1012,10 @@ function renderCandidateTable(distribution, selectedTokenId = null) {
 
 function renderProbabilityChart(distribution, host, selectedTokenId) {
   const eligible = distribution.filter((d) => d.probability > 0);
+  const noteTarget = host === els.probabilityChart ? els.probabilityChartNote : null;
+  if (noteTarget) {
+    noteTarget.textContent = `${eligible.length} token${eligible.length === 1 ? '' : 's'} eligible for sampling · all fit to the chart width.`;
+  }
   host.classList.remove('placeholder-chart');
   host.innerHTML = makeBarChartSvg({
     items: eligible.map((d) => ({ label: d.token, value: d.probability, selected: d.tokenId === selectedTokenId, tooltip: `${d.token}: ${formatProbability(d.probability, 3)} · rank ${d.rank}` })),
@@ -509,12 +1054,12 @@ function renderAttention() {
 }
 
 function makeBarChartSvg({ items, valueMax, valueFormatter, barClass }) {
-  if (!items.length) return '<div class="placeholder-chart" style="height:205px">No values to display.</div>';
+  if (!items.length) return '<div class="placeholder-chart" style="height:240px">No values to display.</div>';
   // Use a fixed viewBox and width:100% so every bar always fits the available
   // screen width. As the number of tokens grows, bars narrow rather than scroll.
   const width = 1200;
-  const height = 215;
-  const margin = { top: 12, right: 12, bottom: 56, left: 45 };
+  const height = 250;
+  const margin = { top: 15, right: 12, bottom: 80, left: 45 };
   const plotW = width - margin.left - margin.right;
   const plotH = height - margin.top - margin.bottom;
   const step = plotW / items.length;
@@ -546,6 +1091,47 @@ function makeBarChartSvg({ items, valueMax, valueFormatter, barClass }) {
 function trimLabel(text, max) {
   const s = String(text);
   return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
+}
+
+function clearSelectionBridge() {
+  const bridge = els.selectionBridge;
+  if (!bridge) return;
+  window.clearTimeout(state.bridgeTimer);
+  bridge.classList.remove('active');
+  bridge.innerHTML = '';
+}
+
+function animateSelectionBridge(record) {
+  const bridge = els.selectionBridge;
+  const container = els.workbenchGrid;
+  if (!bridge || !container) return;
+  if (window.innerWidth <= 760) {
+    bridge.classList.remove('active');
+    bridge.innerHTML = '';
+    return;
+  }
+  requestAnimationFrame(() => {
+    const row = els.candidateTableBody.querySelector('tr.selected-row');
+    const token = els.sentenceOutput.querySelector('.generated-token.just-added') || els.sentenceOutput;
+    if (!row || !token) return;
+    const containerRect = container.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const tokenRect = token.getBoundingClientRect();
+    const startX = rowRect.right - containerRect.left - 10;
+    const endX = tokenRect.left - containerRect.left - 12;
+    const width = Math.max(28, endX - startX);
+    const y = ((rowRect.top + rowRect.bottom) / 2) - containerRect.top - 2;
+    bridge.style.setProperty('--bridge-color', selectionColor(record.selected.rank, record.settings.topK));
+    bridge.innerHTML = `<div class="selection-bridge-line" style="left:${startX}px;top:${y}px;width:${width}px"></div>`;
+    bridge.classList.remove('active');
+    void bridge.offsetWidth;
+    bridge.classList.add('active');
+    window.clearTimeout(state.bridgeTimer);
+    state.bridgeTimer = window.setTimeout(() => {
+      bridge.classList.remove('active');
+      bridge.innerHTML = '';
+    }, 720);
+  });
 }
 
 function renderSentence() {
@@ -640,6 +1226,7 @@ async function chooseNextToken(forFinish = false) {
     ? `Selected #${selected.rank}: “${selected.token}”`
     : `Selected #${selected.rank} (outside top 20): “${selected.token}”`;
   renderSentence();
+  animateSelectionBridge(record);
   updateGenerationStatus();
 
   if (!els.autoRToggle.checked) els.rValueInput.value = '';
@@ -763,6 +1350,7 @@ function backOneToken() {
   if (!els.autoRToggle.checked) els.rValueInput.value = '';
   renderDistribution();
   renderSentence();
+  clearSelectionBridge();
   updateGenerationStatus();
   updateControls();
   setStatus('Ready', 'ready');
@@ -798,6 +1386,8 @@ function renderEmptyData() {
   els.selectionCallout.textContent = '';
   els.probabilityChart.className = 'chart-host placeholder-chart';
   els.probabilityChart.textContent = 'Probability bars will appear here.';
+  els.probabilityChartNote.textContent = '';
+  clearSelectionBridge();
   els.attentionChart.className = 'chart-host attention-chart placeholder-chart';
   els.attentionChart.textContent = 'Attention bars will appear here.';
 }
@@ -941,6 +1531,7 @@ async function init() {
   }
   wireEvents();
   renderSentence();
+  clearSelectionBridge();
   updateGenerationStatus();
   els.temperatureValue.textContent = '1.0';
   els.topKValue.textContent = String(currentTopK());
@@ -970,3 +1561,7 @@ async function init() {
 }
 
 init();
+
+</script>
+</body>
+</html>
