@@ -20,7 +20,8 @@ Automated browser tests were run against the standalone mock-engine build. The G
 - Attention chart fits a 60+ token context without horizontal scrolling.
 - Transformer block buttons navigate directly from Block 1 through Block 12.
 - Historical token dialog opens and displays the candidate list for the selected token.
-- Manual r-value mode can select candidates outside the visible top-20 table; the interface reports the selected rank in the callout.
+- Candidate table virtualizes the full 50,257-token GPT-2 vocabulary; Jump to Rank and Jump to Bottom navigate without rendering tens of thousands of DOM rows.
+- Selected candidate rows remain highlighted during the next inference round and the list returns to the new highest-ranked candidates when that round is displayed.
 - No JavaScript console errors or page errors occurred in the tested mock flows.
 
 ## Production-model note

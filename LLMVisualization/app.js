@@ -10,7 +10,8 @@ const MAX_GENERATED_TOKENS = 50;
 const GPT2_CONTEXT_LIMIT = 1024;
 const MAX_PROMPT_TOKENS_FOR_FINISH = GPT2_CONTEXT_LIMIT - MAX_GENERATED_TOKENS;
 const TOP_CANDIDATES = 50;
-const TABLE_ROWS = 20;
+const CANDIDATE_ROW_HEIGHT = 19;
+const CANDIDATE_OVERSCAN = 8;
 const BLOCK_COUNT = 12;
 const HEADS_PER_BLOCK = 12;
 const MOCK_MODE = new URLSearchParams(window.location.search).get('mock') === '1';
@@ -56,6 +57,10 @@ const els = {
   loadProgressText: $('loadProgressText'),
   roundStatus: $('roundStatus'),
   candidateTableBody: $('candidateTableBody'),
+  candidateTableWrap: $('candidateTableWrap'),
+  candidateJumpRank: $('candidateJumpRank'),
+  jumpRankBtn: $('jumpRankBtn'),
+  jumpBottomBtn: $('jumpBottomBtn'),
   candidateTableNote: $('candidateTableNote'),
   selectionCallout: $('selectionCallout'),
   probabilityChart: $('probabilityChart'),
@@ -93,6 +98,10 @@ const state = {
   history: [],
   currentInference: null,
   currentDistribution: null,
+  currentFullRanking: [],
+  rankingSource: null,
+  candidateSelectedTokenId: null,
+  candidateWindowFrame: null,
   attentionBlock: 0,
   dialogRecord: null,
   dialogAttentionBlock: 0,
@@ -259,13 +268,14 @@ class MockEngine {
     });
   }
   decode(id) {
+    if (this.reverseDynamic.has(id)) return this.reverseDynamic.get(id);
     if (id < this.vocab.length) return this.vocab[id];
-    return this.reverseDynamic.get(id) ?? `⟨${id}⟩`;
+    return `⟨tok ${id}⟩`;
   }
   decodeContext(ids) { return ids.map((id) => this.decode(id)); }
   async infer(tokenIds) {
     await sleep(25);
-    const logits = new Array(this.vocab.length);
+    const logits = new Array(50257);
     const seed = tokenIds.reduce((a, b, i) => (a + (b + 17) * (i + 3)) % 100003, 19);
     for (let i = 0; i < logits.length; i += 1) {
       const wave = Math.sin((i + 1) * 0.73 + seed * 0.0017) * 1.8;
@@ -275,10 +285,10 @@ class MockEngine {
     const lastToken = this.decode(tokenIds[tokenIds.length - 1]);
     if (lastToken === ' over' || lastToken === 'over') {
       const i = this.vocab.indexOf('look');
-      if (i >= 0) logits[i] = Math.max(...logits) + 4;
+      if (i >= 0) logits[i] = maxArrayValue(logits) + 4;
     } else if (lastToken === 'look') {
       const i = this.vocab.indexOf('ed');
-      if (i >= 0) logits[i] = Math.max(...logits) + 4;
+      if (i >= 0) logits[i] = maxArrayValue(logits) + 4;
     }
     const n = tokenIds.length;
     const attentionByBlock = [];
@@ -363,24 +373,39 @@ function currentPlaybackDelay() {
   return PLAYBACK_DELAYS[Number(els.playbackSlider.value)] ?? 1000;
 }
 
+function maxArrayValue(values) {
+  let max = -Infinity;
+  for (const value of values) if (value > max) max = value;
+  return max;
+}
+
 function formatPlaybackDelay(ms) {
   if (ms === 0) return '0s';
   if (ms < 1000) return `${ms / 1000}s`;
   return `${(ms / 1000).toFixed(ms % 1000 === 0 ? 1 : 2)}s`;
 }
 
+function getFullRanking(logits) {
+  // Transformer Explainer already sorts the entire GPT-2 vocabulary before
+  // keeping its top 50 candidates. Preserve that same sort, but cache the full
+  // ranking so students can inspect all 50,257 tokens without extra model work.
+  if (state.rankingSource !== logits) {
+    state.currentFullRanking = Array.from(logits)
+      .map((logit, tokenId) => ({ tokenId, logit: Number(logit) }))
+      .sort((a, b) => b.logit - a.logit)
+      .map((item, index) => ({ ...item, rank: index + 1, rawRank: index }));
+    state.rankingSource = logits;
+  }
+  return state.currentFullRanking;
+}
+
 function buildDistribution(logits, temperature, k) {
-  // Mirrors Transformer Explainer's topKSampling(): sort all logits, retain
-  // the top 50, scale by temperature, filter below K to -Infinity, then softmax.
-  const sorted = Array.from(logits)
-    .map((logit, tokenId) => ({ tokenId, logit: Number(logit) }))
-    .sort((a, b) => b.logit - a.logit)
-    .slice(0, TOP_CANDIDATES);
+  // Sampling remains exactly TE-style: use only the top 50 from the full
+  // logit ranking, scale by temperature, filter below K, then softmax.
+  const sorted = getFullRanking(logits).slice(0, TOP_CANDIDATES);
 
   const filtered = sorted.map((item, index) => ({
     ...item,
-    rank: index + 1,
-    rawRank: index,
     scaledLogit: item.logit / temperature,
     topKLogit: index < k ? item.logit / temperature : -Infinity
   }));
@@ -394,13 +419,14 @@ function buildDistribution(logits, temperature, k) {
     const probability = denom > 0 ? exps[i] / denom : 0;
     const rangeStart = cumulative;
     cumulative += probability;
+    const rawToken = state.engine ? state.engine.decode(d.tokenId) : String(d.tokenId);
     return {
       ...d,
       probability,
       rangeStart,
       rangeEnd: cumulative,
-      rawToken: state.engine ? state.engine.decode(d.tokenId) : String(d.tokenId),
-      token: formatTokenForDisplay(state.engine ? state.engine.decode(d.tokenId) : String(d.tokenId))
+      rawToken,
+      token: formatTokenForDisplay(rawToken)
     };
   });
 }
@@ -466,31 +492,93 @@ function selectionTextColor(rank, k) {
   return selectionStyle(rank, k).foreground;
 }
 
-function renderDistribution() {
+function renderDistribution({ resetCandidateScroll = false } = {}) {
   if (!state.currentInference) return renderEmptyData();
   state.currentDistribution = buildDistribution(state.currentInference.logits, currentTemperature(), currentTopK());
-  renderCandidateTable(state.currentDistribution, null);
+  renderCandidateTable(state.currentDistribution, null, { resetScroll: resetCandidateScroll });
   renderProbabilityChart(state.currentDistribution, els.probabilityChart, null);
   renderAttention();
   els.selectionCallout.textContent = '';
   updateRoundStatus();
 }
 
-function renderCandidateTable(distribution, selectedTokenId = null) {
-  const rows = distribution.slice(0, TABLE_ROWS);
-  els.candidateTableBody.innerHTML = rows.map((d) => `
-    <tr class="${[d.probability === 0 ? 'filtered' : '', d.tokenId === selectedTokenId ? 'selected-row' : ''].filter(Boolean).join(' ')}"${d.tokenId === selectedTokenId ? ` style="--rank-color:${selectionColor(d.rank, currentTopK())};--rank-text:${selectionTextColor(d.rank, currentTopK())}"` : ''}>
-      <td>${d.rank}</td>
-      <td class="token-cell" title="GPT-2 token ID ${d.tokenId}">${escapeHtml(d.token)}</td>
-      <td>${formatNumber(d.logit)}</td>
-      <td>${formatNumber(d.scaledLogit)}</td>
-      <td>${formatNumber(d.topKLogit)}</td>
-      <td>${formatProbability(d.probability)}</td>
-    </tr>`).join('');
+function candidateRowData(index) {
+  const item = state.currentFullRanking[index];
+  if (!item) return null;
+  const temperature = currentTemperature();
   const k = currentTopK();
-  els.candidateTableNote.textContent = k > TABLE_ROWS
-    ? `Top-K includes ${k - TABLE_ROWS} additional eligible token${k - TABLE_ROWS === 1 ? '' : 's'} beyond the 20 shown.`
-    : 'Rows below K become −∞ and receive 0% probability.';
+  const top = index < state.currentDistribution.length ? state.currentDistribution[index] : null;
+  const rawToken = state.engine ? state.engine.decode(item.tokenId) : String(item.tokenId);
+  return {
+    ...item,
+    scaledLogit: item.logit / temperature,
+    topKLogit: index < k ? item.logit / temperature : -Infinity,
+    probability: top?.probability ?? 0,
+    rawToken,
+    token: formatTokenForDisplay(rawToken)
+  };
+}
+
+function renderCandidateTable(distribution, selectedTokenId = null, { resetScroll = false, jumpToSelected = false } = {}) {
+  state.candidateSelectedTokenId = selectedTokenId;
+  if (resetScroll && els.candidateTableWrap) els.candidateTableWrap.scrollTop = 0;
+  renderCandidateWindow();
+  if (jumpToSelected && selectedTokenId != null) {
+    const selected = distribution.find((d) => d.tokenId === selectedTokenId);
+    if (selected) requestAnimationFrame(() => jumpToCandidateRank(selected.rank, 'center'));
+  }
+}
+
+function renderCandidateWindow() {
+  const wrap = els.candidateTableWrap;
+  const total = state.currentFullRanking.length;
+  if (!wrap || total === 0) return;
+
+  const viewportRows = Math.max(1, Math.ceil(wrap.clientHeight / CANDIDATE_ROW_HEIGHT));
+  const firstVisible = Math.max(0, Math.floor(wrap.scrollTop / CANDIDATE_ROW_HEIGHT));
+  const start = Math.max(0, firstVisible - CANDIDATE_OVERSCAN);
+  const end = Math.min(total, firstVisible + viewportRows + CANDIDATE_OVERSCAN);
+  const topSpacer = start * CANDIDATE_ROW_HEIGHT;
+  const bottomSpacer = Math.max(0, (total - end) * CANDIDATE_ROW_HEIGHT);
+
+  const rows = [];
+  if (topSpacer > 0) rows.push(`<tr class="virtual-spacer" aria-hidden="true"><td colspan="6" style="height:${topSpacer}px"></td></tr>`);
+  for (let i = start; i < end; i += 1) {
+    const d = candidateRowData(i);
+    const selected = d.tokenId === state.candidateSelectedTokenId;
+    rows.push(`
+      <tr class="${[d.probability === 0 ? 'filtered' : '', selected ? 'selected-row' : ''].filter(Boolean).join(' ')}"${selected ? ` style="--rank-color:${selectionColor(d.rank, currentTopK())};--rank-text:${selectionTextColor(d.rank, currentTopK())}"` : ''}>
+        <td>${d.rank}</td>
+        <td class="token-cell" title="GPT-2 token ID ${d.tokenId}">${escapeHtml(d.token)}</td>
+        <td>${formatNumber(d.logit)}</td>
+        <td>${formatNumber(d.scaledLogit)}</td>
+        <td>${formatNumber(d.topKLogit)}</td>
+        <td>${formatProbability(d.probability)}</td>
+      </tr>`);
+  }
+  if (bottomSpacer > 0) rows.push(`<tr class="virtual-spacer" aria-hidden="true"><td colspan="6" style="height:${bottomSpacer}px"></td></tr>`);
+  els.candidateTableBody.innerHTML = rows.join('');
+  els.candidateTableNote.textContent = `Ranks ${(start + 1).toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()}`;
+}
+
+function scheduleCandidateWindowRender() {
+  if (state.candidateWindowFrame != null) return;
+  state.candidateWindowFrame = requestAnimationFrame(() => {
+    state.candidateWindowFrame = null;
+    renderCandidateWindow();
+  });
+}
+
+function jumpToCandidateRank(rank, align = 'start') {
+  const total = state.currentFullRanking.length;
+  if (!els.candidateTableWrap || total === 0) return;
+  const safeRank = Math.max(1, Math.min(total, Math.trunc(Number(rank) || 1)));
+  const viewport = els.candidateTableWrap.clientHeight;
+  let top = (safeRank - 1) * CANDIDATE_ROW_HEIGHT;
+  if (align === 'center') top -= Math.max(0, viewport / 2 - CANDIDATE_ROW_HEIGHT);
+  els.candidateTableWrap.scrollTop = Math.max(0, top);
+  if (els.candidateJumpRank) els.candidateJumpRank.value = String(safeRank);
+  renderCandidateWindow();
 }
 
 function renderProbabilityChart(distribution, host, selectedTokenId) {
@@ -609,7 +697,7 @@ async function analyzePrompt({ force = false } = {}) {
     if (version !== state.promptVersion) return;
     state.currentInference = inference;
     state.attentionBlock = 0;
-    renderDistribution();
+    renderDistribution({ resetCandidateScroll: true });
     renderSentence();
     setStatus('Ready', 'ready');
   } catch (error) {
@@ -658,11 +746,9 @@ async function chooseNextToken(forFinish = false) {
   state.tokenIds.push(selected.tokenId);
   state.justAddedIndex = record.index;
   state.currentDistribution = distribution;
-  renderCandidateTable(distribution, selected.tokenId);
+  renderCandidateTable(distribution, selected.tokenId, { jumpToSelected: true });
   renderProbabilityChart(distribution, els.probabilityChart, selected.tokenId);
-  els.selectionCallout.textContent = selected.rank <= TABLE_ROWS
-    ? `Selected #${selected.rank}: “${selected.token}”`
-    : `Selected #${selected.rank} (outside top 20): “${selected.token}”`;
+  els.selectionCallout.textContent = `Selected Rank ${selected.rank}: “${selected.token}”`;
   renderSentence();
   updateGenerationStatus();
 
@@ -697,7 +783,7 @@ async function chooseNextToken(forFinish = false) {
     state.currentInference = nextInference;
     state.justAddedIndex = null;
     renderSentence();
-    renderDistribution();
+    renderDistribution({ resetCandidateScroll: true });
     setStatus(forFinish ? `Generating… ${state.history.length}/${MAX_GENERATED_TOKENS}` : 'Ready', forFinish ? '' : 'ready');
     return true;
   } catch (error) {
@@ -785,7 +871,7 @@ function backOneToken() {
   state.currentInference = cloneInferenceSnapshot(record.inference);
   state.attentionBlock = 0;
   if (!els.autoRToggle.checked) els.rValueInput.value = '';
-  renderDistribution();
+  renderDistribution({ resetCandidateScroll: true });
   renderSentence();
   updateGenerationStatus();
   updateControls();
@@ -802,6 +888,9 @@ async function resetAll() {
   state.history = [];
   state.currentInference = null;
   state.currentDistribution = null;
+  state.currentFullRanking = [];
+  state.rankingSource = null;
+  state.candidateSelectedTokenId = null;
   state.tokenIds = [];
   state.baseTokenIds = [];
   state.attentionBlock = 0;
@@ -819,6 +908,8 @@ async function resetAll() {
 function renderEmptyData() {
   els.candidateTableBody.innerHTML = '<tr><td colspan="6" class="placeholder-cell">The table will appear after the model analyzes the prompt.</td></tr>';
   els.candidateTableNote.textContent = '';
+  state.candidateSelectedTokenId = null;
+  if (els.candidateTableWrap) els.candidateTableWrap.scrollTop = 0;
   els.selectionCallout.textContent = '';
   els.probabilityChart.className = 'chart-host placeholder-chart';
   els.probabilityChart.textContent = 'Probability bars will appear here.';
@@ -946,6 +1037,15 @@ function wireEvents() {
     updateControls();
     state.promptTimer = setTimeout(() => analyzePrompt({ force: true }), 700);
   });
+  els.candidateTableWrap?.addEventListener('scroll', scheduleCandidateWindowRender, { passive: true });
+  const performRankJump = () => jumpToCandidateRank(els.candidateJumpRank?.value || 1);
+  els.jumpRankBtn?.addEventListener('click', performRankJump);
+  els.candidateJumpRank?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    performRankJump();
+  });
+  els.jumpBottomBtn?.addEventListener('click', () => jumpToCandidateRank(state.currentFullRanking.length));
   els.nextBtn.addEventListener('click', () => chooseNextToken(false));
   els.finishBtn.addEventListener('click', () => finishGeneration());
   els.backBtn.addEventListener('click', backOneToken);

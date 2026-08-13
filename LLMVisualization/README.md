@@ -9,7 +9,7 @@ The primary workspace keeps these elements together:
 - Temperature, Top-K, Auto r-value, and Pause-between-tokens controls
 - Input prompt
 - Reset / Back / Next / Finish controls
-- Top-20 next-token table, sorted by raw GPT-2 logit
+- Virtualized full-vocabulary next-token table (all 50,257 GPT-2 tokens), sorted by raw GPT-2 logit, with Jump to Rank and Jump to Bottom navigation
 - Progressive completion beside the table
 - Selected candidate highlighted while it is appended to the completion
 

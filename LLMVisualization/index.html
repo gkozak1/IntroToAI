@@ -79,24 +79,32 @@
     <main>
       <section id="workbenchGrid" class="workbench-grid" aria-label="Token selection workspace">
         <section class="card table-card workbench-card" aria-labelledby="candidateHeading">
-          <div class="workbench-heading">
+          <div class="workbench-heading candidate-workbench-heading">
             <div>
               <h2 id="candidateHeading">Next-token candidates</h2>
-              <span class="microcopy">Top 20 · selected row is highlighted before it is appended</span>
+              <span class="microcopy">All GPT-2 vocabulary tokens · sorted by logit</span>
             </div>
-            <div id="roundStatus" class="small-status">Waiting for model</div>
+            <div class="candidate-heading-tools">
+              <div id="roundStatus" class="small-status">Waiting for model</div>
+              <div class="candidate-jump-controls" aria-label="Candidate list navigation">
+                <label for="candidateJumpRank">Jump to Rank</label>
+                <input id="candidateJumpRank" type="number" min="1" max="50257" inputmode="numeric" placeholder="Rank" />
+                <button id="jumpRankBtn" class="mini-button" type="button">Go</button>
+                <button id="jumpBottomBtn" class="mini-button" type="button">Jump to Bottom</button>
+              </div>
+            </div>
           </div>
 
-          <div class="table-wrap candidate-table-wrap">
+          <div id="candidateTableWrap" class="table-wrap candidate-table-wrap">
             <table id="candidateTable">
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th>Rank</th>
                   <th>Token</th>
                   <th>Logit</th>
-                  <th>Scaled</th>
+                  <th><span class="formula-cue" title="Scaled logit: zᵢ / T">z/T →</span> Scaled</th>
                   <th>Top-K</th>
-                  <th>Prob.</th>
+                  <th><span class="formula-cue" title="Softmax: Pᵢ = eˣⁱ / Σⱼeˣʲ">eˣ/Σeˣ →</span> Probability</th>
                 </tr>
               </thead>
               <tbody id="candidateTableBody">
