@@ -188,10 +188,11 @@ tbody tr.selected-row td:nth-child(2)::after {
   display: inline; white-space: pre-wrap; border: 0; padding: 2px 1px; margin: 0;
   border-radius: 4px; font: inherit; cursor: pointer;
   text-decoration: underline; text-decoration-color: rgba(0,0,0,.14); text-underline-offset: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.68);
   transition: outline-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .generated-token:hover, .generated-token:focus { outline: 2px solid rgba(91,56,209,.4); outline-offset: 1px; }
-.generated-token.just-added { outline: 3px solid rgba(91,56,209,.5); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(91,56,209,.08); }
+.generated-token.just-added { outline: 3px solid rgba(91,56,209,.5); outline-offset: 2px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.68), 0 0 0 4px rgba(91,56,209,.08); }
 .completion-footer { min-height: 22px; padding-top: 5px; font-size: 0.64rem; }
 .rank-legend { display: flex; align-items: center; gap: 3px; }
 .legend-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
@@ -467,10 +468,6 @@ footer { display: none; }
       </div>
       <div id="dialogSummary" class="dialog-summary"></div>
       <div class="dialog-section">
-        <h3>Probability distribution used for this selection</h3>
-        <div id="dialogProbabilityChart" class="chart-host"></div>
-      </div>
-      <div class="dialog-section">
         <h3>r-value selection ranges</h3>
         <div class="table-wrap dialog-table-wrap">
           <table>
@@ -478,6 +475,10 @@ footer { display: none; }
             <tbody id="dialogCandidateBody"></tbody>
           </table>
         </div>
+      </div>
+      <div class="dialog-section">
+        <h3>Probability distribution used for this selection</h3>
+        <div id="dialogProbabilityChart" class="chart-host"></div>
       </div>
       <div class="dialog-section">
         <div class="section-heading-row attention-heading">
@@ -718,12 +719,16 @@ class MockEngine {
     this.dynamicTokens = new Map();
     this.reverseDynamic = new Map();
     this.nextDynamic = 1000;
+    // Mock mode is only for interface testing, but its vocabulary deliberately mixes
+    // whole-word GPT-style tokens with subword pieces so token boundaries can be
+    // evaluated visually. Production mode uses the real Xenova/GPT-2 tokenizer.
     this.vocab = [
-      ' the',' a',' and',' to',' of',' was',' in',' that',' it',' with',' for',' on',' as',' is',' had',' from',' but',' not',' his',' her',
-      ' large',' small',' suddenly',' continued',' began',' started',' walked',' ran',' said',' looked',' because',' then',' into',' away',' again',' more',' very',' one',' two',' new',
-      ' room',' house',' suitcase',' trophy',' road',' school',' model',' token',' answer',' story',' day',' time',' person',' thing',' world',' way',' test',' next',' word',' end',
-      '.',' ',',','!','?','\n',' bright',' quiet',' strange',' clear',' quickly',' slowly',' carefully',' however',' therefore',' while',' after',' before',' could',' would',' might',' should',
-      ' this',' these',' those',' their',' our',' your',' another',' first',' last',' much',' little',' better',' different',' simple',' possible',' result',' example',' attention',' probability',' random'
+      ' the',' a',' and',' to',' of',' was',' in',' that',' it',' with',' over','look','ed',' for',' on',' as',' is',' had',' from',' but',
+      ' not',' his',' her',' bank','er',' river',' left',' sat',' large',' small',' sudden','ly',' continu','ed',' began',' start','ed',' walk','ed',
+      ' ran',' said',' look','ed',' because',' then',' into',' away',' again',' more',' very',' one',' two',' new',' room',' house',' suit','case',' trophy',
+      ' road',' school',' model',' token',' answer',' story',' day',' time',' person',' thing',' world',' way',' test',' next',' word',' end','.',',','!','?','\n',
+      ' bright',' quiet',' strange',' clear',' quick','ly',' slow','ly',' careful','ly',' however',' therefore',' while',' after',' before',' could',' would',' might',' should',
+      ' this',' these',' those',' their',' our',' your',' another',' first',' last',' much',' little',' better',' differ','ent',' simple',' possible',' result',' example',' attention',' probability',' random'
     ];
   }
   async init() {
@@ -731,7 +736,19 @@ class MockEngine {
     await sleep(40);
   }
   encode(text) {
-    const pieces = text.match(/\s+|[A-Za-z0-9’']+|[^\sA-Za-z0-9]/g) || [' '];
+    // A lightweight mock tokenizer: keep a preceding space with a word (as GPT-2
+    // commonly does) and split a few longer forms into subword pieces. This is
+    // intentionally illustrative only; production uses the actual GPT-2 tokenizer.
+    const rough = text.match(/\s*[A-Za-z0-9’']+|[^\sA-Za-z0-9]|\s+/g) || [' '];
+    const pieces = [];
+    for (const piece of rough) {
+      const lower = piece.toLowerCase();
+      if (lower === ' overlooked') pieces.push(' over', 'look', 'ed');
+      else if (lower === 'overlooked') pieces.push('over', 'look', 'ed');
+      else if (lower === ' carefully') pieces.push(' careful', 'ly');
+      else if (lower === 'carefully') pieces.push('careful', 'ly');
+      else pieces.push(piece);
+    }
     return pieces.map((piece) => {
       if (!this.dynamicTokens.has(piece)) {
         const id = this.nextDynamic++;
@@ -754,6 +771,14 @@ class MockEngine {
       const wave = Math.sin((i + 1) * 0.73 + seed * 0.0017) * 1.8;
       const rankBias = 7.8 - i * 0.035;
       logits[i] = rankBias + wave + Math.cos((seed + i * 13) * 0.013) * 0.7;
+    }
+    const lastToken = this.decode(tokenIds[tokenIds.length - 1]);
+    if (lastToken === ' over' || lastToken === 'over') {
+      const i = this.vocab.indexOf('look');
+      if (i >= 0) logits[i] = Math.max(...logits) + 4;
+    } else if (lastToken === 'look') {
+      const i = this.vocab.indexOf('ed');
+      if (i >= 0) logits[i] = Math.max(...logits) + 4;
     }
     const n = tokenIds.length;
     const attentionByBlock = [];
@@ -956,7 +981,7 @@ function renderCandidateTable(distribution, selectedTokenId = null) {
   els.candidateTableBody.innerHTML = rows.map((d) => `
     <tr class="${[d.probability === 0 ? 'filtered' : '', d.tokenId === selectedTokenId ? 'selected-row' : ''].filter(Boolean).join(' ')}"${d.tokenId === selectedTokenId ? ` style="--rank-color:${selectionColor(d.rank, currentTopK())};--rank-text:${selectionTextColor(d.rank, currentTopK())}"` : ''}>
       <td>${d.rank}</td>
-      <td class="token-cell">${escapeHtml(d.token)}</td>
+      <td class="token-cell" title="GPT-2 token ID ${d.tokenId}">${escapeHtml(d.token)}</td>
       <td>${formatNumber(d.logit)}</td>
       <td>${formatNumber(d.scaledLogit)}</td>
       <td>${formatNumber(d.topKLogit)}</td>
@@ -1054,7 +1079,7 @@ function renderSentence() {
     const color = selectionColor(record.selected.rank, record.settings.topK);
     const foreground = selectionTextColor(record.selected.rank, record.settings.topK);
     const justAdded = index === state.justAddedIndex ? ' just-added' : '';
-    html += `<button type="button" class="generated-token${justAdded}" data-history-index="${index}" style="background:${color};color:${foreground}" title="Token ${index + 1}: rank ${record.selected.rank} of ${record.settings.topK}; ${formatProbability(record.selected.probability, 2)}">${escapeHtml(record.selected.rawToken)}</button>`;
+    html += `<button type="button" class="generated-token${justAdded}" data-history-index="${index}" style="background:${color};color:${foreground}" title="GPT-2 token ID ${record.selected.tokenId} · generated token ${index + 1} · rank ${record.selected.rank} of ${record.settings.topK} · ${formatProbability(record.selected.probability, 2)}">${escapeHtml(record.selected.rawToken)}</button>`;
   });
   els.sentenceOutput.innerHTML = html;
   els.sentenceOutput.querySelectorAll('.generated-token').forEach((button) => {
@@ -1358,7 +1383,7 @@ function openHistory(index) {
   els.dialogCandidateBody.innerHTML = eligible.map((d) => `
     <tr class="${d.tokenId === record.selected.tokenId ? 'selected-row' : ''}">
       <td>${d.rank}</td>
-      <td class="token-cell">${escapeHtml(d.token)}</td>
+      <td class="token-cell" title="GPT-2 token ID ${d.tokenId}">${escapeHtml(d.token)}</td>
       <td>${formatProbability(d.probability, 3)}</td>
       <td>${formatR(d.rangeStart)} ≤ r &lt; ${d.rangeEnd >= 0.9999995 ? '1.000000' : formatR(d.rangeEnd)}</td>
     </tr>`).join('');
