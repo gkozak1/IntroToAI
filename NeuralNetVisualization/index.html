@@ -1,150 +1,47 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neural Net Lab</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Interactive neural-network forward propagation visualization for learning diagram, matrix mapping, and matrix math." />
+  <title>Neural Net Visualization</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="app-header">
-    <div>
-      <div class="eyebrow">INTRO TO AI · NEURAL NETWORKS</div>
-      <h1>Neural Net Lab</h1>
-      <p>One forward pass, learned three ways: diagram → mapping → matrix math.</p>
-    </div>
-    <button id="helpBtn" class="btn ghost">How to use</button>
-  </header>
-
-  <main class="app-shell">
-    <section class="card setup-bar">
-      <div class="architecture-row">
-        <span class="setup-label">Network</span>
-        <label>Input <input id="inputCount" type="number" min="1" max="4" value="3"></label>
-        <span>→</span>
-        <label>Hidden 1 <input id="hidden1Count" type="number" min="1" max="4" value="4"></label>
-        <span>→</span>
-        <label>Hidden 2 <input id="hidden2Count" type="number" min="1" max="4" value="3"></label>
-        <span>→</span>
-        <label>Output <input id="outputCount" type="number" min="1" max="4" value="2"></label>
-        <label class="activation-label">Activation
-          <select id="activationSelect">
-            <option value="relu" selected>ReLU</option>
-            <option value="linear">Linear</option>
-            <option value="sigmoid">Sigmoid</option>
-            <option value="tanh">Tanh</option>
-          </select>
-        </label>
-        <button id="buildNetworkBtn" class="btn primary">Build Network</button>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="eyebrow">FORWARD PROPAGATION</div>
+        <h1>Neural Net Visualization</h1>
+        <p class="subtitle">One calculation. Two representations. Three steps.</p>
       </div>
-      <div class="utility-row">
-        <button id="randomizeBtn" class="btn secondary">New Values</button>
-        <button id="editValuesBtn" class="btn secondary">Edit Values</button>
-        <button id="resetPracticeBtn" class="btn secondary">Reset Practice</button>
-      </div>
-    </section>
-
-    <section class="card lesson-nav" aria-label="Learning steps">
-      <button class="lesson-step active" data-stage="diagram">
-        <span class="step-num">1</span><span><strong>Calculate the Diagram</strong><small>How does one neuron work?</small></span>
-      </button>
-      <span class="nav-arrow">→</span>
-      <button class="lesson-step" data-stage="mapping">
-        <span class="step-num">2</span><span><strong>Map to Matrices</strong><small>Where do the diagram values go?</small></span>
-      </button>
-      <span class="nav-arrow">→</span>
-      <button class="lesson-step" data-stage="math">
-        <span class="step-num">3</span><span><strong>Matrix Math</strong><small>How do matrices get the same answers?</small></span>
-      </button>
-      <div class="level-switch">
-        <span>Guidance</span>
-        <button id="beginnerBtn" class="level-btn active">On</button>
-        <button id="advancedBtn" class="level-btn">Off</button>
-      </div>
-    </section>
-
-    <section id="stageIntro" class="stage-intro"></section>
-
-    <section id="diagramStage" class="stage-panel">
-      <article class="card workspace-card">
-        <div class="workspace-header">
-          <div>
-            <div class="kicker">STEP 1</div>
-            <h2>Calculate the Diagram</h2>
-            <p id="diagramInstruction"></p>
-          </div>
-          <div class="workspace-actions">
-            <label class="check-label"><input id="showAllWeights" type="checkbox" checked> Show all weights</label>
-            <button id="checkDiagramBtn" class="btn primary">Check My Work</button>
-          </div>
+      <div class="setup-panel" aria-label="Network setup">
+        <div class="architecture-controls" id="architectureControls"></div>
+        <div class="setup-actions">
+          <button class="btn primary" id="buildBtn">Build Network</button>
+          <button class="btn" id="generateBtn">Generate Values</button>
+          <button class="btn" id="editBtn">Edit Values</button>
+          <button class="btn ghost" id="resetBtn">Reset Work</button>
         </div>
-        <div class="network-scroll"><svg id="diagramSvg" class="network-svg" aria-label="Neural network diagram"></svg></div>
-        <div id="diagramPracticeBar" class="practice-dock"></div>
-      </article>
-    </section>
+      </div>
+    </header>
 
-    <section id="mappingStage" class="stage-panel hidden">
-      <div class="mapping-layout">
-        <article class="card workspace-card">
-          <div class="workspace-header compact">
-            <div><div class="kicker">STEP 2 · DIAGRAM</div><h2>What are we mapping?</h2><p>Use the picture to place the same values into matrix form.</p></div>
-          </div>
-          <div class="network-scroll mapping-network"><svg id="mappingSvg" class="network-svg" aria-label="Neural network for matrix mapping"></svg></div>
-        </article>
-        <article class="card workspace-card">
-          <div class="workspace-header compact">
-            <div><div class="kicker">STEP 2 · MATRIX</div><h2>Map the Same Values</h2><p id="mappingInstruction"></p></div>
-            <button id="checkMappingBtn" class="btn primary">Check My Work</button>
-          </div>
-          <div id="mappingTransitionTabs" class="transition-tabs"></div>
-          <div id="mappingContent" class="matrix-area"></div>
-        </article>
+    <section class="learning-bar">
+      <nav class="step-nav" id="stepNav" aria-label="Instructional steps"></nav>
+      <div class="guidance-control">
+        <span class="guidance-label">Guidance</span>
+        <div class="segmented" id="guidanceControl" role="group" aria-label="Guidance level">
+          <button data-guidance="on" class="active">ON</button>
+          <button data-guidance="off">OFF</button>
+        </div>
       </div>
     </section>
 
-    <section id="mathStage" class="stage-panel hidden">
-      <div class="math-layout">
-        <article class="card workspace-card">
-          <div class="workspace-header compact">
-            <div><div class="kicker">STEP 3</div><h2>Calculate with Matrices</h2><p id="mathInstruction"></p></div>
-            <button id="checkMathBtn" class="btn primary">Check My Work</button>
-          </div>
-          <div id="mathTransitionTabs" class="transition-tabs"></div>
-          <div id="mathContent" class="matrix-area"></div>
-        </article>
-        <aside class="card reference-card">
-          <div class="workspace-header compact">
-            <div><div class="kicker">CONNECTION BACK</div><h2>Same Neuron</h2><p>The matrix is calculating this same part of the diagram.</p></div>
-          </div>
-          <div class="network-scroll mini"><svg id="mathReferenceSvg" class="network-svg mini-svg" aria-label="Neural network reference"></svg></div>
-          <div id="mathReferenceNote" class="reference-note">Click a blank <strong>z</strong> or <strong>a</strong> cell.</div>
-        </aside>
-      </div>
-    </section>
-  </main>
+    <main id="workspace" class="workspace" aria-live="polite"></main>
+  </div>
 
-  <div id="formulaPopover" class="formula-popover hidden"></div>
-
-  <dialog id="editDialog" class="dialog wide">
-    <form method="dialog">
-      <div class="dialog-head"><div><h2>Edit Values</h2><p>Change inputs, weights, and biases. Small values keep the arithmetic readable.</p></div><button value="cancel" class="close-btn">×</button></div>
-      <div id="editorContent" class="editor-content"></div>
-      <div class="dialog-actions"><button value="cancel" class="btn secondary">Cancel</button><button id="saveValuesBtn" value="default" class="btn primary">Save Values</button></div>
-    </form>
-  </dialog>
-
-  <dialog id="helpDialog" class="dialog">
-    <form method="dialog">
-      <div class="dialog-head"><div><h2>Three steps, one forward pass</h2></div><button value="cancel" class="close-btn">×</button></div>
-      <div class="help-body">
-        <p><strong>1 · Diagram:</strong> calculate neuron values directly from the picture.</p>
-        <p><strong>2 · Mapping:</strong> translate the prior activations, weights, and biases into vectors and matrices. No matrix arithmetic yet.</p>
-        <p><strong>3 · Matrix Math:</strong> use the completed matrix representation to calculate <em>z</em>, then apply the activation function to get <em>a</em>.</p>
-        <p><strong>Guidance On</strong> highlights the relationships you need. <strong>Guidance Off</strong> removes those clues.</p>
-      </div>
-      <div class="dialog-actions"><button value="default" class="btn primary">Got it</button></div>
-    </form>
-  </dialog>
+  <div id="modalRoot"></div>
+  <div id="toastRoot" class="toast-root" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>

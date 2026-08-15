@@ -1,50 +1,44 @@
-# Neural Net Lab
+# Neural Net Visualization
 
-A static browser-based instructional visualization for the IntroToAI GitHub Pages site.
+A browser-only instructional app for teaching forward propagation through three connected views:
 
-## Deploy
+1. **Calculate the Diagram** — understand one neuron's weighted sum, bias, and ReLU activation.
+2. **Map to Matrices** — map prior activations, connection weights, and biases into row-vector/matrix form without doing matrix arithmetic yet.
+3. **Matrix Math** — reproduce the same neuron calculations using a row-vector × weight-matrix + bias-vector calculation, then apply ReLU element-by-element.
 
-Copy this folder into the repository as:
+## Run locally
+
+No build process is required. Put these files in the same folder and open `index.html` in a browser, or serve the folder with any simple static web server.
+
+## GitHub Pages deployment
+
+Copy the entire `NeuralNetVisualization` folder into:
 
 ```text
 IntroToAI/
   NeuralNetVisualization/
-    index.html
-    styles.css
-    app.js
 ```
 
-With GitHub Pages enabled, the intended URL is:
+Commit and push. With GitHub Pages already enabled for the repository, the intended URL is:
 
 ```text
 https://gkozak1.github.io/IntroToAI/NeuralNetVisualization/
 ```
 
-No build step, package manager, server-side code, API key, or external JavaScript library is required.
+## Files
 
-## Instructional structure
+- `index.html` — page structure
+- `styles.css` — visual design and responsive layout
+- `app.js` — network model, calculations, SVG rendering, interactions, checking, editing, and state
+- `SPECIFICATION.md` — source functional/instructional specification used for this build
 
-The app teaches one forward pass through three focused workspaces:
+## Implementation notes
 
-1. **Calculate the Diagram** — understand how prior activated values, weights, and bias produce each neuron's `z`, then apply the activation function to get `a`.
-2. **Map to Matrices** — translate those same activations, weights, and biases into matrix locations without doing matrix arithmetic yet.
-3. **Matrix Math** — use the completed mapping to calculate `z`, then apply the activation function element-by-element to calculate `a`.
-
-The default network is **3 → 4 → 3 → 2** with two hidden layers. Every layer is capped at four neurons.
-
-## Guidance On and Off
-
-- **Step 1 / Guidance On:** fully solved worked example; clicking `z` or `a` traces the related values and shows its numerical formula.
-- **Step 1 / Guidance Off:** `z` and `a` begin blank; the student calculates them from the diagram. Selecting `z` highlights the prior activations, incoming weights, and bias.
-- **Step 2 / Guidance On:** matrix mapping is blank, with correspondence highlighting between diagram and matrix.
-- **Step 2 / Guidance Off:** the same mapping exercise without correspondence highlighting.
-- **Step 3 / Guidance On:** `z` and `a` result vectors are blank; selecting a result highlights the matrix values needed to calculate it.
-- **Step 3 / Guidance Off:** the same calculation without operand highlighting.
-
-`Check My Work` turns entered correct values green and incorrect values red while leaving blank values neutral.
-
-## Network values
-
-The default network uses small inputs, one-decimal weights, and one-decimal biases. Use **New Values** to generate a new exercise or **Edit Values** to enter specific values manually.
-
-ReLU is the default activation. Linear, Sigmoid, and Tanh are also available for experimentation.
+- Vanilla HTML/CSS/JavaScript only; no external libraries or APIs.
+- SVG network supports 1–4 neurons in each of four layers.
+- Default architecture is 3 → 4 → 3 → 2.
+- Row-vector convention: `a (1×m) · W (m×n) + b (1×n) = z (1×n)`.
+- ReLU is the default and only activation in this initial build.
+- One authoritative calculation engine supplies every representation so Diagram and Matrix Math cannot disagree.
+- Student work is stored separately for Diagram, Mapping, and Matrix Math.
+- Blank answers remain neutral when checking; incorrect answers do not reveal the solution.
