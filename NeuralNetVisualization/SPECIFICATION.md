@@ -45,7 +45,7 @@ Calculated neurons are split into:
 
 Bias is shown with its destination neuron. Weight labels appear for the selected calculation, with an optional **Show all weights** control.
 
-### Beginner
+### Guidance On
 
 The network is fully solved as a worked example.
 
@@ -62,7 +62,7 @@ Clicking `a`:
 - emphasizes outgoing connections where applicable to show what is passed forward
 - opens the exact activation formula
 
-### Advanced
+### Guidance Off
 
 All derived `z` and `a` values begin blank.
 
@@ -119,7 +119,7 @@ For a source layer of size `m` and destination layer of size `n`:
 - column `j` of `W` contains every weight entering destination neuron `j`
 - `b` is `1 × n`
 
-### Beginner
+### Guidance On
 
 All matrix cells begin blank.
 
@@ -136,7 +136,7 @@ Selecting an individual matrix cell narrows the connection to its exact diagram 
 
 Highlighting reveals **where**, not **what**. The student still types the value.
 
-### Advanced
+### Guidance Off
 
 The same blank mapping exercise is shown with no correspondence highlighting. The current layer transition is still isolated so the diagram does not become unreadable.
 
@@ -166,7 +166,7 @@ The `z` result vector begins blank. Beneath it:
 
 The `a` result vector also begins blank.
 
-### Beginner
+### Guidance On
 
 Selecting blank `z[j]` highlights:
 
@@ -180,7 +180,7 @@ The student calculates and enters `z[j]`.
 
 Selecting blank `a[j]` highlights its corresponding `z[j]`; the student applies the activation function and enters `a[j]`.
 
-### Advanced
+### Guidance Off
 
 The same matrix problem is shown without operand highlighting. The compact diagram remains as contextual confirmation of which neuron the result belongs to, but does not identify the arithmetic operands.
 

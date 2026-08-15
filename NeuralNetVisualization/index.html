@@ -9,135 +9,140 @@
 <body>
   <header class="app-header">
     <div>
+      <div class="eyebrow">INTRO TO AI · NEURAL NETWORKS</div>
       <h1>Neural Net Lab</h1>
-      <p class="subtitle">See the same calculation as a network, a matrix, and a dot product.</p>
+      <p>One forward pass, learned three ways: diagram → mapping → matrix math.</p>
     </div>
-    <button id="helpBtn" class="secondary small">How to use</button>
+    <button id="helpBtn" class="btn ghost">How to use</button>
   </header>
 
   <main class="app-shell">
-    <section class="setup-card card">
-      <div class="setup-main">
-        <div class="field-group compact-field">
-          <label for="inputCount">Inputs</label>
-          <input id="inputCount" type="number" min="1" max="4" value="3" />
-        </div>
-        <div class="field-group compact-field">
-          <label for="hidden1Count">Hidden 1</label>
-          <input id="hidden1Count" type="number" min="1" max="4" value="4" />
-        </div>
-        <div class="field-group compact-field">
-          <label for="hidden2Count">Hidden 2</label>
-          <input id="hidden2Count" type="number" min="1" max="4" value="3" />
-        </div>
-        <div class="field-group compact-field">
-          <label for="outputCount">Outputs</label>
-          <input id="outputCount" type="number" min="1" max="4" value="2" />
-        </div>
-        <div class="field-group activation-field">
-          <label for="activationSelect">Activation</label>
+    <section class="card setup-bar">
+      <div class="architecture-row">
+        <span class="setup-label">Network</span>
+        <label>Input <input id="inputCount" type="number" min="1" max="4" value="3"></label>
+        <span>→</span>
+        <label>Hidden 1 <input id="hidden1Count" type="number" min="1" max="4" value="4"></label>
+        <span>→</span>
+        <label>Hidden 2 <input id="hidden2Count" type="number" min="1" max="4" value="3"></label>
+        <span>→</span>
+        <label>Output <input id="outputCount" type="number" min="1" max="4" value="2"></label>
+        <label class="activation-label">Activation
           <select id="activationSelect">
             <option value="relu" selected>ReLU</option>
             <option value="linear">Linear</option>
             <option value="sigmoid">Sigmoid</option>
             <option value="tanh">Tanh</option>
           </select>
-        </div>
-        <button id="applyArchitectureBtn" class="primary">Build Network</button>
+        </label>
+        <button id="buildNetworkBtn" class="btn primary">Build Network</button>
       </div>
-      <div class="setup-actions">
-        <button id="simplePresetBtn" class="secondary">Simpler 3→3→3→2</button>
-        <button id="randomizeBtn" class="secondary">Generate Values</button>
-        <button id="editValuesBtn" class="secondary">Edit Values</button>
-        <button id="resetCalcBtn" class="secondary">Reset Calculations</button>
+      <div class="utility-row">
+        <button id="randomizeBtn" class="btn secondary">New Values</button>
+        <button id="editValuesBtn" class="btn secondary">Edit Values</button>
+        <button id="resetPracticeBtn" class="btn secondary">Reset Practice</button>
       </div>
     </section>
 
-    <section class="connection-strip" aria-label="Core relationship">
-      <strong>One calculation, three views:</strong>
-      <span>network connection</span><span class="arrow">↔</span>
-      <span>matrix values</span><span class="arrow">↔</span>
-      <span>dot product</span>
+    <section class="card lesson-nav" aria-label="Learning steps">
+      <button class="lesson-step active" data-stage="diagram">
+        <span class="step-num">1</span><span><strong>Calculate the Diagram</strong><small>How does one neuron work?</small></span>
+      </button>
+      <span class="nav-arrow">→</span>
+      <button class="lesson-step" data-stage="mapping">
+        <span class="step-num">2</span><span><strong>Map to Matrices</strong><small>Where do the diagram values go?</small></span>
+      </button>
+      <span class="nav-arrow">→</span>
+      <button class="lesson-step" data-stage="math">
+        <span class="step-num">3</span><span><strong>Matrix Math</strong><small>How do matrices get the same answers?</small></span>
+      </button>
+      <div class="level-switch">
+        <span>Guidance</span>
+        <button id="beginnerBtn" class="level-btn active">On</button>
+        <button id="advancedBtn" class="level-btn">Off</button>
+      </div>
     </section>
 
-    <section class="linked-workspace">
-      <div class="card network-card">
-        <div class="card-heading inline-heading">
+    <section id="stageIntro" class="stage-intro"></section>
+
+    <section id="diagramStage" class="stage-panel">
+      <article class="card workspace-card">
+        <div class="workspace-header">
           <div>
-            <h2>Neural Network</h2>
-            <p>Click the <strong>z</strong> or <strong>a</strong> half of a neuron. The math at right follows the same selection.</p>
+            <div class="kicker">STEP 1</div>
+            <h2>Calculate the Diagram</h2>
+            <p id="diagramInstruction"></p>
           </div>
-          <label class="toggle-label"><input id="showAllWeights" type="checkbox" /> Show all weights</label>
+          <div class="workspace-actions">
+            <label class="check-label"><input id="showAllWeights" type="checkbox" checked> Show all weights</label>
+            <button id="checkDiagramBtn" class="btn primary">Check My Work</button>
+          </div>
         </div>
-        <div id="networkSvgWrap" class="network-svg-wrap">
-          <svg id="networkSvg" role="img" aria-label="Interactive neural network diagram"></svg>
-        </div>
-        <div class="network-actions">
-          <button id="calculateNextLayerBtn" class="primary">Calculate Next Layer</button>
-          <span id="nextLayerStatus" class="status-note"></span>
-        </div>
+        <div class="network-scroll"><svg id="diagramSvg" class="network-svg" aria-label="Neural network diagram"></svg></div>
+        <div id="diagramPracticeBar" class="practice-dock"></div>
+      </article>
+    </section>
+
+    <section id="mappingStage" class="stage-panel hidden">
+      <div class="mapping-layout">
+        <article class="card workspace-card">
+          <div class="workspace-header compact">
+            <div><div class="kicker">STEP 2 · DIAGRAM</div><h2>What are we mapping?</h2><p>Use the picture to place the same values into matrix form.</p></div>
+          </div>
+          <div class="network-scroll mapping-network"><svg id="mappingSvg" class="network-svg" aria-label="Neural network for matrix mapping"></svg></div>
+        </article>
+        <article class="card workspace-card">
+          <div class="workspace-header compact">
+            <div><div class="kicker">STEP 2 · MATRIX</div><h2>Map the Same Values</h2><p id="mappingInstruction"></p></div>
+            <button id="checkMappingBtn" class="btn primary">Check My Work</button>
+          </div>
+          <div id="mappingTransitionTabs" class="transition-tabs"></div>
+          <div id="mappingContent" class="matrix-area"></div>
+        </article>
       </div>
+    </section>
 
-      <aside class="math-inspector">
-        <section class="card matrix-card">
-          <div class="card-heading matrix-heading">
-            <div>
-              <h2>Matrix Mapping</h2>
-              <p id="matrixPrompt">Select a neuron to see where its values live in the matrix.</p>
-            </div>
-            <div class="inline-controls compact-controls">
-              <label for="matrixTransition">Transition</label>
-              <select id="matrixTransition"></select>
-              <button id="practiceMatrixBtn" class="secondary small">Practice Mapping</button>
-            </div>
+    <section id="mathStage" class="stage-panel hidden">
+      <div class="math-layout">
+        <article class="card workspace-card">
+          <div class="workspace-header compact">
+            <div><div class="kicker">STEP 3</div><h2>Calculate with Matrices</h2><p id="mathInstruction"></p></div>
+            <button id="checkMathBtn" class="btn primary">Check My Work</button>
           </div>
-          <div id="matrixContent" class="matrix-content"></div>
-        </section>
-
-        <section class="card calculation-card">
-          <div class="card-heading">
-            <h2>Selected Calculation</h2>
-            <p id="neuronPrompt">Click a hidden or output neuron to connect the three views.</p>
+          <div id="mathTransitionTabs" class="transition-tabs"></div>
+          <div id="mathContent" class="matrix-area"></div>
+        </article>
+        <aside class="card reference-card">
+          <div class="workspace-header compact">
+            <div><div class="kicker">CONNECTION BACK</div><h2>Same Neuron</h2><p>The matrix is calculating this same part of the diagram.</p></div>
           </div>
-          <div id="neuronDetails" class="empty-state">
-            The selected neuron's incoming connections, matrix column, bias, and dot product will all be linked here.
-          </div>
-        </section>
-      </aside>
+          <div class="network-scroll mini"><svg id="mathReferenceSvg" class="network-svg mini-svg" aria-label="Neural network reference"></svg></div>
+          <div id="mathReferenceNote" class="reference-note">Click a blank <strong>z</strong> or <strong>a</strong> cell.</div>
+        </aside>
+      </div>
     </section>
   </main>
 
-  <dialog id="editDialog" class="dialog large-dialog">
+  <div id="formulaPopover" class="formula-popover hidden"></div>
+
+  <dialog id="editDialog" class="dialog wide">
     <form method="dialog">
-      <div class="dialog-header">
-        <div>
-          <h2>Edit Inputs, Weights, and Biases</h2>
-          <p>Use small values so the arithmetic stays readable. One decimal place works well.</p>
-        </div>
-        <button value="cancel" class="icon-btn" aria-label="Close">×</button>
-      </div>
+      <div class="dialog-head"><div><h2>Edit Values</h2><p>Change inputs, weights, and biases. Small values keep the arithmetic readable.</p></div><button value="cancel" class="close-btn">×</button></div>
       <div id="editorContent" class="editor-content"></div>
-      <div class="dialog-actions">
-        <button value="cancel" class="secondary">Cancel</button>
-        <button id="saveValuesBtn" value="default" class="primary">Save Values</button>
-      </div>
+      <div class="dialog-actions"><button value="cancel" class="btn secondary">Cancel</button><button id="saveValuesBtn" value="default" class="btn primary">Save Values</button></div>
     </form>
   </dialog>
 
   <dialog id="helpDialog" class="dialog">
     <form method="dialog">
-      <div class="dialog-header">
-        <h2>How the linked workspace works</h2>
-        <button value="cancel" class="icon-btn" aria-label="Close">×</button>
+      <div class="dialog-head"><div><h2>Three steps, one forward pass</h2></div><button value="cancel" class="close-btn">×</button></div>
+      <div class="help-body">
+        <p><strong>1 · Diagram:</strong> calculate neuron values directly from the picture.</p>
+        <p><strong>2 · Mapping:</strong> translate the prior activations, weights, and biases into vectors and matrices. No matrix arithmetic yet.</p>
+        <p><strong>3 · Matrix Math:</strong> use the completed matrix representation to calculate <em>z</em>, then apply the activation function to get <em>a</em>.</p>
+        <p><strong>Guidance On</strong> highlights the relationships you need. <strong>Guidance Off</strong> removes those clues.</p>
       </div>
-      <ol class="help-list">
-        <li>Click the <strong>z</strong> half of a neuron to focus on the weighted sum, bias, and pre-activation value.</li>
-        <li>The same incoming weights are highlighted as a column in <strong>W</strong>, and the same result is highlighted in <strong>z</strong>.</li>
-        <li>Click the <strong>a</strong> half to focus on activation and the value that moves forward to the next layer.</li>
-        <li>Click an individual network edge, matrix weight, or dot-product term to trace that exact connection across all three views.</li>
-      </ol>
-      <p class="muted help-note">The network always uses two hidden layers and supports up to four neurons per layer.</p>
-      <div class="dialog-actions"><button value="default" class="primary">Got it</button></div>
+      <div class="dialog-actions"><button value="default" class="btn primary">Got it</button></div>
     </form>
   </dialog>
 

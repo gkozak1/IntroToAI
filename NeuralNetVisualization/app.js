@@ -1,744 +1,604 @@
 (() => {
   'use strict';
 
-  const $ = (id) => document.getElementById(id);
-  const clampInt = (v, min, max) => Math.max(min, Math.min(max, parseInt(v, 10) || min));
-  const fmt = (v) => {
-    if (v === null || v === undefined || Number.isNaN(v)) return '?';
-    if (Math.abs(v) < 1e-10) v = 0;
-    const rounded = Math.round(v * 1000) / 1000;
-    return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/0+$/, '').replace(/\.$/, '');
+  const $ = id => document.getElementById(id);
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const fmt = value => {
+    if (value === null || value === undefined || Number.isNaN(value)) return '?';
+    const v = Math.abs(value) < 1e-10 ? 0 : Math.round(value * 1000) / 1000;
+    return Number.isInteger(v) ? String(v) : String(v).replace(/0+$/, '').replace(/\.$/, '');
   };
-  const nearlyEqual = (a, b, tol = 1e-3) => Number.isFinite(a) && Math.abs(a - b) <= tol;
-  const parseNumber = (el) => {
-    const v = parseFloat(el.value);
-    return Number.isFinite(v) ? v : NaN;
+  const closeEnough = (a, b) => Number.isFinite(a) && Math.abs(a - b) <= 0.0015;
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, parseInt(v, 10) || min));
+  const svgEl = (name, attrs = {}) => {
+    const el = document.createElementNS(SVG_NS, name);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    return el;
   };
 
   const ACTIVATIONS = {
-    relu: { label: 'ReLU', fn: (z) => Math.max(0, z), formula: (z) => `max(0, ${fmt(z)})` },
-    linear: { label: 'Linear', fn: (z) => z, formula: (z) => `${fmt(z)}` },
-    sigmoid: { label: 'Sigmoid', fn: (z) => 1 / (1 + Math.exp(-z)), formula: (z) => `1 / (1 + e^(-${fmt(z)}))` },
-    tanh: { label: 'Tanh', fn: (z) => Math.tanh(z), formula: (z) => `tanh(${fmt(z)})` }
+    relu: { label: 'ReLU', fn: z => Math.max(0, z), formula: z => `max(0, ${fmt(z)})` },
+    linear: { label: 'Linear', fn: z => z, formula: z => fmt(z) },
+    sigmoid: { label: 'Sigmoid', fn: z => 1 / (1 + Math.exp(-z)), formula: z => `1 / (1 + e^(-${fmt(z)}))` },
+    tanh: { label: 'Tanh', fn: z => Math.tanh(z), formula: z => `tanh(${fmt(z)})` }
   };
 
-  let state = createSimpleState();
-  let selectedNeuron = null; // {layerIndex, neuronIndex}
-  let selectedEdge = null; // {transition, source, target}
-  let matrixBuilt = false;
-  let matrixPractice = false;
-  let matrixTransitionIndex = 0;
-  let dotTransitionIndex = 0;
-  let dotNeuronIndex = 0;
-
-  function createSimpleState() {
-    const sizes = [3, 3, 2];
-    return makeState(sizes, 'relu', {
-      inputs: [1, 2, 4],
-      weights: [
-        [
-          [0.2, -0.4, 0.5],
-          [0.6, 0.3, -0.2],
-          [0.1, 0.5, -0.4]
-        ],
-        [
-          [0.4, -0.3],
-          [0.2, 0.7],
-          [-0.5, 0.6]
-        ]
+  const defaultPreset = {
+    sizes: [3, 4, 3, 2],
+    inputs: [1, 2, 4],
+    weights: [
+      [
+        [0.1, 0.2, -0.3, 0.4],
+        [0.5, 0.6, -0.7, 0.8],
+        [0.1, 0.2, 0.3, -0.4]
       ],
-      biases: [
-        [0.1, -0.2, -0.3],
-        [0.2, -0.1]
-      ]
-    });
-  }
-
-  function createChapterStyleState() {
-    const sizes = [3, 4, 3, 2];
-    return makeState(sizes, 'relu', {
-      inputs: [1, 2, 4],
-      weights: [
-        [
-          [0.1, 0.2, -0.3, 0.4],
-          [0.5, 0.6, -0.7, 0.8],
-          [0.1, 0.2, 0.3, -0.4]
-        ],
-        [
-          [0.3, -0.2, 0.5],
-          [0.4, 0.1, -0.3],
-          [-0.5, 0.6, 0.2],
-          [0.2, -0.4, 0.7]
-        ],
-        [
-          [0.5, -0.3],
-          [0.2, 0.4],
-          [-0.6, 0.7]
-        ]
+      [
+        [0.3, -0.2, 0.5],
+        [0.4, 0.1, -0.3],
+        [-0.5, 0.6, 0.2],
+        [0.2, -0.4, 0.7]
       ],
-      biases: [
-        [0, 0, 0, 0],
-        [0.1, -0.2, 0.2],
-        [0, 0.1]
+      [
+        [0.5, -0.3],
+        [0.2, 0.4],
+        [-0.6, 0.7]
       ]
-    });
-  }
+    ],
+    biases: [
+      [0.1, -0.2, 0.2, -0.1],
+      [0.1, -0.2, 0.2],
+      [0, 0.1]
+    ]
+  };
+
+  let state = makeState(defaultPreset.sizes, 'relu', defaultPreset);
+  let stage = 'diagram';
+  let guidance = true;
+  let transition = 0;
+  let selection = null; // {kind:'z'|'a', layer, neuron}
+  let mappingFocusNeuron = null;
+  let formulaTimer = null;
+
+  function deepClone(x) { return JSON.parse(JSON.stringify(x)); }
+  function randomWeight() { return Math.round((Math.random() * 2 - 1) * 10) / 10; }
+  function randomBias() { return Math.round((Math.random() * 1.2 - 0.6) * 10) / 10; }
+  function randomInput() { return Math.floor(Math.random() * 5); }
 
   function makeState(sizes, activation, preset = null) {
     const weights = [];
     const biases = [];
-    for (let l = 0; l < sizes.length - 1; l++) {
-      const w = Array.from({ length: sizes[l] }, () =>
-        Array.from({ length: sizes[l + 1] }, () => randomSmall())
-      );
-      const b = Array.from({ length: sizes[l + 1] }, () => randomSmallBias());
-      weights.push(w);
-      biases.push(b);
+    for (let t = 0; t < sizes.length - 1; t++) {
+      weights.push(Array.from({ length: sizes[t] }, () => Array.from({ length: sizes[t + 1] }, randomWeight)));
+      biases.push(Array.from({ length: sizes[t + 1] }, randomBias));
     }
-    return {
-      sizes,
+    const s = {
+      sizes: sizes.slice(),
       activation,
-      inputs: preset?.inputs ? [...preset.inputs] : Array.from({ length: sizes[0] }, () => randomInput()),
+      inputs: preset?.inputs ? deepClone(preset.inputs) : Array.from({ length: sizes[0] }, randomInput),
       weights: preset?.weights ? deepClone(preset.weights) : weights,
       biases: preset?.biases ? deepClone(preset.biases) : biases,
-      revealed: sizes.map((n, idx) => Array.from({ length: n }, () => idx === 0))
+      diagramAnswers: [],
+      mappingAnswers: [],
+      mathAnswers: []
     };
+    resetPracticeState(s);
+    return s;
   }
 
-  function deepClone(x) { return JSON.parse(JSON.stringify(x)); }
-  function randomSmall() { return Math.round((Math.random() * 2 - 1) * 10) / 10; }
-  function randomSmallBias() { return Math.round((Math.random() * 1.2 - 0.6) * 10) / 10; }
-  function randomInput() { return Math.floor(Math.random() * 5); }
-
-  function layerNames() {
-    const names = ['Input'];
-    if (state.sizes.length === 3) names.push('Hidden 1', 'Output');
-    else names.push('Hidden 1', 'Hidden 2', 'Output');
-    return names;
+  function resetPracticeState(target = state) {
+    target.diagramAnswers = target.sizes.map((n, l) => l === 0 ? [] : Array.from({ length: n }, () => ({ z: '', a: '', zStatus: '', aStatus: '' })));
+    target.mappingAnswers = target.weights.map((W, t) => ({
+      a: Array.from({ length: target.sizes[t] }, () => ({ value: '', status: '' })),
+      W: W.map(row => row.map(() => ({ value: '', status: '' }))),
+      b: Array.from({ length: target.sizes[t + 1] }, () => ({ value: '', status: '' }))
+    }));
+    target.mathAnswers = target.weights.map((W, t) => ({
+      z: Array.from({ length: target.sizes[t + 1] }, () => ({ value: '', status: '' })),
+      a: Array.from({ length: target.sizes[t + 1] }, () => ({ value: '', status: '' }))
+    }));
+    selection = null;
+    mappingFocusNeuron = null;
   }
 
-  function trueForward() {
+  function layerNames() { return ['Input', 'Hidden 1', 'Hidden 2', 'Output']; }
+
+  function forward() {
     const activations = [state.inputs.slice()];
     const zs = [null];
-    for (let l = 0; l < state.weights.length; l++) {
-      const prev = activations[l];
-      const nextZ = [];
-      const nextA = [];
-      for (let j = 0; j < state.sizes[l + 1]; j++) {
+    for (let t = 0; t < state.weights.length; t++) {
+      const prev = activations[t];
+      const z = [];
+      const a = [];
+      for (let j = 0; j < state.sizes[t + 1]; j++) {
         let sum = 0;
-        for (let i = 0; i < state.sizes[l]; i++) sum += prev[i] * state.weights[l][i][j];
-        const z = sum + state.biases[l][j];
-        nextZ.push(z);
-        nextA.push(ACTIVATIONS[state.activation].fn(z));
+        for (let i = 0; i < state.sizes[t]; i++) sum += prev[i] * state.weights[t][i][j];
+        const zj = sum + state.biases[t][j];
+        z.push(zj);
+        a.push(ACTIVATIONS[state.activation].fn(zj));
       }
-      zs.push(nextZ);
-      activations.push(nextA);
+      zs.push(z);
+      activations.push(a);
     }
     return { activations, zs };
   }
 
-  function priorLayerReady(layerIndex) {
-    if (layerIndex <= 0) return true;
-    return state.revealed[layerIndex - 1].every(Boolean);
+  function transitionLabel(t) { return `${layerNames()[t]} → ${layerNames()[t + 1]}`; }
+
+  function isPriorDiagramLayerComplete(layer) {
+    if (layer <= 1) return true;
+    return state.diagramAnswers[layer - 1].every(ans => ans.aStatus === 'good');
   }
 
-  function firstIncompleteLayer() {
-    for (let l = 1; l < state.sizes.length; l++) {
-      if (!state.revealed[l].every(Boolean)) return l;
+  function actualPrevA(t) { return forward().activations[t]; }
+
+  function showFormula(layer, neuron, kind) {
+    if (layer === 0) return;
+    const truth = forward();
+    const t = layer - 1;
+    const z = truth.zs[layer][neuron];
+    const a = truth.activations[layer][neuron];
+    const pop = $('formulaPopover');
+    if (kind === 'z') {
+      const terms = truth.activations[t].map((v, i) => `(${fmt(v)} × ${fmt(state.weights[t][i][neuron])})`).join(' + ');
+      pop.innerHTML = `<button class="close-formula" aria-label="Close">×</button><strong>z${neuron + 1}</strong> = ${terms} + (${fmt(state.biases[t][neuron])}) = <strong>${fmt(z)}</strong>`;
+    } else {
+      pop.innerHTML = `<button class="close-formula" aria-label="Close">×</button><strong>a${neuron + 1}</strong> = ${ACTIVATIONS[state.activation].label}(z${neuron + 1}) = ${ACTIVATIONS[state.activation].formula(z)} = <strong>${fmt(a)}</strong>`;
     }
-    return -1;
+    pop.classList.remove('hidden');
+    pop.querySelector('.close-formula').addEventListener('click', () => pop.classList.add('hidden'));
+    clearTimeout(formulaTimer);
+    formulaTimer = setTimeout(() => pop.classList.add('hidden'), 8500);
   }
 
-  function revealLayer(layerIndex) {
-    if (layerIndex < 1 || !priorLayerReady(layerIndex)) return;
-    state.revealed[layerIndex] = state.revealed[layerIndex].map(() => true);
-    renderAll();
-  }
-
-  function revealNeuron(layerIndex, neuronIndex) {
-    if (layerIndex < 1 || !priorLayerReady(layerIndex)) return;
-    state.revealed[layerIndex][neuronIndex] = true;
-    renderAll();
-  }
-
-  function resetCalculations() {
-    state.revealed = state.sizes.map((n, idx) => Array.from({ length: n }, () => idx === 0));
-    selectedNeuron = null;
-    selectedEdge = null;
-    matrixBuilt = false;
-    matrixPractice = false;
-    renderAll();
-  }
-
-  function transitionLabel(t) {
-    const names = layerNames();
-    return `${names[t]} → ${names[t + 1]}`;
-  }
-
-  function syncArchitectureControls() {
+  function syncControls() {
     $('inputCount').value = state.sizes[0];
     $('hidden1Count').value = state.sizes[1];
-    const hasH2 = state.sizes.length === 4;
-    $('hidden2Count').value = hasH2 ? state.sizes[2] : '0';
-    $('outputCount').value = state.sizes[state.sizes.length - 1];
+    $('hidden2Count').value = state.sizes[2];
+    $('outputCount').value = state.sizes[3];
     $('activationSelect').value = state.activation;
   }
 
-  function populateTransitionSelects() {
-    const maxT = state.weights.length - 1;
-    matrixTransitionIndex = Math.min(matrixTransitionIndex, maxT);
-    dotTransitionIndex = Math.min(dotTransitionIndex, maxT);
-    ['matrixTransition', 'dotTransition'].forEach((id) => {
-      const sel = $(id);
-      const current = id === 'matrixTransition' ? matrixTransitionIndex : dotTransitionIndex;
-      sel.innerHTML = '';
-      state.weights.forEach((_, t) => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = transitionLabel(t);
-        if (t === current) opt.selected = true;
-        sel.appendChild(opt);
-      });
-    });
-    populateDotNeuronSelect();
+  function renderStage() {
+    $('diagramStage').classList.toggle('hidden', stage !== 'diagram');
+    $('mappingStage').classList.toggle('hidden', stage !== 'mapping');
+    $('mathStage').classList.toggle('hidden', stage !== 'math');
+    document.querySelectorAll('.lesson-step').forEach(btn => btn.classList.toggle('active', btn.dataset.stage === stage));
+    $('beginnerBtn').classList.toggle('active', guidance);
+    $('advancedBtn').classList.toggle('active', !guidance);
+
+    const intro = {
+      diagram: 'First, calculate directly from the picture. The goal is to understand exactly what happens inside one neuron.',
+      mapping: 'Now reorganize the same picture into vectors and matrices. This step is only about where the values belong.',
+      math: 'Finally, use the matrix representation to reproduce the same z and activated a values more cleanly.'
+    };
+    $('stageIntro').textContent = intro[stage];
+
+    if (stage === 'diagram') renderDiagramStage();
+    if (stage === 'mapping') renderMappingStage();
+    if (stage === 'math') renderMathStage();
   }
 
-  function populateDotNeuronSelect() {
-    const sel = $('dotNeuron');
-    const targetSize = state.sizes[dotTransitionIndex + 1];
-    dotNeuronIndex = Math.min(dotNeuronIndex, targetSize - 1);
-    sel.innerHTML = '';
-    for (let j = 0; j < targetSize; j++) {
-      const opt = document.createElement('option');
-      opt.value = j;
-      opt.textContent = `${layerNames()[dotTransitionIndex + 1]} neuron ${j + 1}`;
-      if (j === dotNeuronIndex) opt.selected = true;
-      sel.appendChild(opt);
-    }
+  // ---------- NETWORK DRAWING ----------
+  function networkLayout(width, height) {
+    const left = 95, right = width - 95, top = 72, bottom = height - 48;
+    const xs = state.sizes.map((_, l) => left + (right - left) * l / (state.sizes.length - 1));
+    const positions = state.sizes.map((n, l) => Array.from({ length: n }, (_, i) => ({
+      x: xs[l], y: top + (bottom - top) * (i + 1) / (n + 1)
+    })));
+    return positions;
   }
 
-  function renderAll() {
-    syncArchitectureControls();
-    populateTransitionSelects();
-    renderNetwork();
-    renderNeuronPanel();
-    renderMatrix();
-    renderDotProduct();
-    updateNextLayerButton();
+  function appendText(parent, text, attrs) {
+    const el = svgEl('text', attrs);
+    el.textContent = text;
+    parent.appendChild(el);
+    return el;
   }
 
-  function updateNextLayerButton() {
-    const next = firstIncompleteLayer();
-    const btn = $('calculateNextLayerBtn');
-    const status = $('nextLayerStatus');
-    if (next === -1) {
-      btn.disabled = true;
-      btn.textContent = 'Network Complete';
-      status.textContent = 'All layer values are revealed.';
-      return;
-    }
-    if (!priorLayerReady(next)) {
-      btn.disabled = true;
-      btn.textContent = 'Calculate Next Layer';
-      status.textContent = 'Finish the prior layer first.';
-      return;
-    }
-    btn.disabled = false;
-    btn.textContent = `Calculate ${layerNames()[next]}`;
-    status.textContent = 'Use this after you understand one neuron calculation.';
+  function appendWeight(svg, x, y, value, classes = '') {
+    const g = svgEl('g', { class: `weight-group ${classes}`.trim() });
+    g.appendChild(svgEl('rect', { x: x - 17, y: y - 10, width: 34, height: 20, rx: 5, class: 'weight-bg' }));
+    appendText(g, fmt(value), { x, y: y + 4, 'text-anchor': 'middle', class: 'weight-text' });
+    svg.appendChild(g);
+    return g;
   }
 
-  function svgEl(tag, attrs = {}) {
-    const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
-    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
-    return e;
-  }
-
-  function renderNetwork() {
-    const svg = $('networkSvg');
-    svg.innerHTML = '';
-    const width = Math.max(760, $('networkSvgWrap').clientWidth || 900);
-    const height = 460;
+  function renderNetwork(svg, options = {}) {
+    const width = options.width || 1040;
+    const height = options.height || 510;
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    const names = layerNames();
-    const forward = trueForward();
-    const cols = state.sizes.length;
-    const xPad = 75;
-    const xPositions = Array.from({ length: cols }, (_, i) => xPad + i * ((width - 2 * xPad) / (cols - 1)));
-    const nodeR = 36;
-    const yTop = 76;
-    const yBottom = height - 40;
-    const positions = state.sizes.map((n, l) => {
-      if (n === 1) return [{ x: xPositions[l], y: (yTop + yBottom) / 2 }];
-      const gap = (yBottom - yTop) / (n - 1);
-      return Array.from({ length: n }, (_, j) => ({ x: xPositions[l], y: yTop + gap * j }));
-    });
+    svg.innerHTML = '';
+    const pos = networkLayout(width, height);
+    const truth = forward();
+    const showWeights = options.showWeights !== false;
+    const focus = options.focus || null; // {layer,neuron,kind}
+    const mappingFocus = options.mappingFocus;
+    const mini = !!options.mini;
 
-    // layer labels
-    names.forEach((name, l) => {
-      const t = svgEl('text', { x: xPositions[l], y: 26, 'text-anchor': 'middle', class: 'layer-label' });
-      t.textContent = name;
-      svg.appendChild(t);
-    });
+    const selectedLayer = focus?.layer ?? (mappingFocus !== null && mappingFocus !== undefined ? transition + 1 : null);
+    const selectedNeuron = focus?.neuron ?? mappingFocus;
 
-    const showAllWeights = $('showAllWeights').checked;
-    const focus = selectedNeuron;
-
-    // edges and weight labels
+    // edges first
     for (let t = 0; t < state.weights.length; t++) {
       for (let i = 0; i < state.sizes[t]; i++) {
         for (let j = 0; j < state.sizes[t + 1]; j++) {
-          const p1 = positions[t][i], p2 = positions[t + 1][j];
-          const isFocused = !!focus && focus.layerIndex === t + 1 && focus.neuronIndex === j;
-          const isExact = !!selectedEdge && selectedEdge.transition === t && selectedEdge.source === i && selectedEdge.target === j;
-          const unrelated = !!focus && !isFocused;
+          const p1 = pos[t][i], p2 = pos[t + 1][j];
+          let related = selectedLayer === t + 1 && selectedNeuron === j && (!focus || focus.kind === 'z');
+          let dim = selectedLayer !== null && !related;
           const edge = svgEl('line', {
-            x1: p1.x + nodeR - 3,
-            y1: p1.y,
-            x2: p2.x - nodeR + 3,
-            y2: p2.y,
-            class: `edge${isFocused ? ' focused' : ''}${isExact ? ' exact' : ''}${unrelated ? ' dimmed' : ''}${state.revealed[t][i] && forward.activations[t][i] === 0 ? ' zero-source' : ''}`,
-            'data-transition': t,
-            'data-source': i,
-            'data-target': j
-          });
-          edge.addEventListener('click', () => {
-            selectedEdge = { transition: t, source: i, target: j };
-            matrixTransitionIndex = t;
-            $('matrixTransition').value = String(t);
-            matrixBuilt = true;
-            matrixPractice = false;
-            document.querySelector('[data-view="matrix"]').click();
-            renderMatrix();
+            x1: p1.x + 31, y1: p1.y, x2: p2.x - 31, y2: p2.y,
+            class: `edge${related ? ' related' : ''}${dim ? ' dim' : ''}`
           });
           svg.appendChild(edge);
-
-          if (showAllWeights || isFocused) {
-            const ratio = 0.52;
-            const lx = p1.x + (p2.x - p1.x) * ratio;
-            const ly = p1.y + (p2.y - p1.y) * ratio;
-            const g = svgEl('g', { class: `weight-label${unrelated ? ' dimmed' : ''}` });
-            const rect = svgEl('rect', { x: lx - 20, y: ly - 11, width: 40, height: 22 });
-            const txt = svgEl('text', { x: lx, y: ly + 4, 'text-anchor': 'middle' });
-            txt.textContent = fmt(state.weights[t][i][j]);
-            g.append(rect, txt);
-            svg.appendChild(g);
+          if (showWeights && (!mini || related) && ($('showAllWeights')?.checked || related || stage !== 'diagram')) {
+            const f = 0.66;
+            const x = p1.x + (p2.x - p1.x) * f;
+            const y = p1.y + (p2.y - p1.y) * f;
+            appendWeight(svg, x, y, state.weights[t][i][j], `${related ? 'related' : ''}${dim ? ' dim' : ''}`);
           }
         }
       }
     }
 
+    // layer labels
+    layerNames().forEach((name, l) => appendText(svg, name, { x: pos[l][0].x, y: 28, 'text-anchor': 'middle', class: 'layer-label' }));
+
     // nodes
     for (let l = 0; l < state.sizes.length; l++) {
       for (let j = 0; j < state.sizes[l]; j++) {
-        const { x, y } = positions[l][j];
-        const isSelected = !!focus && focus.layerIndex === l && focus.neuronIndex === j;
-        const isRelevantSource = !!focus && focus.layerIndex === l + 1;
-        const sourceForFocus = isRelevantSource;
-        const dimmed = !!focus && !isSelected && !(sourceForFocus && l === focus.layerIndex - 1);
-        const g = svgEl('g', { class: `node-group${isSelected ? ' selected' : ''}${dimmed ? ' dimmed' : ''}`, tabindex: '0', role: 'button' });
-        g.dataset.layer = l;
-        g.dataset.neuron = j;
-        if (l === 0) {
-          const c = svgEl('circle', { cx: x, cy: y, r: nodeR, class: 'node-circle input-node' });
-          const title = svgEl('text', { x, y: y - 6, 'text-anchor': 'middle', class: 'node-title' });
-          title.textContent = `x${j + 1}`;
-          const val = svgEl('text', { x, y: y + 13, 'text-anchor': 'middle', class: 'node-value' });
-          val.textContent = fmt(state.inputs[j]);
-          g.append(c, title, val);
-        } else {
-          const clipId = `clip-${l}-${j}`;
-          const defs = svgEl('defs');
-          const clip = svgEl('clipPath', { id: clipId });
-          clip.appendChild(svgEl('circle', { cx: x, cy: y, r: nodeR }));
-          defs.appendChild(clip);
-          g.appendChild(defs);
-          const left = svgEl('rect', { x: x - nodeR, y: y - nodeR, width: nodeR, height: nodeR * 2, class: 'node-left', 'clip-path': `url(#${clipId})` });
-          const right = svgEl('rect', { x, y: y - nodeR, width: nodeR, height: nodeR * 2, class: 'node-right', 'clip-path': `url(#${clipId})` });
-          const circle = svgEl('circle', { cx: x, cy: y, r: nodeR, class: 'node-circle transparent-circle', fill: 'none' });
-          const divider = svgEl('line', { x1: x, y1: y - nodeR + 2, x2: x, y2: y + nodeR - 2, class: 'node-divider' });
-          const title = svgEl('text', { x, y: y - 44, 'text-anchor': 'middle', class: 'node-title' });
-          title.textContent = `${l === state.sizes.length - 1 ? 'y' : 'h'}${j + 1}`;
-          const zText = svgEl('text', { x: x - 18, y: y + 5, 'text-anchor': 'middle', class: 'node-value' });
-          const aText = svgEl('text', { x: x + 18, y: y + 5, 'text-anchor': 'middle', class: 'node-value' });
-          const revealed = state.revealed[l][j];
-          zText.textContent = revealed ? fmt(forward.zs[l][j]) : '?';
-          aText.textContent = revealed ? fmt(forward.activations[l][j]) : '?';
-          const zLabel = svgEl('text', { x: x - 18, y: y - 11, 'text-anchor': 'middle', class: 'node-title' });
-          zLabel.textContent = 'z';
-          const aLabel = svgEl('text', { x: x + 18, y: y - 11, 'text-anchor': 'middle', class: 'node-title' });
-          aLabel.textContent = 'a';
-          g.append(left, right, circle, divider, title, zLabel, aLabel, zText, aText);
+        const p = pos[l][j];
+        const group = svgEl('g', { class: 'node-group' });
+        const nodeRelated = selectedLayer === l && selectedNeuron === j;
+        if (nodeRelated) group.classList.add('related');
+        if (selectedLayer !== null && !nodeRelated && !(focus?.kind === 'z' && l === selectedLayer - 1)) group.classList.add('dim');
 
-          const biasG = svgEl('g', { class: 'bias-badge' });
-          biasG.append(
-            svgEl('rect', { x: x - 29, y: y + nodeR + 8, width: 58, height: 22 }),
-            (() => { const t = svgEl('text', { x, y: y + nodeR + 23, 'text-anchor': 'middle' }); t.textContent = `b ${fmt(state.biases[l - 1][j])}`; return t; })()
-          );
-          g.appendChild(biasG);
+        if (l === 0) {
+          group.appendChild(svgEl('circle', { cx: p.x, cy: p.y, r: 30, class: 'node-circle input-circle' }));
+          appendText(group, `a${j + 1}`, { x: p.x, y: p.y - 6, 'text-anchor': 'middle', class: 'node-label' });
+          appendText(group, fmt(state.inputs[j]), { x: p.x, y: p.y + 12, 'text-anchor': 'middle', class: 'node-value' });
+        } else {
+          const clipId = `${svg.id}-clip-${l}-${j}`;
+          const defs = svg.querySelector('defs') || svg.insertBefore(svgEl('defs'), svg.firstChild);
+          const clip = svgEl('clipPath', { id: clipId });
+          clip.appendChild(svgEl('circle', { cx: p.x, cy: p.y, r: 30 }));
+          defs.appendChild(clip);
+          group.appendChild(svgEl('rect', { x: p.x - 30, y: p.y - 30, width: 30, height: 60, class: 'node-z-half', 'clip-path': `url(#${clipId})` }));
+          group.appendChild(svgEl('rect', { x: p.x, y: p.y - 30, width: 30, height: 60, class: 'node-a-half', 'clip-path': `url(#${clipId})` }));
+          group.appendChild(svgEl('circle', { cx: p.x, cy: p.y, r: 30, class: 'node-circle', fill: 'none' }));
+          group.appendChild(svgEl('line', { x1: p.x, y1: p.y - 29, x2: p.x, y2: p.y + 29, class: 'node-divider' }));
+          appendText(group, 'z', { x: p.x - 14, y: p.y - 10, 'text-anchor': 'middle', class: 'node-label' });
+          appendText(group, 'a', { x: p.x + 14, y: p.y - 10, 'text-anchor': 'middle', class: 'node-label' });
+
+          let zDisplay, aDisplay, zStatus = '', aStatus = '';
+          if (options.mode === 'diagram' && !guidance) {
+            const ans = state.diagramAnswers[l][j];
+            zDisplay = ans.z === '' ? '?' : ans.z;
+            aDisplay = ans.a === '' ? '?' : ans.a;
+            zStatus = ans.zStatus; aStatus = ans.aStatus;
+          } else {
+            zDisplay = fmt(truth.zs[l][j]);
+            aDisplay = fmt(truth.activations[l][j]);
+          }
+          appendText(group, zDisplay, { x: p.x - 14, y: p.y + 10, 'text-anchor': 'middle', class: `node-value node-result ${zStatus}` });
+          appendText(group, aDisplay, { x: p.x + 14, y: p.y + 10, 'text-anchor': 'middle', class: `node-value node-result ${aStatus}` });
+
+          const zHit = svgEl('rect', { x: p.x - 30, y: p.y - 30, width: 30, height: 60, class: 'node-half-hit' });
+          const aHit = svgEl('rect', { x: p.x, y: p.y - 30, width: 30, height: 60, class: 'node-half-hit' });
+          if (options.interactive !== false) {
+            zHit.addEventListener('click', () => onNetworkValueClick(l, j, 'z', options.mode));
+            aHit.addEventListener('click', () => onNetworkValueClick(l, j, 'a', options.mode));
+          }
+          group.appendChild(zHit); group.appendChild(aHit);
+
+          // bias
+          const bg = svgEl('g', { class: `bias-group${focus?.kind === 'z' && nodeRelated ? ' related' : ''}` });
+          bg.appendChild(svgEl('rect', { x: p.x - 22, y: p.y + 35, width: 44, height: 19, rx: 6 }));
+          appendText(bg, `b=${fmt(state.biases[l - 1][j])}`, { x: p.x, y: p.y + 48, 'text-anchor': 'middle' });
+          group.appendChild(bg);
         }
-        const selectFn = () => {
-          selectedEdge = null;
-          if (l === 0) selectedNeuron = { layerIndex: 0, neuronIndex: j };
-          else selectedNeuron = { layerIndex: l, neuronIndex: j };
-          renderNetwork();
-          renderNeuronPanel();
-        };
-        g.addEventListener('click', selectFn);
-        g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectFn(); } });
-        svg.appendChild(g);
+        svg.appendChild(group);
+      }
+    }
+    return pos;
+  }
+
+  function onNetworkValueClick(layer, neuron, kind, mode) {
+    selection = { layer, neuron, kind };
+    if (mode === 'mapping') {
+      if (layer !== transition + 1) {
+        transition = layer - 1;
+        renderMappingStage();
+      }
+      mappingFocusNeuron = neuron;
+      renderMappingStage();
+      return;
+    }
+    if (mode === 'diagram') {
+      if (guidance) showFormula(layer, neuron, kind);
+      else {
+        if (!isPriorDiagramLayerComplete(layer)) return;
+        const ans = state.diagramAnswers[layer][neuron];
+        if ((kind === 'z' && ans.zStatus === 'good') || (kind === 'a' && ans.aStatus === 'good')) showFormula(layer, neuron, kind);
+      }
+      renderDiagramStage();
+    }
+  }
+
+  // ---------- STEP 1 ----------
+  function renderDiagramStage() {
+    $('diagramInstruction').textContent = guidance
+      ? 'Worked example: click any z or a value to see exactly which values produced it.'
+      : 'Practice: click a blank z or a value. Guidance highlights the needed values only when Guidance is On.';
+    $('checkDiagramBtn').style.display = guidance ? 'none' : '';
+    renderNetwork($('diagramSvg'), { mode: 'diagram', focus: selection, showWeights: true });
+    renderDiagramPracticeDock();
+  }
+
+  function renderDiagramPracticeDock() {
+    const dock = $('diagramPracticeBar');
+    if (guidance || !selection || selection.layer === 0) { dock.innerHTML = ''; return; }
+    const { layer, neuron, kind } = selection;
+    if (!isPriorDiagramLayerComplete(layer)) {
+      dock.innerHTML = `<span class="hint">Finish the activated a values in ${layerNames()[layer - 1]} before moving to ${layerNames()[layer]}.</span>`;
+      return;
+    }
+    const ans = state.diagramAnswers[layer][neuron];
+    const label = `${layerNames()[layer]} neuron ${neuron + 1}`;
+    if (kind === 'z') {
+      dock.innerHTML = `<div class="practice-row"><strong>${label}: calculate z</strong><span class="hint">Multiply each prior a by its incoming weight, add the products, then add bias.</span><label>z = <input id="diagramAnswerInput" class="answer-input ${ans.zStatus}" value="${ans.z}"></label><button id="diagramAnswerCheck" class="btn primary">Check</button><span id="diagramAnswerFeedback"></span></div>`;
+      $('diagramAnswerCheck').addEventListener('click', () => checkDiagramOne(layer, neuron, 'z'));
+      $('diagramAnswerInput').addEventListener('input', e => { state.diagramAnswers[layer][neuron].z = e.target.value; });
+    } else {
+      const zKnown = ans.zStatus === 'good';
+      dock.innerHTML = `<div class="practice-row"><strong>${label}: apply ${ACTIVATIONS[state.activation].label}</strong><span class="hint">${zKnown ? `Use z = ${fmt(forward().zs[layer][neuron])}.` : 'Calculate z correctly first.'}</span><label>a = <input id="diagramAnswerInput" class="answer-input ${ans.aStatus}" value="${ans.a}" ${zKnown ? '' : 'disabled'}></label><button id="diagramAnswerCheck" class="btn primary" ${zKnown ? '' : 'disabled'}>Check</button><span id="diagramAnswerFeedback"></span></div>`;
+      if (zKnown) {
+        $('diagramAnswerCheck').addEventListener('click', () => checkDiagramOne(layer, neuron, 'a'));
+        $('diagramAnswerInput').addEventListener('input', e => { state.diagramAnswers[layer][neuron].a = e.target.value; });
       }
     }
   }
 
-  function renderNeuronPanel() {
-    const panel = $('neuronDetails');
-    const prompt = $('neuronPrompt');
-    if (!selectedNeuron) {
-      prompt.textContent = 'Select a hidden or output neuron.';
-      panel.className = 'empty-state';
-      panel.innerHTML = 'Start with one neuron. The rest of the network will fade so you can follow its inputs and weights.';
-      return;
-    }
-    const { layerIndex: l, neuronIndex: j } = selectedNeuron;
-    if (l === 0) {
-      prompt.textContent = `Input neuron x${j + 1}`;
-      panel.className = '';
-      panel.innerHTML = `<div class="calc-section"><div class="formula-box">x${j + 1} = ${fmt(state.inputs[j])}</div><p class="muted">Input neurons already contain data. The calculation begins when values move to the next layer.</p></div>`;
-      return;
-    }
-    prompt.textContent = `${layerNames()[l]} neuron ${j + 1}`;
-    panel.className = '';
-    if (!priorLayerReady(l)) {
-      panel.innerHTML = `<div class="calc-section"><p>Calculate <strong>${layerNames()[l - 1]}</strong> first. This neuron needs the activated values from the prior layer.</p></div>`;
-      return;
-    }
-    const f = trueForward();
-    const prev = f.activations[l - 1];
-    const weights = state.weights[l - 1].map(row => row[j]);
-    const products = prev.map((v, i) => v * weights[i]);
-    const dot = products.reduce((a, b) => a + b, 0);
-    const bias = state.biases[l - 1][j];
-    const z = dot + bias;
-    const a = ACTIVATIONS[state.activation].fn(z);
-    const expression = prev.map((v, i) => `(${fmt(v)} × ${fmt(weights[i])})`).join(' + ');
+  function checkDiagramOne(layer, neuron, kind) {
+    const inp = $('diagramAnswerInput');
+    const v = parseFloat(inp.value);
+    const truth = forward();
+    const correct = kind === 'z' ? truth.zs[layer][neuron] : truth.activations[layer][neuron];
+    const ans = state.diagramAnswers[layer][neuron];
+    ans[kind] = inp.value;
+    ans[`${kind}Status`] = closeEnough(v, correct) ? 'good' : 'bad';
+    renderDiagramStage();
+    if (ans[`${kind}Status`] === 'good') showFormula(layer, neuron, kind);
+  }
 
-    panel.innerHTML = `
-      <div class="calc-section">
-        <div class="calc-row-grid">
-          <div class="head">Prior a</div><div class="head">Weight</div><div class="head">Product</div><div></div>
-          ${prev.map((v, i) => `<div>${fmt(v)}</div><div>× ${fmt(weights[i])}</div><div>= ${fmt(products[i])}</div><div></div>`).join('')}
-        </div>
-      </div>
-      <div class="calc-section">
-        <div class="formula-box">${expression}<br>+ bias ${fmt(bias)}<br>→ z → ${ACTIVATIONS[state.activation].label}(z) → a</div>
-      </div>
-      <div class="calc-section">
-        <div class="practice-line"><label for="neuronDotInput">Weighted sum</label><input id="neuronDotInput" inputmode="decimal"><span id="neuronDotFeedback" class="feedback"></span></div>
-        <div class="practice-line"><label for="neuronZInput">After bias: z</label><input id="neuronZInput" inputmode="decimal"><span id="neuronZFeedback" class="feedback"></span></div>
-        <div class="practice-line"><label for="neuronAInput">After ${ACTIVATIONS[state.activation].label}: a</label><input id="neuronAInput" inputmode="decimal"><span id="neuronAFeedback" class="feedback"></span></div>
-        <div class="practice-actions">
-          <button id="checkNeuronBtn" class="primary">Check My Work</button>
-          <button id="showNeuronBtn" class="secondary">Show Me</button>
-        </div>
-      </div>
-    `;
+  function checkAllDiagram() {
+    if (guidance) return;
+    const truth = forward();
+    for (let l = 1; l < state.sizes.length; l++) {
+      for (let j = 0; j < state.sizes[l]; j++) {
+        const ans = state.diagramAnswers[l][j];
+        if (ans.z !== '') ans.zStatus = closeEnough(parseFloat(ans.z), truth.zs[l][j]) ? 'good' : 'bad';
+        if (ans.a !== '') ans.aStatus = closeEnough(parseFloat(ans.a), truth.activations[l][j]) ? 'good' : 'bad';
+      }
+    }
+    renderDiagramStage();
+  }
 
-    $('checkNeuronBtn').addEventListener('click', () => {
-      const checks = [
-        ['neuronDotInput', 'neuronDotFeedback', dot],
-        ['neuronZInput', 'neuronZFeedback', z],
-        ['neuronAInput', 'neuronAFeedback', a]
-      ];
-      let allGood = true;
-      checks.forEach(([inputId, fbId, answer]) => {
-        const input = $(inputId), fb = $(fbId);
-        const val = parseNumber(input);
-        const good = nearlyEqual(val, answer, state.activation === 'sigmoid' || state.activation === 'tanh' ? 0.01 : 0.001);
-        allGood = allGood && good;
-        fb.textContent = good ? 'Correct' : 'Check it';
-        fb.className = `feedback ${good ? 'good' : 'bad'}`;
-      });
-      if (allGood) revealNeuron(l, j);
-    });
-    $('showNeuronBtn').addEventListener('click', () => {
-      $('neuronDotInput').value = fmt(dot);
-      $('neuronZInput').value = fmt(z);
-      $('neuronAInput').value = fmt(a);
-      ['neuronDotFeedback', 'neuronZFeedback', 'neuronAFeedback'].forEach(id => { $(id).textContent = 'Shown'; $(id).className = 'feedback good'; });
-      revealNeuron(l, j);
+  // ---------- MATRIX UI HELPERS ----------
+  function renderTransitionTabs(container, callback) {
+    container.innerHTML = '';
+    state.weights.forEach((_, t) => {
+      const btn = document.createElement('button');
+      btn.className = `transition-btn${t === transition ? ' active' : ''}`;
+      btn.textContent = transitionLabel(t);
+      btn.addEventListener('click', () => { transition = t; selection = null; mappingFocusNeuron = null; callback(); });
+      container.appendChild(btn);
     });
   }
 
-  function renderMatrix() {
-    const content = $('matrixContent');
-    if (!matrixBuilt && !matrixPractice) {
-      content.className = 'matrix-content empty-matrix';
-      content.innerHTML = '<p>Start blank. Choose a transition, then build it or practice filling it from the network.</p>';
-      return;
-    }
-    content.className = 'matrix-content';
-    const t = matrixTransitionIndex;
-    const f = trueForward();
-    const sourceValues = f.activations[t];
-    const sourceUnknown = new Set(sourceValues.map((_, i) => state.revealed[t][i] ? null : `0-${i}`).filter(Boolean));
-    const targetZ = f.zs[t + 1];
-    const targetA = f.activations[t + 1];
-
-    const vectorHtml = matrixGridHtml([sourceValues], `matrix-source-${t}`, sourceUnknown.size ? sourceUnknown : null, false);
-    const weightsHtml = matrixPractice ? matrixPracticeGridHtml(state.weights[t], 'weight') : matrixGridHtml(state.weights[t], `matrix-w-${t}`, null, true, t);
-    const biasHtml = matrixPractice ? matrixPracticeGridHtml([state.biases[t]], 'bias') : matrixGridHtml([state.biases[t]], `matrix-b-${t}`);
-    const zUnknown = new Set(targetZ.map((_, i) => state.revealed[t + 1][i] ? null : `0-${i}`).filter(Boolean));
-    const aUnknown = new Set(targetA.map((_, i) => state.revealed[t + 1][i] ? null : `0-${i}`).filter(Boolean));
-    const zHtml = matrixGridHtml([targetZ], `matrix-z-${t}`, zUnknown.size ? zUnknown : null);
-    const aHtml = matrixGridHtml([targetA], `matrix-a-${t}`, aUnknown.size ? aUnknown : null);
-
-    content.innerHTML = `
-      <div class="matrix-equation">
-        ${matrixBlockHtml('a (current layer)', `1 × ${state.sizes[t]}`, vectorHtml)}
-        <span class="matrix-op">·</span>
-        ${matrixBlockHtml('W (weights)', `${state.sizes[t]} × ${state.sizes[t + 1]}`, weightsHtml)}
-        <span class="matrix-op">+</span>
-        ${matrixBlockHtml('b (bias)', `1 × ${state.sizes[t + 1]}`, biasHtml)}
-        <span class="matrix-op">=</span>
-        ${matrixBlockHtml('z', `1 × ${state.sizes[t + 1]}`, zHtml)}
-        <span class="matrix-op">→</span>
-        ${matrixBlockHtml(`${ACTIVATIONS[state.activation].label}(z) = a`, `1 × ${state.sizes[t + 1]}`, aHtml)}
-      </div>
-      ${matrixPractice ? '<div class="matrix-practice-actions"><button id="checkMatrixBtn" class="primary">Check Matrix</button> <span id="matrixFeedback" class="feedback"></span></div>' : ''}
-      <div class="matrix-legend">In this row-vector convention, each <strong>column of W</strong> contains the weights entering one destination neuron. Click a weight cell to locate its network connection.</div>
-    `;
-
-    if (!matrixPractice) {
-      content.querySelectorAll('.weight-cell').forEach(cell => {
-        cell.addEventListener('click', () => {
-          const target = parseInt(cell.dataset.target, 10);
-          selectedEdge = { transition: t, source: parseInt(cell.dataset.source, 10), target };
-          selectedNeuron = { layerIndex: t + 1, neuronIndex: target };
-          document.querySelector('[data-view="network"]').click();
-          renderNetwork();
-          renderNeuronPanel();
-        });
-      });
-    } else {
-      $('checkMatrixBtn').addEventListener('click', checkMatrixPractice);
-      content.querySelectorAll('.matrix-practice-input').forEach(inp => {
-        inp.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') { e.preventDefault(); checkOneMatrixInput(inp); }
-        });
-        inp.addEventListener('blur', () => { if (inp.value.trim()) checkOneMatrixInput(inp); });
-      });
-    }
+  function matrixBlock(name, rows, cols, cellRenderer, extraClass = '') {
+    const block = document.createElement('div'); block.className = 'matrix-block';
+    block.innerHTML = `<div class="matrix-name">${name}</div><div class="matrix-dim">${rows} × ${cols}</div>`;
+    const grid = document.createElement('div'); grid.className = `matrix-grid ${extraClass}`; grid.style.gridTemplateColumns = `repeat(${cols}, minmax(50px, auto))`;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) grid.appendChild(cellRenderer(r, c));
+    block.appendChild(grid); return block;
   }
 
-  function matrixBlockHtml(name, dim, grid) {
-    return `<div class="matrix-block"><div class="matrix-name">${name}</div><div class="dim-label">${dim}</div>${grid}</div>`;
+  function textCell(text, classes = '') { const d = document.createElement('div'); d.className = `matrix-cell ${classes}`.trim(); d.textContent = text; return d; }
+  function op(text) { const d = document.createElement('div'); d.className = 'matrix-op'; d.textContent = text; return d; }
+
+  function inputCell(valueObj, dataset, classes = '') {
+    const cell = document.createElement('div'); cell.className = `matrix-cell ${classes}`.trim();
+    const inp = document.createElement('input'); inp.className = `matrix-input ${valueObj.status}`; inp.value = valueObj.value; Object.assign(inp.dataset, dataset); cell.appendChild(inp); return cell;
   }
 
-  function matrixGridHtml(matrix, id, unknownSet = null, weightsClickable = false, transition = null) {
-    const rows = matrix.length, cols = matrix[0].length;
-    return `<div id="${id}" class="matrix-grid" style="grid-template-columns:repeat(${cols}, minmax(48px,auto))">
-      ${matrix.map((row, r) => row.map((val, c) => {
-        const unknown = unknownSet?.has(`${r}-${c}`);
-        const linked = weightsClickable && selectedEdge && selectedEdge.transition === transition && selectedEdge.source === r && selectedEdge.target === c;
-        const weightClass = weightsClickable ? ` weight-cell${linked ? ' linked' : ''}` : '';
-        const data = weightsClickable ? ` data-transition="${transition}" data-source="${r}" data-target="${c}"` : '';
-        return `<div class="matrix-cell${weightClass}${unknown ? ' unknown' : ''}"${data}>${unknown ? '?' : fmt(val)}</div>`;
-      }).join('')).join('')}
-    </div>`;
+  // ---------- STEP 2 ----------
+  function renderMappingStage() {
+    $('mappingInstruction').textContent = guidance
+      ? 'Click a destination neuron. Its incoming values are highlighted in the diagram and in their empty matrix locations.'
+      : 'No highlighting: use the diagram to determine where each activation, weight, and bias belongs.';
+    renderTransitionTabs($('mappingTransitionTabs'), renderMappingStage);
+    const focus = guidance ? mappingFocusNeuron : null;
+    renderNetwork($('mappingSvg'), { mode: 'mapping', mappingFocus: focus, showWeights: true });
+    renderMappingMatrix();
   }
 
-  function matrixPracticeGridHtml(matrix, type) {
-    const rows = matrix.length, cols = matrix[0].length;
-    return `<div class="matrix-grid" style="grid-template-columns:repeat(${cols}, minmax(62px,auto))">
-      ${matrix.map((row, r) => row.map((val, c) => `<div class="matrix-cell"><input class="matrix-practice-input" data-kind="${type}" data-r="${r}" data-c="${c}" aria-label="${type} row ${r + 1} column ${c + 1}"></div>`).join('')).join('')}
-    </div>`;
+  function renderMappingMatrix() {
+    const wrap = $('mappingContent'); wrap.innerHTML = '';
+    const t = transition, src = state.sizes[t], dst = state.sizes[t + 1], ans = state.mappingAnswers[t];
+    const eq = document.createElement('div'); eq.className = 'matrix-equation';
+    const isRelTarget = j => guidance && mappingFocusNeuron !== null && mappingFocusNeuron === j;
+    eq.appendChild(matrixBlock(`a${t === 0 ? '⁽⁰⁾' : `⁽${t}⁾`}`, 1, src, (_, c) => inputCell(ans.a[c], { mapType: 'a', c }, guidance && mappingFocusNeuron !== null ? 'related' : '')));
+    eq.appendChild(op('·'));
+    eq.appendChild(matrixBlock(`W⁽${t + 1}⁾`, src, dst, (r, c) => inputCell(ans.W[r][c], { mapType: 'w', r, c }, isRelTarget(c) ? 'related' : '')));
+    eq.appendChild(op('+'));
+    eq.appendChild(matrixBlock(`b⁽${t + 1}⁾`, 1, dst, (_, c) => inputCell(ans.b[c], { mapType: 'b', c }, isRelTarget(c) ? 'related' : '')));
+    wrap.appendChild(eq);
+    const note = document.createElement('div'); note.className = 'mapping-note'; note.textContent = 'Mapping only: do not calculate z yet. You are organizing the same values from the diagram.'; wrap.appendChild(note);
   }
 
-  function matrixPracticeAnswer(inp) {
-    const r = parseInt(inp.dataset.r, 10), c = parseInt(inp.dataset.c, 10);
-    return inp.dataset.kind === 'weight' ? state.weights[matrixTransitionIndex][r][c] : state.biases[matrixTransitionIndex][c];
-  }
-
-  function checkOneMatrixInput(inp) {
-    const good = nearlyEqual(parseNumber(inp), matrixPracticeAnswer(inp));
-    inp.style.borderColor = good ? 'var(--good)' : 'var(--bad)';
-    inp.style.background = good ? '#eef8f3' : '#fff2f2';
-    return good;
-  }
-
-  function checkMatrixPractice() {
-    const inputs = [...$('matrixContent').querySelectorAll('.matrix-practice-input')];
-    const allGood = inputs.every(checkOneMatrixInput);
-    const fb = $('matrixFeedback');
-    fb.textContent = allGood ? 'Everything matches the network.' : 'Some cells still do not match.';
-    fb.className = `feedback ${allGood ? 'good' : 'bad'}`;
-  }
-
-  function renderDotProduct() {
-    const visual = $('dotVisual');
-    const practice = $('dotPractice');
-    const t = dotTransitionIndex;
-    const j = dotNeuronIndex;
-    const f = trueForward();
-    const sourceReady = t === 0 || state.revealed[t].every(Boolean);
-    if (!sourceReady) {
-      visual.innerHTML = `<div class="empty-state">Calculate <strong>${layerNames()[t]}</strong> in Network View first. Dot products need the prior layer's activated values.</div>`;
-      practice.innerHTML = `<div class="empty-state">Once the prior layer is known, you can practice one result entry here.</div>`;
-      return;
-    }
-    const source = f.activations[t];
-    const column = state.weights[t].map(row => row[j]);
-    const products = source.map((v, i) => v * column[i]);
-    const dot = products.reduce((a, b) => a + b, 0);
-    const bias = state.biases[t][j];
-    const z = dot + bias;
-    const a = ACTIVATIONS[state.activation].fn(z);
-    const rowGrid = matrixGridHtml([source], 'dot-row');
-    const colGrid = matrixGridHtml(column.map(v => [v]), 'dot-col');
-    visual.innerHTML = `
-      <div class="dot-explainer">
-        <div class="dot-matrices">
-          ${matrixBlockHtml('Current activations', `1 × ${source.length}`, rowGrid)}
-          <span class="matrix-op">·</span>
-          <div class="dot-column">${matrixBlockHtml(`W column ${j + 1}`, `${column.length} × 1`, colGrid)}</div>
-        </div>
-        <div class="pair-list">
-          ${source.map((v, i) => `<div class="pair-chip">${fmt(v)} × ${fmt(column[i])}</div>`).join('')}
-        </div>
-        <div class="dot-expression">${source.map((v, i) => `(${fmt(v)} × ${fmt(column[i])})`).join(' + ')} + bias ${fmt(bias)}</div>
-        <p class="muted" style="text-align:center;margin:0">This single dot product creates ${layerNames()[t + 1]} neuron ${j + 1}.</p>
-      </div>
-    `;
-    practice.innerHTML = `
-      <div class="calc-section">
-        <div class="practice-line"><label for="dotSumInput">Weighted sum</label><input id="dotSumInput" inputmode="decimal"><span id="dotSumFeedback" class="feedback"></span></div>
-        <div class="practice-line"><label for="dotZInput">Add bias → z</label><input id="dotZInput" inputmode="decimal"><span id="dotZFeedback" class="feedback"></span></div>
-        <div class="practice-line"><label for="dotAInput">${ACTIVATIONS[state.activation].label}(z) → a</label><input id="dotAInput" inputmode="decimal"><span id="dotAFeedback" class="feedback"></span></div>
-        <div class="practice-actions">
-          <button id="checkDotBtn" class="primary">Check My Work</button>
-          <button id="revealDotBtn" class="secondary">Show Me</button>
-          <button id="nextDotNeuronBtn" class="secondary">Next Neuron</button>
-        </div>
-      </div>
-    `;
-    $('checkDotBtn').addEventListener('click', () => {
-      const checks = [
-        ['dotSumInput', 'dotSumFeedback', dot],
-        ['dotZInput', 'dotZFeedback', z],
-        ['dotAInput', 'dotAFeedback', a]
-      ];
-      let allGood = true;
-      checks.forEach(([inputId, fbId, ans]) => {
-        const good = nearlyEqual(parseNumber($(inputId)), ans, state.activation === 'sigmoid' || state.activation === 'tanh' ? 0.01 : 0.001);
-        allGood = allGood && good;
-        $(fbId).textContent = good ? 'Correct' : 'Check it';
-        $(fbId).className = `feedback ${good ? 'good' : 'bad'}`;
-      });
-      if (allGood) revealNeuron(t + 1, j);
+  function checkMapping() {
+    const t = transition, ans = state.mappingAnswers[t], truthA = forward().activations[t];
+    $('mappingContent').querySelectorAll('.matrix-input').forEach(inp => {
+      const value = parseFloat(inp.value), type = inp.dataset.mapType;
+      let obj, correct;
+      if (type === 'a') { obj = ans.a[+inp.dataset.c]; correct = truthA[+inp.dataset.c]; }
+      else if (type === 'w') { obj = ans.W[+inp.dataset.r][+inp.dataset.c]; correct = state.weights[t][+inp.dataset.r][+inp.dataset.c]; }
+      else { obj = ans.b[+inp.dataset.c]; correct = state.biases[t][+inp.dataset.c]; }
+      obj.value = inp.value;
+      obj.status = inp.value.trim() === '' ? '' : (closeEnough(value, correct) ? 'good' : 'bad');
     });
-    $('revealDotBtn').addEventListener('click', () => {
-      $('dotSumInput').value = fmt(dot); $('dotZInput').value = fmt(z); $('dotAInput').value = fmt(a);
-      ['dotSumFeedback', 'dotZFeedback', 'dotAFeedback'].forEach(id => { $(id).textContent = 'Shown'; $(id).className = 'feedback good'; });
-      revealNeuron(t + 1, j);
-    });
-    $('nextDotNeuronBtn').addEventListener('click', () => {
-      dotNeuronIndex = (j + 1) % state.sizes[t + 1];
-      populateDotNeuronSelect();
-      renderDotProduct();
-    });
+    renderMappingStage();
   }
 
+  // ---------- STEP 3 ----------
+  function renderMathStage() {
+    $('mathInstruction').textContent = guidance
+      ? 'Click a blank z cell to highlight the activation vector, matching weight column, and bias. Then apply the activation function to get a.'
+      : 'No operand highlighting: identify the correct matrix values yourself, calculate z, then calculate a.';
+    renderTransitionTabs($('mathTransitionTabs'), renderMathStage);
+    renderMathMatrix();
+    renderNetwork($('mathReferenceSvg'), { mode: 'math', focus: selection && selection.layer === transition + 1 ? selection : null, showWeights: true, mini: true, interactive: false, width: 720, height: 360 });
+    renderReferenceNote();
+  }
+
+  function renderMathMatrix() {
+    const wrap = $('mathContent'); wrap.innerHTML = '';
+    const t = transition, src = state.sizes[t], dst = state.sizes[t + 1];
+    const truth = forward(), ans = state.mathAnswers[t];
+    const focusJ = guidance && selection?.layer === t + 1 ? selection.neuron : null;
+    const focusKind = guidance && selection?.layer === t + 1 ? selection.kind : null;
+    const eq = document.createElement('div'); eq.className = 'matrix-equation';
+    eq.appendChild(matrixBlock(`a⁽${t}⁾`, 1, src, (_, c) => textCell(fmt(truth.activations[t][c]), focusKind === 'z' && focusJ !== null ? 'related' : '')));
+    eq.appendChild(op('·'));
+    eq.appendChild(matrixBlock(`W⁽${t + 1}⁾`, src, dst, (r, c) => textCell(fmt(state.weights[t][r][c]), focusKind === 'z' && focusJ === c ? 'related' : '')));
+    eq.appendChild(op('+'));
+    eq.appendChild(matrixBlock(`b⁽${t + 1}⁾`, 1, dst, (_, c) => textCell(fmt(state.biases[t][c]), focusKind === 'z' && focusJ === c ? 'related' : '')));
+    eq.appendChild(op('='));
+    eq.appendChild(matrixBlock(`z⁽${t + 1}⁾`, 1, dst, (_, c) => {
+      const cell = inputCell(ans.z[c], { mathType: 'z', c }, `result${focusJ === c && focusKind === 'z' ? ' exact' : ''}`);
+      cell.querySelector('input').addEventListener('focus', () => { selection = { layer: t + 1, neuron: c, kind: 'z' }; renderMathStage(); setTimeout(() => focusMathInput('z', c), 0); });
+      return cell;
+    }));
+    wrap.appendChild(eq);
+
+    const activate = document.createElement('div'); activate.className = 'matrix-equation';
+    activate.appendChild(matrixBlock(`z⁽${t + 1}⁾`, 1, dst, (_, c) => textCell(ans.z[c].status === 'good' ? fmt(truth.zs[t + 1][c]) : '?', focusJ === c && focusKind === 'a' ? 'related' : '')));
+    activate.appendChild(op(`→ ${ACTIVATIONS[state.activation].label} →`));
+    activate.appendChild(matrixBlock(`a⁽${t + 1}⁾`, 1, dst, (_, c) => {
+      const cell = inputCell(ans.a[c], { mathType: 'a', c }, `result${focusJ === c && focusKind === 'a' ? ' exact' : ''}`);
+      const input = cell.querySelector('input');
+      input.disabled = ans.z[c].status !== 'good';
+      input.addEventListener('focus', () => { selection = { layer: t + 1, neuron: c, kind: 'a' }; renderMathStage(); setTimeout(() => focusMathInput('a', c), 0); });
+      return cell;
+    }));
+    wrap.appendChild(activate);
+
+    if (selection?.layer === t + 1) {
+      const j = selection.neuron;
+      const line = document.createElement('div'); line.className = 'formula-line';
+      if (selection.kind === 'z') {
+        const terms = truth.activations[t].map((v, i) => `(${fmt(v)}×${fmt(state.weights[t][i][j])})`).join(' + ');
+        line.textContent = guidance ? `z${j + 1} = ${terms} + (${fmt(state.biases[t][j])})` : `Calculate z${j + 1} using a⁽${t}⁾, W⁽${t + 1}⁾, and b⁽${t + 1}⁾.`;
+      } else {
+        line.textContent = guidance ? `a${j + 1} = ${ACTIVATIONS[state.activation].label}(z${j + 1})` : `Apply the activation function to z${j + 1}.`;
+      }
+      wrap.appendChild(line);
+    }
+  }
+
+  function focusMathInput(type, c) {
+    const input = $('mathContent').querySelector(`input[data-math-type="${type}"][data-c="${c}"]`);
+    if (input) { input.focus(); input.select(); }
+  }
+
+  function renderReferenceNote() {
+    const note = $('mathReferenceNote');
+    if (!selection || selection.layer !== transition + 1) { note.innerHTML = 'Click a blank <strong>z</strong> or <strong>a</strong> cell. The small diagram will identify the same neuron.'; return; }
+    const n = selection.neuron + 1;
+    note.innerHTML = selection.kind === 'z'
+      ? `You are calculating the <strong>pre-activation z value</strong> for ${layerNames()[transition + 1]} neuron ${n}.`
+      : `You are applying <strong>${ACTIVATIONS[state.activation].label}</strong> to that neuron's z value to determine the a value passed forward.`;
+  }
+
+  function checkMath() {
+    const t = transition, ans = state.mathAnswers[t], truth = forward();
+    $('mathContent').querySelectorAll('.matrix-input').forEach(inp => {
+      const type = inp.dataset.mathType, c = +inp.dataset.c;
+      const obj = ans[type][c]; obj.value = inp.value;
+      if (inp.value.trim() === '') obj.status = '';
+      else {
+        const correct = type === 'z' ? truth.zs[t + 1][c] : truth.activations[t + 1][c];
+        obj.status = closeEnough(parseFloat(inp.value), correct) ? 'good' : 'bad';
+        if (obj.status === 'good') showFormula(t + 1, c, type);
+      }
+    });
+    renderMathStage();
+  }
+
+  // ---------- EDITOR ----------
   function buildEditor() {
-    const wrap = $('editorContent');
-    const names = layerNames();
-    let html = `<section class="editor-section"><h3>Input values</h3><div class="editor-grid" style="grid-template-columns:repeat(${state.sizes[0]},74px)">
-      ${state.inputs.map((v, i) => `<input type="number" step="0.1" data-edit="input" data-i="${i}" value="${fmt(v)}" aria-label="Input ${i + 1}">`).join('')}
-    </div></section>`;
-    state.weights.forEach((matrix, t) => {
-      const rows = matrix.length, cols = matrix[0].length;
-      html += `<section class="editor-section"><h3>${names[t]} → ${names[t + 1]} weights</h3><div class="editor-grid" style="grid-template-columns:60px repeat(${cols},74px)">
-        <div></div>${Array.from({length: cols}, (_, c) => `<div class="editor-col-label">to ${c + 1}</div>`).join('')}
-        ${matrix.map((row, r) => `<div class="editor-row-label">from ${r + 1}</div>${row.map((v, c) => `<input type="number" step="0.1" data-edit="weight" data-t="${t}" data-r="${r}" data-c="${c}" value="${fmt(v)}" aria-label="Weight from neuron ${r + 1} to neuron ${c + 1}">`).join('')}`).join('')}
-      </div><h3 style="margin-top:.8rem">${names[t + 1]} biases</h3><div class="editor-grid" style="grid-template-columns:repeat(${cols},74px)">
-        ${state.biases[t].map((v, c) => `<input type="number" step="0.1" data-edit="bias" data-t="${t}" data-c="${c}" value="${fmt(v)}" aria-label="Bias for neuron ${c + 1}">`).join('')}
-      </div></section>`;
+    const wrap = $('editorContent'); wrap.innerHTML = '';
+    let html = `<section class="editor-section"><h3>Input values</h3><div class="editor-grid" style="grid-template-columns:repeat(${state.sizes[0]},72px)">`;
+    state.inputs.forEach((v, i) => html += `<input data-edit="input" data-i="${i}" value="${v}">`);
+    html += '</div></section>';
+    state.weights.forEach((W, t) => {
+      html += `<section class="editor-section"><h3>${transitionLabel(t)} weights</h3><div class="editor-grid" style="grid-template-columns:52px repeat(${state.sizes[t + 1]},72px)"><span></span>`;
+      for (let c = 0; c < state.sizes[t + 1]; c++) html += `<span class="editor-label">to ${c + 1}</span>`;
+      W.forEach((row, r) => {
+        html += `<span class="editor-label">from ${r + 1}</span>`;
+        row.forEach((v, c) => html += `<input data-edit="weight" data-t="${t}" data-r="${r}" data-c="${c}" value="${v}">`);
+      });
+      html += `</div><h3>Biases</h3><div class="editor-grid" style="grid-template-columns:repeat(${state.sizes[t + 1]},72px)">`;
+      state.biases[t].forEach((v, c) => html += `<input data-edit="bias" data-t="${t}" data-c="${c}" value="${v}">`);
+      html += '</div></section>';
     });
     wrap.innerHTML = html;
   }
 
-  function saveEditorValues() {
+  function saveEditor() {
     const inputs = [...$('editorContent').querySelectorAll('input')];
-    for (const inp of inputs) {
+    for (const inp of inputs) if (!Number.isFinite(parseFloat(inp.value))) { alert('Every value must be a number.'); return false; }
+    inputs.forEach(inp => {
       const v = parseFloat(inp.value);
-      if (!Number.isFinite(v)) { alert('Every value must be a number.'); return false; }
-      const kind = inp.dataset.edit;
-      if (kind === 'input') state.inputs[+inp.dataset.i] = v;
-      if (kind === 'weight') state.weights[+inp.dataset.t][+inp.dataset.r][+inp.dataset.c] = v;
-      if (kind === 'bias') state.biases[+inp.dataset.t][+inp.dataset.c] = v;
-    }
-    resetCalculations();
-    return true;
-  }
-
-  function randomizeValues() {
-    state.inputs = state.inputs.map(() => randomInput());
-    state.weights = state.weights.map(m => m.map(row => row.map(() => randomSmall())));
-    state.biases = state.biases.map(row => row.map(() => randomSmallBias()));
-    resetCalculations();
-  }
-
-  function applyArchitecture() {
-    const input = clampInt($('inputCount').value, 1, 5);
-    const h1 = clampInt($('hidden1Count').value, 1, 5);
-    const h2 = clampInt($('hidden2Count').value, 0, 5);
-    const output = clampInt($('outputCount').value, 1, 5);
-    const sizes = h2 > 0 ? [input, h1, h2, output] : [input, h1, output];
-    state = makeState(sizes, $('activationSelect').value);
-    selectedNeuron = null; selectedEdge = null; matrixBuilt = false; matrixPractice = false; matrixTransitionIndex = 0; dotTransitionIndex = 0; dotNeuronIndex = 0;
-    renderAll();
-  }
-
-  function setActivation() {
-    state.activation = $('activationSelect').value;
-    resetCalculations();
-  }
-
-  // Events
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active-view'));
-      tab.classList.add('active');
-      $(`${tab.dataset.view}View`).classList.add('active-view');
-      if (tab.dataset.view === 'network') renderNetwork();
-      if (tab.dataset.view === 'matrix') renderMatrix();
-      if (tab.dataset.view === 'dot') renderDotProduct();
+      if (inp.dataset.edit === 'input') state.inputs[+inp.dataset.i] = v;
+      if (inp.dataset.edit === 'weight') state.weights[+inp.dataset.t][+inp.dataset.r][+inp.dataset.c] = v;
+      if (inp.dataset.edit === 'bias') state.biases[+inp.dataset.t][+inp.dataset.c] = v;
     });
+    resetPracticeState(); renderStage(); return true;
+  }
+
+  // ---------- EVENTS ----------
+  function buildNetwork() {
+    const sizes = [
+      clamp($('inputCount').value, 1, 4), clamp($('hidden1Count').value, 1, 4),
+      clamp($('hidden2Count').value, 1, 4), clamp($('outputCount').value, 1, 4)
+    ];
+    state = makeState(sizes, $('activationSelect').value);
+    transition = 0; selection = null; mappingFocusNeuron = null;
+    syncControls(); renderStage();
+  }
+
+  $('buildNetworkBtn').addEventListener('click', buildNetwork);
+  $('activationSelect').addEventListener('change', () => { state.activation = $('activationSelect').value; resetPracticeState(); renderStage(); });
+  $('randomizeBtn').addEventListener('click', () => {
+    state.inputs = state.inputs.map(randomInput);
+    state.weights = state.weights.map(W => W.map(row => row.map(randomWeight)));
+    state.biases = state.biases.map(b => b.map(randomBias));
+    resetPracticeState(); renderStage();
   });
-
-  $('applyArchitectureBtn').addEventListener('click', applyArchitecture);
-  $('activationSelect').addEventListener('change', setActivation);
-  $('simplePresetBtn').addEventListener('click', () => { state = createSimpleState(); selectedNeuron = null; selectedEdge = null; matrixBuilt = false; matrixPractice = false; matrixTransitionIndex = 0; dotTransitionIndex = 0; dotNeuronIndex = 0; renderAll(); });
-  $('chapterPresetBtn').addEventListener('click', () => { state = createChapterStyleState(); selectedNeuron = null; selectedEdge = null; matrixBuilt = false; matrixPractice = false; matrixTransitionIndex = 0; dotTransitionIndex = 0; dotNeuronIndex = 0; renderAll(); });
-  $('randomizeBtn').addEventListener('click', randomizeValues);
-  $('resetCalcBtn').addEventListener('click', resetCalculations);
-  $('showAllWeights').addEventListener('change', renderNetwork);
-  $('calculateNextLayerBtn').addEventListener('click', () => { const l = firstIncompleteLayer(); if (l !== -1) revealLayer(l); });
-
-  $('matrixTransition').addEventListener('change', (e) => { matrixTransitionIndex = +e.target.value; matrixBuilt = false; matrixPractice = false; renderMatrix(); });
-  $('buildMatrixBtn').addEventListener('click', () => { matrixBuilt = true; matrixPractice = false; renderMatrix(); });
-  $('practiceMatrixBtn').addEventListener('click', () => { matrixBuilt = false; matrixPractice = true; renderMatrix(); });
-  $('clearMatrixBtn').addEventListener('click', () => { matrixBuilt = false; matrixPractice = false; renderMatrix(); });
-
-  $('dotTransition').addEventListener('change', (e) => { dotTransitionIndex = +e.target.value; dotNeuronIndex = 0; populateDotNeuronSelect(); renderDotProduct(); });
-  $('dotNeuron').addEventListener('change', (e) => { dotNeuronIndex = +e.target.value; renderDotProduct(); });
-
-  $('editValuesBtn').addEventListener('click', () => { buildEditor(); $('editDialog').showModal(); });
-  $('saveValuesBtn').addEventListener('click', (e) => { if (!saveEditorValues()) e.preventDefault(); });
+  $('resetPracticeBtn').addEventListener('click', () => { resetPracticeState(); renderStage(); });
+  $('showAllWeights').addEventListener('change', () => { if (stage === 'diagram') renderDiagramStage(); });
+  $('checkDiagramBtn').addEventListener('click', checkAllDiagram);
+  $('checkMappingBtn').addEventListener('click', checkMapping);
+  $('checkMathBtn').addEventListener('click', checkMath);
   $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
+  $('editValuesBtn').addEventListener('click', () => { buildEditor(); $('editDialog').showModal(); });
+  $('saveValuesBtn').addEventListener('click', e => { if (!saveEditor()) e.preventDefault(); });
 
-  window.addEventListener('resize', () => { if (document.querySelector('[data-view="network"]').classList.contains('active')) renderNetwork(); });
+  document.querySelectorAll('.lesson-step').forEach(btn => btn.addEventListener('click', () => { stage = btn.dataset.stage; selection = null; mappingFocusNeuron = null; transition = 0; renderStage(); }));
+  $('beginnerBtn').addEventListener('click', () => { guidance = true; selection = null; mappingFocusNeuron = null; renderStage(); });
+  $('advancedBtn').addEventListener('click', () => { guidance = false; selection = null; mappingFocusNeuron = null; renderStage(); });
 
-  renderAll();
+  syncControls();
+  renderStage();
 })();

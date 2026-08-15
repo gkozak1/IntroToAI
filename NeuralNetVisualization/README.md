@@ -32,14 +32,14 @@ The app teaches one forward pass through three focused workspaces:
 
 The default network is **3 → 4 → 3 → 2** with two hidden layers. Every layer is capped at four neurons.
 
-## Beginner and Advanced
+## Guidance On and Off
 
-- **Step 1 / Beginner:** fully solved worked example; clicking `z` or `a` traces the related values and shows its numerical formula.
-- **Step 1 / Advanced:** `z` and `a` begin blank; the student calculates them from the diagram. Selecting `z` highlights the prior activations, incoming weights, and bias.
-- **Step 2 / Beginner:** matrix mapping is blank, with correspondence highlighting between diagram and matrix.
-- **Step 2 / Advanced:** the same mapping exercise without correspondence highlighting.
-- **Step 3 / Beginner:** `z` and `a` result vectors are blank; selecting a result highlights the matrix values needed to calculate it.
-- **Step 3 / Advanced:** the same calculation without operand highlighting.
+- **Step 1 / Guidance On:** fully solved worked example; clicking `z` or `a` traces the related values and shows its numerical formula.
+- **Step 1 / Guidance Off:** `z` and `a` begin blank; the student calculates them from the diagram. Selecting `z` highlights the prior activations, incoming weights, and bias.
+- **Step 2 / Guidance On:** matrix mapping is blank, with correspondence highlighting between diagram and matrix.
+- **Step 2 / Guidance Off:** the same mapping exercise without correspondence highlighting.
+- **Step 3 / Guidance On:** `z` and `a` result vectors are blank; selecting a result highlights the matrix values needed to calculate it.
+- **Step 3 / Guidance Off:** the same calculation without operand highlighting.
 
 `Check My Work` turns entered correct values green and incorrect values red while leaving blank values neutral.
 
