@@ -1,125 +1,229 @@
-# Neural Net Lab — Final Product Specification
+# Neural Net Lab — Product Specification
 
 ## Purpose
 
-Teach high-school students that these are the same forward-propagation calculation shown in different forms:
+Neural Net Lab is an instructional aid for high-school students learning forward propagation. It deliberately avoids becoming a general-purpose neural-network simulator. The same forward pass is learned in three increasingly abstract ways:
 
-1. a neuron receiving weighted inputs,
-2. a dot product,
-3. a row-vector × weight-matrix operation.
+**Calculate the diagram → map the diagram to matrices → calculate with the matrices.**
 
-The tool prioritizes focus, mathematical practice, and the connection among representations over realism or feature count.
+The diagram and the matrices are two representations of the same network. Dot products are the calculation performed inside the matrix representation, not a separate third representation.
 
-## Instructional flow
+## Network constraints
 
-### 1. One neuron
-- Start with neuron values hidden.
-- Click one non-input neuron.
-- Fade unrelated connections.
-- Reveal the incoming source activations, weights, products, bias, and activation function.
-- Student enters:
-  - weighted sum,
-  - z after bias,
-  - activated value a.
-- **Check My Work** checks all three; **Show Me** reveals them.
-- A correct/revealed neuron becomes visible in the network.
+- Four layers always present: Input, Hidden 1, Hidden 2, Output
+- Default architecture: **3 → 4 → 3 → 2**
+- 1–4 neurons per layer
+- Fully connected adjacent layers
+- Default activation: ReLU
+- Optional experimentation: Linear, Sigmoid, Tanh
+- Small numerical inputs, weights, and biases for readable arithmetic
 
-### 2. One layer
-- **Calculate Next Layer** reveals all remaining neurons in the next available layer.
-- The button works layer-by-layer rather than calculating the entire network.
-- A later layer cannot be practiced until the preceding layer is fully known.
+The row-vector convention is used throughout:
 
-### 3. Matrix representation
-- Matrix view begins blank.
-- **Build Matrix** shows current activations, the weight matrix, bias vector, z vector, and activated vector.
-- Unknown neuron results remain `?` until revealed in the network.
-- Dimensions are displayed above each object.
-- Row-vector convention: `a · W + b = z`, followed by activation.
-- Clicking a weight-matrix cell returns to the network and highlights the exact corresponding edge.
-- Clicking a network edge opens the matrix view and highlights the corresponding matrix cell.
-- **Practice Mapping** blanks the weight matrix and bias vector for student entry.
-- Entries can be checked individually by Enter/blur and together with **Check Matrix**.
+`a(previous) · W + b = z`
 
-### 4. Dot product
-- Choose one transition and one destination neuron.
-- Show the current activation row and only the corresponding weight-matrix column.
-- Student calculates only three values:
-  - weighted sum,
-  - z after bias,
-  - activated value a.
-- **Check My Work**, **Show Me**, and **Next Neuron** support brief repeated practice.
-- Correct work reveals the corresponding neuron in the network.
+Then activation is applied element-by-element:
 
-## Network limits
+`Activation(z) = a(next)`
 
-- Input neurons: 1–5
-- Hidden Layer 1: 1–5
-- Hidden Layer 2: optional, 1–5
-- Output neurons: 1–5
-- Fully connected feed-forward network only
+---
 
-## Values
+## Step 1 — Calculate the Diagram
 
-- Inputs, weights, and biases can be edited manually.
-- **Generate Values** uses small values suitable for hand calculation.
-- Generated weights and biases use one decimal place.
-- Generated inputs are small integers.
+### Instructional question
 
-## Activation functions
+**How does one neuron get its value?**
 
-- ReLU — default
-- Linear
-- Sigmoid
-- Tanh
+### Screen
 
-A single activation is used throughout the teaching network to avoid adding a separate output-layer concept to this tool.
+Only the neural-network diagram is visible. Matrix visuals are completely absent.
 
-## Presets
+Calculated neurons are split into:
 
-### Simple Start
-- 3 inputs → 3 hidden → 2 outputs
-- Designed to keep the first student experience visually clean.
-- Includes a negative pre-activation so ReLU visibly changes at least one value to zero.
+- left half: `z` (pre-activation)
+- right half: `a` (activated value passed forward)
 
-### Chapter 15-style
-- 3 → 4 → 3 → 2
-- First transition reproduces the chapter's explicit input and weight example:
-  - input `[1, 2, 4]`
-  - pre-activation values before bias/ReLU: `1.5, 2.2, -0.5, 0.4`
-- Later-layer weights are fixed teaching values, not representations of unseen chapter figures.
+Bias is shown with its destination neuron. Weight labels appear for the selected calculation, with an optional **Show all weights** control.
 
-## Visual rules
+### Beginner
 
-- Show every node and connection.
-- Do not print every edge weight by default.
-- Selecting a neuron shows weights only on its incoming connections.
-- **Show all weights** is optional.
-- Every non-input neuron is split visually into:
-  - `z`: value after weighted sum + bias,
-  - `a`: value after activation.
-- Bias appears beside its destination neuron.
-- Uncalculated values show `?`.
-- Zero-valued source activations use a dashed connection style.
-- Focused and exact-linked edges use stronger visual emphasis.
+The network is fully solved as a worked example.
 
-## Technical constraints
+Clicking `z`:
 
-- Static browser application.
-- No server, database, API, npm install, build step, or external library.
-- Vanilla HTML, CSS, JavaScript, and SVG.
-- Compatible with GitHub Pages.
-- Target deployment path: `/IntroToAI/NeuralNetVisualization/`.
-- Responsive enough for Chromebook-sized screens; primary design target is classroom laptop/desktop use.
+- highlights prior-layer activated values
+- highlights incoming edges and weights
+- highlights the destination bias
+- opens the exact numerical weighted-sum-plus-bias formula
 
-## Non-goals for this version
+Clicking `a`:
 
-- Training/backpropagation
-- Gradient descent
-- Loss functions
-- Softmax/classification probabilities
-- Convolutional networks
-- Arbitrary tensor operations
-- Generic full-featured matrix calculator
-- Gamification, scoring, timers, or streaks
+- emphasizes the activation side of the neuron
+- emphasizes outgoing connections where applicable to show what is passed forward
+- opens the exact activation formula
 
-These are excluded to preserve the conceptual chain: neuron → layer → matrix → dot product.
+### Advanced
+
+All derived `z` and `a` values begin blank.
+
+- Hidden Layer 1 neurons may be solved in any order.
+- Later layers wait until the prior layer's `a` values have been checked correct.
+- Selecting blank `z` highlights the prior activations, incoming weights, and bias.
+- The student enters `z` in a compact practice dock.
+- Once `z` is checked correct, the student calculates `a`.
+
+This preserves the idea that neurons within a layer can be calculated in parallel while later layers depend on the completed prior layer.
+
+### Checking
+
+`Check My Work` evaluates entered values only:
+
+- correct: green
+- incorrect: red
+- blank: neutral
+
+Incorrect answers are not automatically revealed.
+
+---
+
+## Step 2 — Map to Matrices
+
+### Instructional question
+
+**Where does each part of the diagram go in the matrix representation?**
+
+### Screen
+
+The diagram and matrix representation appear side by side. Matrix arithmetic is not shown.
+
+One transition is mapped at a time:
+
+- Input → Hidden 1
+- Hidden 1 → Hidden 2
+- Hidden 2 → Output
+
+The student maps only the information needed to set up the calculation:
+
+- previous activation vector `a`
+- weight matrix `W`
+- bias vector `b`
+
+The destination `z` and `a` vectors are intentionally left for Step 3 rather than copied from the diagram.
+
+### Matrix meaning
+
+For a source layer of size `m` and destination layer of size `n`:
+
+- `a` is `1 × m`
+- `W` is `m × n`
+- column `j` of `W` contains every weight entering destination neuron `j`
+- `b` is `1 × n`
+
+### Beginner
+
+All matrix cells begin blank.
+
+Selecting a destination neuron highlights:
+
+- the prior-layer activated values
+- all incoming weights for that neuron
+- its bias
+- the previous activation vector
+- the matching column of `W`
+- the matching bias cell
+
+Selecting an individual matrix cell narrows the connection to its exact diagram source.
+
+Highlighting reveals **where**, not **what**. The student still types the value.
+
+### Advanced
+
+The same blank mapping exercise is shown with no correspondence highlighting. The current layer transition is still isolated so the diagram does not become unreadable.
+
+### Checking
+
+`Check My Work` checks the current transition. Correct entries turn green, incorrect entries red, and blanks remain neutral.
+
+---
+
+## Step 3 — Matrix Math
+
+### Instructional question
+
+**How do these matrices produce the same neuron values we calculated from the diagram?**
+
+### Screen
+
+The matrix calculation is the dominant visual. A smaller network remains visible as a reference back to the destination neuron.
+
+The mapped values are complete:
+
+`a(previous) · W + b = z`
+
+The `z` result vector begins blank. Beneath it:
+
+`Activation(z) = a(next)`
+
+The `a` result vector also begins blank.
+
+### Beginner
+
+Selecting blank `z[j]` highlights:
+
+- the complete previous activation vector
+- column `j` of `W`
+- bias `b[j]`
+- destination `z[j]`
+- the corresponding destination neuron and incoming connections in the small diagram
+
+The student calculates and enters `z[j]`.
+
+Selecting blank `a[j]` highlights its corresponding `z[j]`; the student applies the activation function and enters `a[j]`.
+
+### Advanced
+
+The same matrix problem is shown without operand highlighting. The compact diagram remains as contextual confirmation of which neuron the result belongs to, but does not identify the arithmetic operands.
+
+### Formula inspection
+
+After a calculated `z` or `a` value has been checked correct, clicking it opens the exact numerical formula that produced it. Formula inspection confirms understanding without becoming an answer-reveal mechanism before the attempt.
+
+### Checking
+
+`Check My Work` evaluates entered result cells for the selected transition:
+
+- correct: green
+- incorrect: red
+- blank: neutral
+
+---
+
+## Shared controls
+
+- Architecture: 1–4 neurons per layer, with both hidden layers retained
+- Default: 3 → 4 → 3 → 2
+- **New Values:** generate a fresh small-number exercise
+- **Edit Values:** manually edit inputs, every weight, and every bias
+- **Reset Practice:** clear student entries/checking while preserving the network values
+
+## Visual language
+
+Use a restrained emphasis system rather than a different color for every connection:
+
+- selected target: strongest emphasis
+- related source values/weights/bias: medium emphasis
+- exact mapped connection: gold emphasis
+- correct entry: green
+- incorrect entry: red
+- irrelevant information: subdued when focus is useful
+
+## Technical requirements
+
+- Static browser application
+- `index.html`, `styles.css`, `app.js`
+- No server-side code
+- No npm/build process
+- No API dependency
+- No external JavaScript libraries
+- GitHub Pages compatible
+- Designed for current Chromium-based browsers and classroom Chromebook/projector use

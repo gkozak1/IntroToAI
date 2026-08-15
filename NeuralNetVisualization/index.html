@@ -10,7 +10,7 @@
   <header class="app-header">
     <div>
       <h1>Neural Net Lab</h1>
-      <p class="subtitle">See one neural-network calculation as neurons, matrices, and dot products.</p>
+      <p class="subtitle">See the same calculation as a network, a matrix, and a dot product.</p>
     </div>
     <button id="helpBtn" class="secondary small">How to use</button>
   </header>
@@ -20,26 +20,19 @@
       <div class="setup-main">
         <div class="field-group compact-field">
           <label for="inputCount">Inputs</label>
-          <input id="inputCount" type="number" min="1" max="5" value="3" />
+          <input id="inputCount" type="number" min="1" max="4" value="3" />
         </div>
         <div class="field-group compact-field">
           <label for="hidden1Count">Hidden 1</label>
-          <input id="hidden1Count" type="number" min="1" max="5" value="3" />
+          <input id="hidden1Count" type="number" min="1" max="4" value="4" />
         </div>
         <div class="field-group compact-field">
           <label for="hidden2Count">Hidden 2</label>
-          <select id="hidden2Count">
-            <option value="0" selected>None</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
+          <input id="hidden2Count" type="number" min="1" max="4" value="3" />
         </div>
         <div class="field-group compact-field">
           <label for="outputCount">Outputs</label>
-          <input id="outputCount" type="number" min="1" max="5" value="2" />
+          <input id="outputCount" type="number" min="1" max="4" value="2" />
         </div>
         <div class="field-group activation-field">
           <label for="activationSelect">Activation</label>
@@ -53,112 +46,66 @@
         <button id="applyArchitectureBtn" class="primary">Build Network</button>
       </div>
       <div class="setup-actions">
-        <button id="simplePresetBtn" class="secondary">Simple Start</button>
-        <button id="chapterPresetBtn" class="secondary">Chapter 15-style</button>
+        <button id="simplePresetBtn" class="secondary">Simpler 3→3→3→2</button>
         <button id="randomizeBtn" class="secondary">Generate Values</button>
         <button id="editValuesBtn" class="secondary">Edit Values</button>
         <button id="resetCalcBtn" class="secondary">Reset Calculations</button>
       </div>
     </section>
 
-    <section class="lesson-strip" aria-label="Suggested learning path">
-      <span class="lesson-label">Suggested path</span>
-      <span>1. Calculate one neuron</span>
-      <span class="arrow">→</span>
-      <span>2. Propagate a layer</span>
-      <span class="arrow">→</span>
-      <span>3. Convert to matrix form</span>
-      <span class="arrow">→</span>
-      <span>4. Practice the dot product</span>
+    <section class="connection-strip" aria-label="Core relationship">
+      <strong>One calculation, three views:</strong>
+      <span>network connection</span><span class="arrow">↔</span>
+      <span>matrix values</span><span class="arrow">↔</span>
+      <span>dot product</span>
     </section>
 
-    <nav class="tabs" aria-label="Views">
-      <button class="tab active" data-view="network">Network</button>
-      <button class="tab" data-view="matrix">Matrix</button>
-      <button class="tab" data-view="dot">Dot Product</button>
-    </nav>
-
-    <section id="networkView" class="view-panel active-view">
-      <div class="network-layout">
-        <div class="card network-card">
-          <div class="card-heading inline-heading">
-            <div>
-              <h2>Network View</h2>
-              <p>Click a non-input neuron to focus on just the values that create it.</p>
-            </div>
-            <label class="toggle-label"><input id="showAllWeights" type="checkbox" /> Show all weights</label>
-          </div>
-          <div id="networkSvgWrap" class="network-svg-wrap">
-            <svg id="networkSvg" role="img" aria-label="Interactive neural network diagram"></svg>
-          </div>
-          <div class="network-actions">
-            <button id="calculateNextLayerBtn" class="primary">Calculate Next Layer</button>
-            <span id="nextLayerStatus" class="status-note"></span>
-          </div>
-        </div>
-
-        <aside class="card calculation-card" id="neuronPanel">
-          <div class="card-heading">
-            <h2>One Neuron</h2>
-            <p id="neuronPrompt">Select a hidden or output neuron.</p>
-          </div>
-          <div id="neuronDetails" class="empty-state">
-            Start with one neuron. The rest of the network will fade so you can follow its inputs and weights.
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <section id="matrixView" class="view-panel">
-      <div class="card">
-        <div class="card-heading matrix-heading">
+    <section class="linked-workspace">
+      <div class="card network-card">
+        <div class="card-heading inline-heading">
           <div>
-            <h2>Matrix View</h2>
-            <p>The same connections, reorganized as numbers.</p>
+            <h2>Neural Network</h2>
+            <p>Click the <strong>z</strong> or <strong>a</strong> half of a neuron. The math at right follows the same selection.</p>
           </div>
-          <div class="inline-controls">
-            <label for="matrixTransition">Transition</label>
-            <select id="matrixTransition"></select>
-            <button id="buildMatrixBtn" class="primary">Build Matrix</button>
-            <button id="practiceMatrixBtn" class="secondary">Practice Mapping</button>
-            <button id="clearMatrixBtn" class="secondary">Clear</button>
-          </div>
+          <label class="toggle-label"><input id="showAllWeights" type="checkbox" /> Show all weights</label>
         </div>
-        <div id="matrixContent" class="matrix-content empty-matrix">
-          <p>Start blank. Choose a transition, then build it or practice filling it from the network.</p>
+        <div id="networkSvgWrap" class="network-svg-wrap">
+          <svg id="networkSvg" role="img" aria-label="Interactive neural network diagram"></svg>
+        </div>
+        <div class="network-actions">
+          <button id="calculateNextLayerBtn" class="primary">Calculate Next Layer</button>
+          <span id="nextLayerStatus" class="status-note"></span>
         </div>
       </div>
-    </section>
 
-    <section id="dotView" class="view-panel">
-      <div class="dot-layout">
-        <div class="card">
+      <aside class="math-inspector">
+        <section class="card matrix-card">
           <div class="card-heading matrix-heading">
             <div>
-              <h2>Dot Product</h2>
-              <p>Calculate one destination neuron using one input row and one weight column.</p>
+              <h2>Matrix Mapping</h2>
+              <p id="matrixPrompt">Select a neuron to see where its values live in the matrix.</p>
             </div>
-            <div class="inline-controls">
-              <label for="dotTransition">Transition</label>
-              <select id="dotTransition"></select>
-              <label for="dotNeuron">Neuron</label>
-              <select id="dotNeuron"></select>
+            <div class="inline-controls compact-controls">
+              <label for="matrixTransition">Transition</label>
+              <select id="matrixTransition"></select>
+              <button id="practiceMatrixBtn" class="secondary small">Practice Mapping</button>
             </div>
           </div>
-          <div id="dotVisual" class="dot-visual"></div>
-        </div>
-        <aside class="card calculation-card">
+          <div id="matrixContent" class="matrix-content"></div>
+        </section>
+
+        <section class="card calculation-card">
           <div class="card-heading">
-            <h2>Practice</h2>
-            <p>Do the important arithmetic, without turning this into a worksheet marathon.</p>
+            <h2>Selected Calculation</h2>
+            <p id="neuronPrompt">Click a hidden or output neuron to connect the three views.</p>
           </div>
-          <div id="dotPractice"></div>
-        </aside>
-      </div>
+          <div id="neuronDetails" class="empty-state">
+            The selected neuron's incoming connections, matrix column, bias, and dot product will all be linked here.
+          </div>
+        </section>
+      </aside>
     </section>
   </main>
-
-  <div id="modalBackdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
 
   <dialog id="editDialog" class="dialog large-dialog">
     <form method="dialog">
@@ -180,16 +127,16 @@
   <dialog id="helpDialog" class="dialog">
     <form method="dialog">
       <div class="dialog-header">
-        <h2>Keep the lesson simple</h2>
+        <h2>How the linked workspace works</h2>
         <button value="cancel" class="icon-btn" aria-label="Close">×</button>
       </div>
       <ol class="help-list">
-        <li><strong>Network:</strong> click one neuron and calculate its weighted sum, bias, and activation.</li>
-        <li><strong>Layer:</strong> use <em>Calculate Next Layer</em> to reveal the rest only after the idea is clear.</li>
-        <li><strong>Matrix:</strong> convert one transition and see where every connection appears in the weight matrix.</li>
-        <li><strong>Dot Product:</strong> calculate one result entry and see that it is the same neuron calculation again.</li>
+        <li>Click the <strong>z</strong> half of a neuron to focus on the weighted sum, bias, and pre-activation value.</li>
+        <li>The same incoming weights are highlighted as a column in <strong>W</strong>, and the same result is highlighted in <strong>z</strong>.</li>
+        <li>Click the <strong>a</strong> half to focus on activation and the value that moves forward to the next layer.</li>
+        <li>Click an individual network edge, matrix weight, or dot-product term to trace that exact connection across all three views.</li>
       </ol>
-      <p class="muted">The tool supports larger networks, but small examples are usually better for learning.</p>
+      <p class="muted help-note">The network always uses two hidden layers and supports up to four neurons per layer.</p>
       <div class="dialog-actions"><button value="default" class="primary">Got it</button></div>
     </form>
   </dialog>
