@@ -1,772 +1,199 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gradient Descent Neuron Lab</title>
-  <style>
-    body { margin: 0; padding: 24px; background: #f4f6f8; }
-    main { max-width: 1180px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 18px; }
-    @media (max-width: 600px) { body { padding: 8px; } main { padding: 12px; } }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neural Net Lab</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<main>
-<div id="gd-lab" class="gd-lab">
-  <style>
-    #gd-lab {
-      --panel: var(--viz-panel, #ffffff);
-      --card: var(--viz-card, #ffffff);
-      --chip: var(--viz-chip-card, #f6f8fb);
-      --text: var(--viz-text, #18212f);
-      --muted: var(--viz-muted, #667085);
-      --border: var(--viz-border, #d9dee7);
-      --accent: var(--viz-accent, #285f8f);
-      --accent-text: var(--viz-accent-text, #ffffff);
-      --accent-bg: var(--viz-accent-bg, #e8f1f8);
-      --accent-soft: var(--viz-accent-bg-subtle, #f3f7fb);
-      --series-1: var(--viz-series-1, #285f8f);
-      --series-2: var(--viz-series-2, #9b5b42);
-      --series-3: var(--viz-series-3, #6b7f3f);
-      color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      width: 100%;
-    }
-    #gd-lab * { box-sizing: border-box; }
-    #gd-lab button, #gd-lab input, #gd-lab select { font: inherit; }
-    #gd-lab .gd-shell { display: grid; gap: 18px; }
-    #gd-lab .gd-note {
-      background: var(--accent-soft);
-      border: 1px solid var(--border);
-      border-left: 4px solid var(--accent);
-      border-radius: 14px;
-      padding: 13px 15px;
-      line-height: 1.45;
-    }
-    #gd-lab .gd-stage-nav {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-    #gd-lab .gd-stage-btn {
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 11px 10px;
-      text-align: left;
-      cursor: pointer;
-      min-height: 64px;
-    }
-    #gd-lab .gd-stage-btn strong { display: block; font-weight: 650; }
-    #gd-lab .gd-stage-btn span { display: block; margin-top: 3px; color: var(--muted); font-size: 0.82rem; }
-    #gd-lab .gd-stage-btn[aria-selected="true"] {
-      background: var(--accent-bg);
-      border-color: var(--accent);
-      box-shadow: inset 0 0 0 1px var(--accent);
-    }
-    #gd-lab .gd-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1.28fr) minmax(280px, 0.82fr);
-      gap: 18px;
-      align-items: start;
-    }
-    #gd-lab .gd-section { display: grid; gap: 10px; min-width: 0; }
-    #gd-lab .gd-section-head { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
-    #gd-lab h2, #gd-lab h3 { margin: 0; font-weight: 650; }
-    #gd-lab h2 { font-size: 1.05rem; }
-    #gd-lab h3 { font-size: 0.98rem; }
-    #gd-lab .gd-subtle { color: var(--muted); font-size: 0.86rem; line-height: 1.4; }
-    #gd-lab .gd-chart-wrap { min-width: 0; }
-    #gd-lab svg { width: 100%; height: auto; display: block; overflow: visible; }
-    #gd-lab .gd-chart-frame { fill: var(--panel); stroke: var(--border); }
-    #gd-lab .gd-grid { stroke: var(--border); stroke-width: 1; opacity: 0.65; }
-    #gd-lab .gd-axis { stroke: var(--muted); stroke-width: 1.2; }
-    #gd-lab .gd-tick { fill: var(--muted); font-size: 11px; }
-    #gd-lab .gd-axis-label { fill: var(--text); font-size: 12px; font-weight: 600; }
-    #gd-lab .gd-chart-annotation { fill: var(--text); font-size: 11px; font-weight: 600; }
-    #gd-lab .gd-current-line { stroke: var(--series-1); stroke-width: 3; }
-    #gd-lab .gd-opt-line { stroke: var(--series-3); stroke-width: 2; stroke-dasharray: 7 6; }
-    #gd-lab .gd-point { fill: var(--series-2); stroke: var(--panel); stroke-width: 2; }
-    #gd-lab .gd-residual { stroke: var(--series-2); stroke-width: 1.5; stroke-dasharray: 3 3; opacity: 0.75; }
-    #gd-lab .gd-curve { fill: none; stroke: var(--series-1); stroke-width: 2.5; }
-    #gd-lab .gd-tangent { stroke: var(--series-2); stroke-width: 2.1; stroke-dasharray: 7 5; }
-    #gd-lab .gd-marker { fill: var(--series-2); stroke: var(--panel); stroke-width: 2; }
-    #gd-lab .gd-controls {
-      border: 1px solid var(--border);
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px;
-      display: grid;
-      gap: 13px;
-    }
-    #gd-lab .gd-control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    #gd-lab .gd-control { min-width: 0; }
-    #gd-lab label { display: block; font-size: 0.84rem; font-weight: 600; margin-bottom: 6px; }
-    #gd-lab input[type="number"], #gd-lab select {
-      width: 100%;
-      border: 1px solid var(--border);
-      background: var(--panel);
-      color: var(--text);
-      border-radius: 10px;
-      padding: 8px 9px;
-    }
-    #gd-lab input[type="range"] { width: 100%; accent-color: var(--accent); }
-    #gd-lab .gd-combo { display: grid; grid-template-columns: 1fr 92px; gap: 9px; align-items: center; }
-    #gd-lab .gd-button-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    #gd-lab button.gd-button {
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      border-radius: 10px;
-      padding: 9px 12px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    #gd-lab button.gd-button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-    #gd-lab button.gd-button:disabled { opacity: 0.48; cursor: not-allowed; }
-    #gd-lab .gd-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
-    #gd-lab .gd-metric {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--chip);
-      padding: 10px;
-      min-width: 0;
-    }
-    #gd-lab .gd-metric span { display: block; color: var(--muted); font-size: 0.75rem; }
-    #gd-lab .gd-metric strong { display: block; margin-top: 4px; font-size: 1.02rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-    #gd-lab .gd-status {
-      border-radius: 12px;
-      padding: 10px 12px;
-      background: var(--accent-soft);
-      border: 1px solid var(--border);
-      font-size: 0.9rem;
-      line-height: 1.4;
-    }
-    #gd-lab .gd-loss-stack { display: grid; gap: 14px; }
-    #gd-lab .gd-loss-card { border-top: 1px solid var(--border); padding-top: 12px; }
-    #gd-lab .gd-loss-card:first-child { border-top: 0; padding-top: 0; }
-    #gd-lab .gd-loss-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 7px; }
-    #gd-lab .gd-loss-title h3, #gd-lab .gd-loss-slope { margin: 0; font-size: 0.98rem; font-weight: 650; color: var(--text); }
-    #gd-lab details { border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
-    #gd-lab summary { cursor: pointer; padding: 12px 14px; font-weight: 650; }
-    #gd-lab details > div { padding: 0 14px 14px; }
-    #gd-lab .gd-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
-    #gd-lab table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
-    #gd-lab th, #gd-lab td { padding: 8px 9px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
-    #gd-lab th:first-child, #gd-lab td:first-child { text-align: left; }
-    #gd-lab th { background: #214d1d; color: #ffffff; font-weight: 650; }
-    #gd-lab tr:last-child td { border-bottom: 0; }
-    #gd-lab .gd-summary-table th { background: #18212f; }
-    #gd-lab .gd-summary-table td:nth-child(1), #gd-lab .gd-summary-table td:nth-child(2) { text-align: left; white-space: normal; }
-    #gd-lab .gd-summary-table td:nth-child(3) { text-align: right; }
-    #gd-lab .gd-mini-badge { display: inline-block; border-radius: 999px; padding: 3px 8px; background: var(--accent-bg); color: var(--text); font-size: 0.76rem; }
-    #gd-lab .gd-hidden { display: none !important; }
-    #gd-lab .gd-warning { color: #9a3412; font-weight: 600; }
-    #gd-lab .gd-success { color: #216e39; font-weight: 650; }
-    #gd-lab .gd-disabled-control { opacity: 0.52; }
-    #gd-lab .gd-disabled-control input { cursor: not-allowed; }
-    #gd-lab .gd-disabled-loss { opacity: 0.42; filter: grayscale(1); }
-    #gd-lab input[type="number"].gd-converged-input {
-      border-color: #2e7d32 !important;
-      background: #eaf7ed !important;
-      color: #14532d !important;
-      box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.18);
-      opacity: 1;
-    }
-    @media (max-width: 850px) {
-      #gd-lab .gd-layout { grid-template-columns: 1fr; }
-      #gd-lab .gd-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 560px) {
-      #gd-lab .gd-stage-nav { grid-template-columns: 1fr; }
-      #gd-lab .gd-control-grid { grid-template-columns: 1fr; }
-      #gd-lab .gd-combo { grid-template-columns: 1fr 88px; }
-    }
-  </style>
+  <header class="app-header">
+    <div>
+      <h1>Neural Net Lab</h1>
+      <p class="subtitle">See one neural-network calculation as neurons, matrices, and dot products.</p>
+    </div>
+    <button id="helpBtn" class="secondary small">How to use</button>
+  </header>
 
-  <div class="gd-shell">
-    <nav class="gd-stage-nav" aria-label="Gradient descent stages">
-      <button class="gd-stage-btn" type="button" data-stage="1" aria-selected="true">
-        <strong>1. Fit by eye</strong><span>Adjust weight and bias</span>
-      </button>
-      <button class="gd-stage-btn" type="button" data-stage="2" aria-selected="false">
-        <strong>2. Lock the bias</strong><span>Optimize weight only</span>
-      </button>
-      <button class="gd-stage-btn" type="button" data-stage="3" aria-selected="false">
-        <strong>3. Advanced</strong><span>Optimize both parameters</span>
-      </button>
+  <main class="app-shell">
+    <section class="setup-card card">
+      <div class="setup-main">
+        <div class="field-group compact-field">
+          <label for="inputCount">Inputs</label>
+          <input id="inputCount" type="number" min="1" max="5" value="3" />
+        </div>
+        <div class="field-group compact-field">
+          <label for="hidden1Count">Hidden 1</label>
+          <input id="hidden1Count" type="number" min="1" max="5" value="3" />
+        </div>
+        <div class="field-group compact-field">
+          <label for="hidden2Count">Hidden 2</label>
+          <select id="hidden2Count">
+            <option value="0" selected>None</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <div class="field-group compact-field">
+          <label for="outputCount">Outputs</label>
+          <input id="outputCount" type="number" min="1" max="5" value="2" />
+        </div>
+        <div class="field-group activation-field">
+          <label for="activationSelect">Activation</label>
+          <select id="activationSelect">
+            <option value="relu" selected>ReLU</option>
+            <option value="linear">Linear</option>
+            <option value="sigmoid">Sigmoid</option>
+            <option value="tanh">Tanh</option>
+          </select>
+        </div>
+        <button id="applyArchitectureBtn" class="primary">Build Network</button>
+      </div>
+      <div class="setup-actions">
+        <button id="simplePresetBtn" class="secondary">Simple Start</button>
+        <button id="chapterPresetBtn" class="secondary">Chapter 15-style</button>
+        <button id="randomizeBtn" class="secondary">Generate Values</button>
+        <button id="editValuesBtn" class="secondary">Edit Values</button>
+        <button id="resetCalcBtn" class="secondary">Reset Calculations</button>
+      </div>
+    </section>
+
+    <section class="lesson-strip" aria-label="Suggested learning path">
+      <span class="lesson-label">Suggested path</span>
+      <span>1. Calculate one neuron</span>
+      <span class="arrow">→</span>
+      <span>2. Propagate a layer</span>
+      <span class="arrow">→</span>
+      <span>3. Convert to matrix form</span>
+      <span class="arrow">→</span>
+      <span>4. Practice the dot product</span>
+    </section>
+
+    <nav class="tabs" aria-label="Views">
+      <button class="tab active" data-view="network">Network</button>
+      <button class="tab" data-view="matrix">Matrix</button>
+      <button class="tab" data-view="dot">Dot Product</button>
     </nav>
 
-    <div id="stageMessage" class="gd-status" aria-live="polite"></div>
+    <section id="networkView" class="view-panel active-view">
+      <div class="network-layout">
+        <div class="card network-card">
+          <div class="card-heading inline-heading">
+            <div>
+              <h2>Network View</h2>
+              <p>Click a non-input neuron to focus on just the values that create it.</p>
+            </div>
+            <label class="toggle-label"><input id="showAllWeights" type="checkbox" /> Show all weights</label>
+          </div>
+          <div id="networkSvgWrap" class="network-svg-wrap">
+            <svg id="networkSvg" role="img" aria-label="Interactive neural network diagram"></svg>
+          </div>
+          <div class="network-actions">
+            <button id="calculateNextLayerBtn" class="primary">Calculate Next Layer</button>
+            <span id="nextLayerStatus" class="status-note"></span>
+          </div>
+        </div>
 
-    <div class="gd-layout">
-      <section class="gd-section">
-        <div class="gd-section-head">
+        <aside class="card calculation-card" id="neuronPanel">
+          <div class="card-heading">
+            <h2>One Neuron</h2>
+            <p id="neuronPrompt">Select a hidden or output neuron.</p>
+          </div>
+          <div id="neuronDetails" class="empty-state">
+            Start with one neuron. The rest of the network will fade so you can follow its inputs and weights.
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="matrixView" class="view-panel">
+      <div class="card">
+        <div class="card-heading matrix-heading">
           <div>
-            <h2>Model fit</h2>
-            <div id="equationText" class="gd-subtle"></div>
+            <h2>Matrix View</h2>
+            <p>The same connections, reorganized as numbers.</p>
           </div>
-          <span id="stageBadge" class="gd-mini-badge"></span>
-        </div>
-        <div class="gd-chart-wrap">
-          <svg id="fitChart" viewBox="0 0 680 410" role="img" aria-label="Scatterplot with current regression line"></svg>
-        </div>
-
-        <div class="gd-controls">
-          <div id="manualControls">
-            <div class="gd-control-grid">
-              <div class="gd-control">
-                <label for="manualWeight">Weight <em>w</em></label>
-                <div class="gd-combo">
-                  <input id="manualWeightRange" type="range" min="-0.2" max="1.2" step="0.1" value="0">
-                  <input id="manualWeight" type="number" min="-2" max="3" step="0.001" value="0.000" inputmode="decimal">
-                </div>
-              </div>
-              <div class="gd-control">
-                <label for="manualBias">Bias <em>b</em></label>
-                <div class="gd-combo">
-                  <input id="manualBiasRange" type="range" min="-0.5" max="5.5" step="0.1" value="0">
-                  <input id="manualBias" type="number" min="-5" max="8" step="0.001" value="0.000" inputmode="decimal">
-                </div>
-              </div>
-            </div>
-            <div class="gd-button-row" style="margin-top:12px">
-              <button id="testLine" class="gd-button primary" type="button">Check current line</button>
-              <button id="manualReset" class="gd-button" type="button">Reset</button>
-              <button id="revealSolution" class="gd-button" type="button">Reveal solution</button>
-            </div>
-          </div>
-
-          <div id="gradientControls" class="gd-hidden">
-            <div class="gd-control-grid">
-              <div class="gd-control">
-                <label for="gdWeight">Current weight <em>w</em></label>
-                <div class="gd-combo">
-                  <input id="gdWeightRange" type="range" min="-0.2" max="1.2" step="0.1" value="0">
-                  <input id="gdWeight" type="number" min="-2" max="3" step="0.001" value="0.000" inputmode="decimal">
-                </div>
-              </div>
-              <div id="gdBiasControl" class="gd-control">
-                <label id="gdBiasLabel" for="gdBias">Current bias <em>b</em></label>
-                <div class="gd-combo">
-                  <input id="gdBiasRange" type="range" min="-0.5" max="5.5" step="0.1" value="0">
-                  <input id="gdBias" type="number" min="-5" max="8" step="0.001" value="0.000" inputmode="decimal">
-                </div>
-              </div>
-              <div class="gd-control">
-                <label for="runCount">Number of iterations to advance</label>
-                <input id="runCount" type="number" min="1" max="100" step="1" value="5" inputmode="numeric">
-              </div>
-            </div>
-            <div class="gd-button-row" style="margin-top:12px">
-              <button id="stepOnce" class="gd-button primary" type="button">Run one iteration</button>
-              <button id="runMany" class="gd-button" type="button">Advance X</button>
-              <button id="playPause" class="gd-button" type="button">Play</button>
-              <button id="gdReset" class="gd-button" type="button">Reset</button>
-            </div>
-            <div id="rateWarning" class="gd-subtle" style="margin-top:9px"></div>
-          </div>
-
-          <div class="gd-control-grid">
-            <div id="learningRateControl" class="gd-control">
-              <label for="learningRate">Learning rate α</label>
-              <input id="learningRate" type="number" min="0.0001" max="0.05" step="0.0005" value="0.0050" inputmode="decimal">
-              <div class="gd-subtle">Used when gradient descent performs an iteration.</div>
-            </div>
-            <div class="gd-control">
-              <label for="epsilon">Gradient tolerance ε</label>
-              <input id="epsilon" type="number" min="0.001" max="20" step="0.01" value="0.50" inputmode="decimal">
-              <div class="gd-subtle">“Close enough to zero” stopping criterion.</div>
-            </div>
+          <div class="inline-controls">
+            <label for="matrixTransition">Transition</label>
+            <select id="matrixTransition"></select>
+            <button id="buildMatrixBtn" class="primary">Build Matrix</button>
+            <button id="practiceMatrixBtn" class="secondary">Practice Mapping</button>
+            <button id="clearMatrixBtn" class="secondary">Clear</button>
           </div>
         </div>
-
-        <div class="gd-metrics">
-          <div class="gd-metric"><span id="metricLabel1">Attempts</span><strong id="metric1">0</strong></div>
-          <div class="gd-metric"><span>Mean squared error</span><strong id="metric2">—</strong></div>
-          <div class="gd-metric"><span id="metricLabel3">Gradient magnitude</span><strong id="metric3">—</strong></div>
-          <div class="gd-metric"><span id="metricLabel4">Status</span><strong id="metric4">Preview</strong></div>
-        </div>
-      </section>
-
-      <aside class="gd-section">
-        <div class="gd-section-head">
-          <div>
-            <h2 id="lossHeading">Loss-curve slices</h2>
-            <div id="lossDescription" class="gd-subtle"></div>
-          </div>
-        </div>
-        <div class="gd-loss-stack">
-          <div class="gd-loss-card">
-            <div class="gd-loss-title"><h3>Weight slice</h3><span id="weightGradientText" class="gd-loss-slope"></span></div>
-            <svg id="weightLossChart" viewBox="0 0 430 245" role="img" aria-label="Weight loss curve and tangent"></svg>
-          </div>
-          <div id="biasLossCard" class="gd-loss-card">
-            <div class="gd-loss-title"><h3>Bias slice</h3><span id="biasGradientText" class="gd-loss-slope"></span></div>
-            <svg id="biasLossChart" viewBox="0 0 430 245" role="img" aria-label="Bias loss curve and tangent"></svg>
-          </div>
-        </div>
-        <div class="gd-note" style="font-size:0.86rem">
-          Each curve is a one-dimensional slice through the same bowl-shaped loss surface. The tangent slope is one component of the gradient.
-        </div>
-      </aside>
-    </div>
-
-    <details open>
-      <summary>Calculations for the current iteration</summary>
-      <div class="gd-section">
-        <div class="gd-subtle" id="calculationCaption"></div>
-        <div class="gd-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Index (i)</th><th>Input</th><th>Correct Output (y)</th><th>Predicted Output (ŷ)</th><th>Error</th><th>Error × 2 × Input</th><th>Error × 2</th><th>Error Squared</th>
-              </tr>
-            </thead>
-            <tbody id="sampleBody"></tbody>
-          </table>
-        </div>
-        <div class="gd-scroll">
-          <table class="gd-summary-table">
-            <thead><tr><th>Step in Words</th><th>Step as Formula</th><th>Answer</th></tr></thead>
-            <tbody id="summaryBody"></tbody>
-          </table>
+        <div id="matrixContent" class="matrix-content empty-matrix">
+          <p>Start blank. Choose a transition, then build it or practice filling it from the network.</p>
         </div>
       </div>
-    </details>
-  </div>
+    </section>
 
-  <script>
-    (() => {
-      const root = document.getElementById('gd-lab');
-      const data = [
-        {i:1,x:1,y:1.695},{i:2,x:2,y:2.656},{i:3,x:3,y:3.156},{i:4,x:4,y:4.120},{i:5,x:5,y:3.474},
-        {i:6,x:6,y:5.526},{i:7,x:7,y:5.682},{i:8,x:8,y:4.877},{i:9,x:9,y:5.766},{i:10,x:10,y:7.398}
-      ];
-      const optimum = { w: 0.536, b: 1.487 };
-      const state = {
-        stage: 1,
-        epsilon: 0.50,
-        playing: false,
-        timer: null,
-        remaining: null,
-        manual: { w: 0, b: 0, attempts: 0, countedW: 0, countedB: 0, revealed: false, lastSubmitted: null },
-        guided: { w: 0, b: optimum.b, startW: 0, iteration: 0, attempts: 0, lr: 0.005, lastStep: null },
-        advanced: { w: 0, b: 0, startW: 0, startB: 0, iteration: 0, lr: 0.005, lastStep: null }
-      };
+    <section id="dotView" class="view-panel">
+      <div class="dot-layout">
+        <div class="card">
+          <div class="card-heading matrix-heading">
+            <div>
+              <h2>Dot Product</h2>
+              <p>Calculate one destination neuron using one input row and one weight column.</p>
+            </div>
+            <div class="inline-controls">
+              <label for="dotTransition">Transition</label>
+              <select id="dotTransition"></select>
+              <label for="dotNeuron">Neuron</label>
+              <select id="dotNeuron"></select>
+            </div>
+          </div>
+          <div id="dotVisual" class="dot-visual"></div>
+        </div>
+        <aside class="card calculation-card">
+          <div class="card-heading">
+            <h2>Practice</h2>
+            <p>Do the important arithmetic, without turning this into a worksheet marathon.</p>
+          </div>
+          <div id="dotPractice"></div>
+        </aside>
+      </div>
+    </section>
+  </main>
 
-      const $ = id => root.querySelector('#' + id);
-      const qsa = sel => [...root.querySelectorAll(sel)];
-      const mean = arr => arr.reduce((a,b) => a+b,0) / arr.length;
-      const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
-      const num = (v,d=3) => Number.isFinite(v) ? v.toFixed(d) : '—';
-      const signed = (v,d=3) => Number.isFinite(v) ? (v >= 0 ? '+' : '') + v.toFixed(d) : '—';
-      const parseNumber = (el, fallback) => {
-        const value = Number(el.value);
-        return Number.isFinite(value) ? value : fallback;
-      };
+  <div id="modalBackdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
 
-      function calculate(w,b) {
-        const rows = data.map(d => {
-          const predicted = w*d.x + b;
-          const difference = predicted - d.y;
-          return {
-            ...d,
-            predicted,
-            difference,
-            diff2x: difference * 2 * d.x,
-            diff2: difference * 2,
-            squared: difference * difference
-          };
-        });
-        const mse = mean(rows.map(r => r.squared));
-        const gw = mean(rows.map(r => r.diff2x));
-        const gb = mean(rows.map(r => r.diff2));
-        return { rows, mse, gw, gb, gradMag: Math.hypot(gw,gb) };
-      }
+  <dialog id="editDialog" class="dialog large-dialog">
+    <form method="dialog">
+      <div class="dialog-header">
+        <div>
+          <h2>Edit Inputs, Weights, and Biases</h2>
+          <p>Use small values so the arithmetic stays readable. One decimal place works well.</p>
+        </div>
+        <button value="cancel" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <div id="editorContent" class="editor-content"></div>
+      <div class="dialog-actions">
+        <button value="cancel" class="secondary">Cancel</button>
+        <button id="saveValuesBtn" value="default" class="primary">Save Values</button>
+      </div>
+    </form>
+  </dialog>
 
-      function currentParams() {
-        if (state.stage === 1) return state.manual;
-        if (state.stage === 2) return state.guided;
-        return state.advanced;
-      }
+  <dialog id="helpDialog" class="dialog">
+    <form method="dialog">
+      <div class="dialog-header">
+        <h2>Keep the lesson simple</h2>
+        <button value="cancel" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <ol class="help-list">
+        <li><strong>Network:</strong> click one neuron and calculate its weighted sum, bias, and activation.</li>
+        <li><strong>Layer:</strong> use <em>Calculate Next Layer</em> to reveal the rest only after the idea is clear.</li>
+        <li><strong>Matrix:</strong> convert one transition and see where every connection appears in the weight matrix.</li>
+        <li><strong>Dot Product:</strong> calculate one result entry and see that it is the same neuron calculation again.</li>
+      </ol>
+      <p class="muted">The tool supports larger networks, but small examples are usually better for learning.</p>
+      <div class="dialog-actions"><button value="default" class="primary">Got it</button></div>
+    </form>
+  </dialog>
 
-      function svgNode(name, attrs={}) {
-        const node = document.createElementNS('http://www.w3.org/2000/svg', name);
-        Object.entries(attrs).forEach(([k,v]) => node.setAttribute(k,String(v)));
-        return node;
-      }
-
-      function addText(svg, x, y, text, cls, anchor='middle') {
-        const node = svgNode('text',{x,y,class:cls,'text-anchor':anchor});
-        node.textContent = text;
-        svg.appendChild(node);
-        return node;
-      }
-
-      function drawAxes(svg, dims, xDomain, yDomain, xLabel, yLabel, xTicks=6, yTicks=5) {
-        const {W,H,m} = dims;
-        const X = v => m.l + (v-xDomain[0])/(xDomain[1]-xDomain[0])*(W-m.l-m.r);
-        const Y = v => H-m.b - (v-yDomain[0])/(yDomain[1]-yDomain[0])*(H-m.t-m.b);
-        svg.appendChild(svgNode('rect',{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b,rx:8,class:'gd-chart-frame'}));
-        for (let i=0;i<=xTicks;i++) {
-          const v=xDomain[0]+i*(xDomain[1]-xDomain[0])/xTicks;
-          const px=X(v);
-          svg.appendChild(svgNode('line',{x1:px,y1:m.t,x2:px,y2:H-m.b,class:'gd-grid'}));
-          addText(svg,px,H-m.b+18,Math.abs(v)<1e-10?'0':Number(v.toFixed(2)).toString(),'gd-tick');
-        }
-        for (let i=0;i<=yTicks;i++) {
-          const v=yDomain[0]+i*(yDomain[1]-yDomain[0])/yTicks;
-          const py=Y(v);
-          svg.appendChild(svgNode('line',{x1:m.l,y1:py,x2:W-m.r,y2:py,class:'gd-grid'}));
-          addText(svg,m.l-8,py+4,Number(v.toFixed(2)).toString(),'gd-tick','end');
-        }
-        svg.appendChild(svgNode('line',{x1:m.l,y1:H-m.b,x2:W-m.r,y2:H-m.b,class:'gd-axis'}));
-        svg.appendChild(svgNode('line',{x1:m.l,y1:m.t,x2:m.l,y2:H-m.b,class:'gd-axis'}));
-        addText(svg,(m.l+W-m.r)/2,H-7,xLabel,'gd-axis-label');
-        const yl=addText(svg,14,(m.t+H-m.b)/2,yLabel,'gd-axis-label');
-        yl.setAttribute('transform',`rotate(-90 14 ${(m.t+H-m.b)/2})`);
-        return {X,Y};
-      }
-
-      function drawFitChart(w,b) {
-        const svg=$('fitChart'); svg.innerHTML='';
-        const dims={W:680,H:410,m:{l:55,r:20,t:18,b:48}};
-        const {X,Y}=drawAxes(svg,dims,[0,11],[0,8.5],'Input x','Target / predicted output',11,8);
-        const calc=calculate(w,b);
-        const x0=0,x1=11;
-        svg.appendChild(svgNode('line',{x1:X(x0),y1:Y(w*x0+b),x2:X(x1),y2:Y(w*x1+b),class:'gd-current-line'}));
-        if (state.manual.revealed) {
-          svg.appendChild(svgNode('line',{x1:X(x0),y1:Y(optimum.w*x0+optimum.b),x2:X(x1),y2:Y(optimum.w*x1+optimum.b),class:'gd-opt-line'}));
-        }
-        data.forEach(d => {
-          const c=svgNode('circle',{cx:X(d.x),cy:Y(d.y),r:6,class:'gd-point'});
-          const title=svgNode('title'); title.textContent=`Example ${d.i}: x=${d.x}, target=${d.y.toFixed(3)}`; c.appendChild(title); svg.appendChild(c);
-        });
-        addText(svg,X(7.2),Y(w*7.2+b)-10,`ŷ = ${w.toFixed(3)}x ${b>=0?'+':'−'} ${Math.abs(b).toFixed(3)}`,'gd-axis-label','start');
-      }
-
-      function lossAt(parameter,value,fixed) {
-        return parameter==='w' ? calculate(value,fixed).mse : calculate(fixed,value).mse;
-      }
-
-      function drawLossChart(svgId, parameter, current, fixed, gradient) {
-        const svg=$(svgId); svg.innerHTML='';
-        const dims={W:430,H:245,m:{l:48,r:14,t:43,b:42}};
-        const domain=parameter==='w'?[-0.2,1.2]:[-0.5,5.5];
-        const samples=[];
-        for(let i=0;i<=100;i++) {
-          const v=domain[0]+(domain[1]-domain[0])*i/100;
-          samples.push({v,l:lossAt(parameter,v,fixed)});
-        }
-        const currentLoss=lossAt(parameter,current,fixed);
-        const maxSample=Math.max(...samples.map(s=>s.l),currentLoss);
-        const minSample=Math.min(...samples.map(s=>s.l));
-        const yMax=Math.max(minSample+1,maxSample*1.03);
-        const {X,Y}=drawAxes(svg,dims,domain,[0,yMax],parameter==='w'?'Weight w':'Bias b','MSE',7,4);
-        const tangentIntercept=currentLoss-gradient*current;
-        const tangentEquation=`y = ${num(gradient,3)}x ${tangentIntercept>=0?'+':'−'} ${num(Math.abs(tangentIntercept),3)}`;
-        addText(svg,dims.m.l,16,`Point: (${num(current,3)}, ${num(currentLoss,3)})`,'gd-chart-annotation','start');
-        addText(svg,dims.m.l,32,`Tangent: ${tangentEquation}`,'gd-chart-annotation','start');
-        const path=svgNode('path',{class:'gd-curve'});
-        path.setAttribute('d',samples.map((s,i)=>(i?'L':'M')+X(s.v)+' '+Y(s.l)).join(' '));
-        svg.appendChild(path);
-        const clipId='clip-'+svgId;
-        const defs=svgNode('defs');
-        const clip=svgNode('clipPath',{id:clipId});
-        clip.appendChild(svgNode('rect',{x:dims.m.l,y:dims.m.t,width:dims.W-dims.m.l-dims.m.r,height:dims.H-dims.m.t-dims.m.b,rx:8}));
-        defs.appendChild(clip); svg.appendChild(defs);
-        const xA=domain[0],xB=domain[1];
-        const yA=currentLoss+gradient*(xA-current),yB=currentLoss+gradient*(xB-current);
-        const tangent=svgNode('line',{x1:X(xA),y1:Y(yA),x2:X(xB),y2:Y(yB),class:'gd-tangent','clip-path':`url(#${clipId})`});
-        svg.appendChild(tangent);
-        svg.appendChild(svgNode('circle',{cx:X(current),cy:Y(currentLoss),r:6,class:'gd-marker'}));
-      }
-
-      function syncManualInputs() {
-        if (document.activeElement !== $('manualWeight')) $('manualWeight').value=state.manual.w.toFixed(3);
-        $('manualWeightRange').value=clamp(state.manual.w,-0.2,1.2);
-        if (document.activeElement !== $('manualBias')) $('manualBias').value=state.manual.b.toFixed(3);
-        $('manualBiasRange').value=clamp(state.manual.b,-0.5,5.5);
-      }
-
-      function syncGradientInputs() {
-        const s=state.stage===2?state.guided:state.advanced;
-        $('gdWeight').value=s.w.toFixed(3);
-        $('gdWeightRange').value=clamp(s.w,-0.2,1.2);
-        $('gdBias').value=s.b.toFixed(3);
-        $('gdBiasRange').value=clamp(s.b,-0.5,5.5);
-      }
-
-      function syncSharedInputs() {
-        const lr=state.stage===3?state.advanced.lr:state.guided.lr;
-        if (document.activeElement !== $('learningRate')) $('learningRate').value=lr.toFixed(4);
-      }
-
-      function getTableContext() {
-        if (state.stage===1) {
-          const c=calculate(state.manual.w,state.manual.b);
-          return {wOld:state.manual.w,bOld:state.manual.b,calc:c,lr:null,weightStep:null,biasStep:null,wNew:null,bNew:null,iteration:null};
-        }
-        const s=state.stage===2?state.guided:state.advanced;
-        if (s.lastStep) return s.lastStep;
-        const c=calculate(s.w,s.b);
-        return {wOld:s.w,bOld:s.b,calc:c,lr:s.lr,weightStep:null,biasStep:null,wNew:null,bNew:null,iteration:s.iteration};
-      }
-
-      function renderCalculationTables() {
-        const ctx=getTableContext();
-        $('sampleBody').innerHTML=ctx.calc.rows.map(r=>`
-          <tr><td>${r.i}</td><td>${num(r.x,1)}</td><td>${num(r.y)}</td><td>${num(r.predicted)}</td><td>${num(r.difference)}</td><td>${num(r.diff2x)}</td><td>${num(r.diff2)}</td><td>${num(r.squared)}</td></tr>`).join('');
-        if (state.stage===1) {
-          $('calculationCaption').textContent='The table uses the current preview line. This stage records human attempts but does not apply a gradient update.';
-        } else if (ctx.weightStep===null) {
-          $('calculationCaption').textContent='These are the calculations that would be used for the next iteration.';
-        } else {
-          $('calculationCaption').textContent=`Completed iteration ${ctx.iteration}: calculations use the old parameter values, multiply each gradient by the learning rate, and subtract that result to produce the new values.`;
-        }
-        const sumW=ctx.calc.rows.reduce((a,r)=>a+r.diff2x,0);
-        const sumB=ctx.calc.rows.reduce((a,r)=>a+r.diff2,0);
-        const lrText=ctx.lr===null?'Not used in manual mode':num(ctx.lr,4);
-        const weightStep=ctx.weightStep===null?'—':signed(ctx.weightStep,6);
-        const bLocked=state.stage===2;
-        const lockedBias=state.stage===2?state.guided.b:ctx.bOld;
-        const biasStep=ctx.biasStep===null?'—':signed(ctx.biasStep,6);
-        const criterion=state.stage===2?Math.abs(ctx.calc.gw):ctx.calc.gradMag;
-        const rows=[
-          ['Prior Weight [w(old)]', 'w(old)', num(ctx.wOld,6)],
-          ['Prior Bias [b(old)]', 'b(old)', num(ctx.bOld,6)],
-          ['Sum of (differences × 2 × input)', 'Σ[2x(ŷ − y)]', num(sumW,4)],
-          ['Weight Gradient', '(1/n)Σ[2x(ŷ − y)]', num(ctx.calc.gw,4)],
-          ['Learning Rate × Weight Gradient', 'α × Weight Gradient', ctx.lr===null?'Not used in manual mode':weightStep],
-          ['New Weight', 'w(new) = w(old) − (Learning Rate × Weight Gradient)', ctx.wNew===null?'Not yet applied':num(ctx.wNew,6)],
-          ['Sum of (differences × 2)', 'Σ[2(ŷ − y)]', num(sumB,4)],
-          ['Bias Gradient', '(1/n)Σ[2(ŷ − y)]', num(ctx.calc.gb,4)],
-          ['Learning Rate × Bias Gradient', bLocked?'Not applied because the bias is fixed':'α × Bias Gradient', bLocked?'0.000000':(ctx.lr===null?'Not used in manual mode':biasStep)],
-          ['New Bias', bLocked?'b(new) = b(old)':'b(new) = b(old) − (Learning Rate × Bias Gradient)', bLocked?num(lockedBias,6):(ctx.bNew===null?'Not yet applied':num(ctx.bNew,6))],
-          ['Stopping check', state.stage===2?'|weight gradient| < ε':'gradient magnitude < ε', `${num(criterion,4)} < ${num(state.epsilon,3)} ? ${criterion<state.epsilon?'Yes':'No'}`],
-          ['Learning rate used', 'α', lrText]
-        ];
-        $('summaryBody').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
-      }
-
-      function convergenceValue(calc) { return state.stage===2 ? Math.abs(calc.gw) : calc.gradMag; }
-
-      function render() {
-        const s=currentParams();
-        const calc=calculate(s.w,s.b);
-        const criterion=convergenceValue(calc);
-        qsa('.gd-stage-btn').forEach(btn=>btn.setAttribute('aria-selected',String(Number(btn.dataset.stage)===state.stage)));
-        $('manualControls').classList.toggle('gd-hidden',state.stage!==1);
-        $('gradientControls').classList.toggle('gd-hidden',state.stage===1);
-        $('biasLossCard').classList.toggle('gd-disabled-loss',state.stage===2);
-        $('epsilon').value=state.epsilon.toFixed(2);
-        if (state.stage===1) syncManualInputs(); else syncGradientInputs();
-        syncSharedInputs();
-        const biasLocked=state.stage===2;
-        $('gdBiasLabel').innerHTML=biasLocked?'Fixed bias <em>b</em> (not updated)':'Current bias <em>b</em>';
-        $('gdBiasControl').classList.toggle('gd-disabled-control',biasLocked);
-        $('gdBiasRange').disabled=biasLocked;
-        $('gdBias').disabled=biasLocked;
-        const learningRateDisabled=state.stage===1;
-        $('learningRateControl').classList.toggle('gd-disabled-control',learningRateDisabled);
-        $('learningRate').disabled=learningRateDisabled;
-
-        if (state.stage===1) {
-          $('stageBadge').textContent='Human estimation';
-          $('stageMessage').innerHTML='<strong>Challenge:</strong> Use the sliders for coarse moves and the number boxes for three-decimal fine-tuning. Every slider movement and each completed number-box change counts as an attempt.';
-          $('lossDescription').textContent='';
-          $('metricLabel1').textContent='Attempts'; $('metric1').textContent=state.manual.attempts;
-          $('metricLabel3').textContent='Gradient magnitude';
-          $('metricLabel4').textContent='Status';
-          $('metric4').innerHTML=state.manual.lastSubmitted ? (criterion<state.epsilon?'<span class="gd-success">Close enough</span>':'Keep adjusting') : 'Preview';
-        } else if (state.stage===2) {
-          $('stageBadge').textContent='Core lesson';
-          $('stageMessage').innerHTML='<strong>Bias revealed and locked:</strong> b = 1.487. Gradient descent changes only the weight, while the inactive bias controls and loss slice remain visible for continuity.';
-          $('lossDescription').textContent='The bias is held constant, so the weight slice is now the complete one-dimensional loss curve.';
-          $('metricLabel1').textContent='Attempts'; $('metric1').textContent=state.guided.attempts;
-          $('metricLabel3').textContent='Gradient magnitude';
-          $('metricLabel4').textContent='Last learning-rate-scaled weight gradient';
-          $('metric4').textContent=state.guided.lastStep?signed(state.guided.lastStep.weightStep,6):'—';
-        } else {
-          $('stageBadge').textContent='Advanced extension';
-          $('stageMessage').innerHTML='<strong>Advanced mode:</strong> Gradient descent updates weight and bias together. The two changing curves are slices through the same bowl-shaped loss surface.';
-          $('lossDescription').textContent='Each update uses both partial derivatives at the current point.';
-          $('metricLabel1').textContent='Iterations'; $('metric1').textContent=state.advanced.iteration;
-          $('metricLabel3').textContent='Gradient magnitude';
-          $('metricLabel4').textContent='Last learning-rate-scaled gradients';
-          $('metric4').textContent=state.advanced.lastStep?`w ${signed(state.advanced.lastStep.weightStep,4)}, b ${signed(state.advanced.lastStep.biasStep,4)}`:'—';
-        }
-
-        $('equationText').textContent=`Current equation: ŷ = ${s.w.toFixed(3)}x ${s.b>=0?'+':'−'} ${Math.abs(s.b).toFixed(3)}`;
-        $('metric2').textContent=num(calc.mse,4);
-        $('metric3').textContent=num(criterion,4);
-        const converged=criterion<state.epsilon;
-        const activeWeightInput=state.stage===1?$('manualWeight'):$('gdWeight');
-        const activeBiasInput=state.stage===1?$('manualBias'):$('gdBias');
-        activeWeightInput.classList.toggle('gd-converged-input',converged);
-        activeBiasInput.classList.toggle('gd-converged-input',converged);
-        if (state.stage===1) {
-          $('gdWeight').classList.remove('gd-converged-input');
-          $('gdBias').classList.remove('gd-converged-input');
-        } else {
-          $('manualWeight').classList.remove('gd-converged-input');
-          $('manualBias').classList.remove('gd-converged-input');
-        }
-        drawFitChart(s.w,s.b);
-        drawLossChart('weightLossChart','w',s.w,s.b,calc.gw);
-        $('weightGradientText').textContent=`slope = ${signed(calc.gw,3)}`;
-        drawLossChart('biasLossChart','b',s.b,s.w,calc.gb);
-        $('biasGradientText').textContent=`slope = ${signed(calc.gb,3)}`;
-        const lr=state.stage===1?null:(state.stage===2?state.guided.lr:state.advanced.lr);
-        if (lr!==null) {
-          const biasNote=state.stage===2 && Math.abs(state.guided.b-optimum.b)>0.0005?' <span class="gd-warning">The fixed bias differs from 1.487, so the best weight will shift.</span>':'';
-          $('rateWarning').innerHTML=(lr>=0.025?'<span class="gd-warning">This learning rate is near or above the stable range and may overshoot.</span>':'Smaller learning rates move more cautiously; larger ones move faster but can overshoot.')+biasNote;
-        }
-        $('playPause').textContent=state.playing?'Pause':'Play';
-        renderCalculationTables();
-      }
-
-      function setStage(stage) {
-        stopPlaying();
-        if (stage===2 && state.stage!==2) {
-          state.guided={w:0,b:optimum.b,startW:0,iteration:0,attempts:0,lr:state.guided.lr,lastStep:null};
-        }
-        if (stage===3 && state.stage!==3) {
-          state.advanced={w:0,b:0,startW:0,startB:0,iteration:0,lr:state.advanced.lr,lastStep:null};
-        }
-        state.stage=stage;
-        render();
-      }
-
-      function recordManualModification(parameter) {
-        state.manual.attempts++;
-        if (parameter === 'w') state.manual.countedW=state.manual.w;
-        if (parameter === 'b') state.manual.countedB=state.manual.b;
-        state.manual.lastSubmitted=calculate(state.manual.w,state.manual.b);
-      }
-
-      function commitManualNumber(parameter) {
-        const current=parameter==='w'?state.manual.w:state.manual.b;
-        const counted=parameter==='w'?state.manual.countedW:state.manual.countedB;
-        if (current!==counted) recordManualModification(parameter);
-        render();
-      }
-
-      function checkCurrentLine() {
-        state.manual.lastSubmitted=calculate(state.manual.w,state.manual.b);
-        render();
-      }
-
-      function runStep(shouldRender=true) {
-        if (state.stage===1) return false;
-        const s=state.stage===2?state.guided:state.advanced;
-        const before=calculate(s.w,s.b);
-        const weightStep=s.lr*before.gw;
-        const biasStep=state.stage===2?0:s.lr*before.gb;
-        const wNew=s.w-weightStep;
-        const bNew=s.b-biasStep;
-        s.iteration++;
-        if (state.stage===2) s.attempts++;
-        s.lastStep={iteration:s.iteration,wOld:s.w,bOld:s.b,calc:before,lr:s.lr,weightStep,biasStep,wNew,bNew};
-        s.w=wNew; s.b=bNew;
-        if (shouldRender) render();
-        const after=calculate(s.w,s.b);
-        return convergenceValue(after)<state.epsilon;
-      }
-
-      function stopPlaying() {
-        state.playing=false;
-        if (state.timer) clearTimeout(state.timer);
-        state.timer=null;
-        state.remaining=null;
-      }
-
-      function advanceMany(count) {
-        stopPlaying();
-        for (let i=0; i<count; i++) runStep(false);
-        render();
-      }
-
-      function scheduleSteps(count=null) {
-        stopPlaying();
-        state.playing=true;
-        state.remaining=count;
-        const tick=()=>{
-          if (!state.playing) return;
-          const converged=runStep();
-          if (state.remaining!==null) state.remaining--;
-          const finiteRun=state.remaining!==null;
-          if ((!finiteRun && converged) || (finiteRun && state.remaining<=0)) {
-            stopPlaying(); render(); return;
-          }
-          state.timer=setTimeout(tick,550);
-        };
-        tick();
-      }
-
-      function resetManual() {
-        state.manual={w:0,b:0,attempts:0,countedW:0,countedB:0,revealed:false,lastSubmitted:null};
-        render();
-      }
-
-      function resetGradient() {
-        stopPlaying();
-        if (state.stage===2) {
-          state.guided={w:0,b:optimum.b,startW:0,iteration:0,attempts:0,lr:parseNumber($('learningRate'),0.005),lastStep:null};
-        } else {
-          state.advanced={w:0,b:0,startW:0,startB:0,iteration:0,lr:parseNumber($('learningRate'),0.005),lastStep:null};
-        }
-        render();
-      }
-
-      qsa('.gd-stage-btn').forEach(btn=>btn.addEventListener('click',()=>setStage(Number(btn.dataset.stage))));
-      $('manualWeightRange').addEventListener('input',e=>{
-        const next=Number(e.target.value);
-        if (Number.isFinite(next) && next!==state.manual.w) { state.manual.w=next; recordManualModification('w'); render(); }
-      });
-      $('manualBiasRange').addEventListener('input',e=>{
-        const next=Number(e.target.value);
-        if (Number.isFinite(next) && next!==state.manual.b) { state.manual.b=next; recordManualModification('b'); render(); }
-      });
-      $('manualWeight').addEventListener('input',e=>{
-        const next=Number(e.target.value);
-        if (e.target.value!=='' && Number.isFinite(next) && next!==state.manual.w) { state.manual.w=next; state.manual.lastSubmitted=null; render(); }
-      });
-      $('manualBias').addEventListener('input',e=>{
-        const next=Number(e.target.value);
-        if (e.target.value!=='' && Number.isFinite(next) && next!==state.manual.b) { state.manual.b=next; state.manual.lastSubmitted=null; render(); }
-      });
-      $('manualWeight').addEventListener('change',()=>commitManualNumber('w'));
-      $('manualBias').addEventListener('change',()=>commitManualNumber('b'));
-      $('manualWeight').addEventListener('blur',render);
-      $('manualBias').addEventListener('blur',render);
-      $('testLine').addEventListener('click',checkCurrentLine);
-      $('manualReset').addEventListener('click',resetManual);
-      $('revealSolution').addEventListener('click',()=>{state.manual.revealed=true;render();});
-
-      $('gdWeightRange').addEventListener('input',e=>{const s=state.stage===2?state.guided:state.advanced;s.w=Number(e.target.value);s.lastStep=null;render();});
-      $('gdBiasRange').addEventListener('input',e=>{const s=state.stage===2?state.guided:state.advanced;s.b=Number(e.target.value);s.lastStep=null;render();});
-      $('gdWeight').addEventListener('change',e=>{const s=state.stage===2?state.guided:state.advanced;s.w=parseNumber(e.target,s.w);s.lastStep=null;render();});
-      $('gdBias').addEventListener('change',e=>{const s=state.stage===2?state.guided:state.advanced;s.b=parseNumber(e.target,s.b);s.lastStep=null;render();});
-      $('learningRate').addEventListener('change',e=>{
-        if (state.stage===1) return;
-        const s=state.stage===2?state.guided:state.advanced;
-        s.lr=clamp(parseNumber(e.target,s.lr),0.0001,0.05);
-        render();
-      });
-      $('stepOnce').addEventListener('click',()=>{stopPlaying();runStep();});
-      $('runMany').addEventListener('click',()=>advanceMany(clamp(Math.round(parseNumber($('runCount'),5)),1,100)));
-      $('playPause').addEventListener('click',()=>{state.playing?stopPlaying():scheduleSteps(null);render();});
-      $('gdReset').addEventListener('click',resetGradient);
-      $('epsilon').addEventListener('change',e=>{state.epsilon=clamp(parseNumber(e.target,state.epsilon),0.001,20);render();});
-
-      render();
-    })();
-  </script>
-</div>
-
-</main>
+  <script src="app.js"></script>
 </body>
 </html>
