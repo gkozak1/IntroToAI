@@ -312,3 +312,11 @@ h1 { margin: 0; font-size: 28px; line-height: 1.1; letter-spacing: -.025em; }
 .status-text.incorrect { color: var(--danger); }
 .matrix-caption { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .mini-kicker { color: var(--accent); font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+
+.node-half-highlight.correct { fill: var(--success-soft); stroke: var(--success); stroke-width: 1.5; }
+.node-half-highlight.incorrect { fill: var(--danger-soft); stroke: var(--danger); stroke-width: 1.5; }
+.node-status-icon { font-size: 10px; font-weight: 900; text-anchor: middle; pointer-events: none; }
+.node-status-icon.correct { fill: var(--success); }
+.node-status-icon.incorrect { fill: var(--danger); }
+.matrix-cell.locked-cell { background: #f4f6f9; border-style: dashed; opacity: .72; }
+.matrix-cell.locked-cell input { cursor: not-allowed; color: var(--muted); font-size: 11px; font-weight: 700; }

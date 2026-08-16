@@ -276,7 +276,7 @@
       if (s.kind === "value" && s.layer === layer && s.index === idx) {
         nodeClass = "selected";
         if (s.valueType === "z") zHalf = "strong";
-        if (s.valueType === "a") aHalf = "strong";
+        if (s.valueType === "a") { aHalf = "strong"; zHalf = "related"; }
       } else if (s.kind === "value" && s.valueType === "z" && s.layer > 0) {
         if (layer === s.layer - 1) nodeClass = "related";
         else if (layer !== s.layer || idx !== s.index) nodeClass = "muted";
@@ -378,7 +378,9 @@
           const y2 = ys[t + 1][j];
           const cls = edgeClass(t, i, j, context, activeTransition);
           const wg = weightGroupClass(t, i, j, context, activeTransition);
-          const labelT = .55 + .18 * (j / Math.max(1, counts[t + 1] - 1));
+          // Keep labels close to the source side, before most edge crossings occur.
+          // With at most four destinations this fans labels apart and keeps each value readable.
+          const labelT = .20;
           const lx = x1 + (x2 - x1) * labelT;
           const ly = y1 + (y2 - y1) * labelT;
           const weight = fmt(net.W[t][i][j]);
@@ -401,15 +403,21 @@
         } else {
           const zVal = context === "diagram" ? diagramValue(layer, "z", j) : fmt(net.z[layer][j]);
           const aVal = context === "diagram" ? diagramValue(layer, "a", j) : fmt(net.a[layer][j]);
+          const zStatus = context === "diagram" && state.guidance === "off" ? correctDiagramStatus(layer, "z", j) : null;
+          const aStatus = context === "diagram" && state.guidance === "off" ? correctDiagramStatus(layer, "a", j) : null;
+          const zStatusIcon = zStatus === "correct" ? "✓" : zStatus === "incorrect" ? "!" : "";
+          const aStatusIcon = aStatus === "correct" ? "✓" : aStatus === "incorrect" ? "!" : "";
           parts.push(`<g class="${groupClass}" data-node-layer="${layer}" data-node-index="${j}">
             <rect class="node-outer" x="${x - 56}" y="${y - 25}" rx="12" width="112" height="50"></rect>
-            <rect class="node-half-highlight ${h.zHalf}" x="${x - 55}" y="${y - 24}" rx="11" width="55" height="48"></rect>
-            <rect class="node-half-highlight ${h.aHalf}" x="${x}" y="${y - 24}" rx="11" width="55" height="48"></rect>
+            <rect class="node-half-highlight ${h.zHalf} ${zStatus || ""}" x="${x - 55}" y="${y - 24}" rx="11" width="55" height="48"></rect>
+            <rect class="node-half-highlight ${h.aHalf} ${aStatus || ""}" x="${x}" y="${y - 24}" rx="11" width="55" height="48"></rect>
             <line class="node-divider" x1="${x}" y1="${y - 24}" x2="${x}" y2="${y + 24}"></line>
             <text class="node-label" x="${x - 28}" y="${y - 9}">z${j + 1}</text>
             <text class="node-text" x="${x - 28}" y="${y + 9}">${zVal}</text>
             <text class="node-label" x="${x + 28}" y="${y - 9}">a${j + 1}</text>
             <text class="node-text" x="${x + 28}" y="${y + 9}">${aVal}</text>
+            ${zStatusIcon ? `<text class="node-status-icon ${zStatus}" x="${x - 49}" y="${y + 19}">${zStatusIcon}</text>` : ""}
+            ${aStatusIcon ? `<text class="node-status-icon ${aStatus}" x="${x + 49}" y="${y + 19}">${aStatusIcon}</text>` : ""}
             <rect class="value-hotspot" data-node-value="z" data-layer="${layer}" data-index="${j}" x="${x - 56}" y="${y - 25}" width="56" height="50"></rect>
             <rect class="value-hotspot" data-node-value="a" data-layer="${layer}" data-index="${j}" x="${x}" y="${y - 25}" width="56" height="50"></rect>
           </g>`);
@@ -478,6 +486,12 @@
     const ready = diagramLayerReady(layer);
     if (!ready) return `<div class="inspector-title">Layer locked</div><p class="help-copy">Finish the activated values in the preceding layer first. The next layer depends on those completed a values.</p>`;
     const correctValue = valueType === "z" ? state.network.z[layer][j] : state.network.a[layer][j];
+    const zReadyForActivation = valueType !== "a" || state.guidance === "on" || equalNum(state.work.diagram[layer - 1].z[j], state.network.z[layer][j]);
+    if (!zReadyForActivation) {
+      return `<div class="inspector-title"><span class="value-badge">a<sub>${j + 1}</sub><sup>(${layer})</sup></span>Activation waits for z</div>
+        <div class="formula-block"><div class="symbolic">a<sub>${j + 1}</sub><sup>(${layer})</sup> = ReLU(z<sub>${j + 1}</sub><sup>(${layer})</sup>)</div>
+        <div class="formula-step" style="margin-top:8px">Calculate the corresponding z value correctly first. Then apply ReLU.</div></div>`;
+    }
     const entered = state.guidance === "off" ? state.work.diagram[layer - 1][valueType][j] : String(correctValue);
     const solved = state.guidance === "on" || equalNum(entered, correctValue);
     const status = state.guidance === "off" ? correctDiagramStatus(layer, valueType, j) : null;
@@ -584,7 +598,10 @@
     const rows = prev.length, cols = b.length;
     const work = state.work.math[t], checks = state.checks.math[t];
     const zCells = work.z.map((v, j) => `<div class="matrix-cell${matrixStatusClass(checks.z[j])}${matrixSelectionClass("z", null, null, j, "math")}" data-math-select="1" data-kind="z" data-index="${j}"><input type="number" step="any" value="${v}" data-math-input="1" data-kind="z" data-index="${j}" placeholder="?" aria-label="${info.z} cell ${j + 1}"></div>`).join("");
-    const aCells = work.a.map((v, j) => `<div class="matrix-cell${matrixStatusClass(checks.a[j])}${matrixSelectionClass("a", null, null, j, "math")}" data-math-select="1" data-kind="a" data-index="${j}"><input type="number" step="any" value="${v}" data-math-input="1" data-kind="a" data-index="${j}" placeholder="?" aria-label="${info.outA} cell ${j + 1}"></div>`).join("");
+    const aCells = work.a.map((v, j) => {
+      const zReady = equalNum(work.z[j], state.network.z[t + 1][j]);
+      return `<div class="matrix-cell${!zReady ? " locked-cell" : ""}${matrixStatusClass(checks.a[j])}${matrixSelectionClass("a", null, null, j, "math")}" data-math-select="1" data-kind="a" data-index="${j}"><input type="number" step="any" value="${v}" data-math-input="1" data-kind="a" data-index="${j}" placeholder="${zReady ? "?" : "z first"}" aria-label="${info.outA} cell ${j + 1}" ${zReady ? "" : "disabled"}></div>`;
+    }).join("");
     return `<div class="math-equation"><span>${info.a}</span><span class="op">·</span><span>${info.W}</span><span class="op">+</span><span>${info.b}</span><span class="equals">= ${info.z}</span></div>
       <div class="matrix-math-grid">
         <div class="math-object"><div class="math-label">${info.a} <span class="dim">1 × ${rows}</span></div>${staticVector(prev, "priorA")}</div>
@@ -614,6 +631,8 @@
     }
     if (s.kind === "a") {
       const j = s.index;
+      const zReady = equalNum(state.work.math[t].z[j], state.network.z[t + 1][j]);
+      if (!zReady) return `<div class="formula-block"><div class="symbolic">${TRANSITIONS[t].outA.replace("a", "a")} = ReLU(${TRANSITIONS[t].z})</div><div class="formula-step" style="margin-top:8px">Calculate the corresponding z value correctly first. Then apply ReLU.</div></div>`;
       const solved = equalNum(state.work.math[t].a[j], state.network.a[t + 1][j]);
       const f = formulaForA(t + 1, j);
       return `<div class="formula-block"><div class="symbolic">${f.symbolic}</div>${solved ? `<div class="formula-main" style="margin-top:8px">${f.line1}</div><div class="formula-step">${f.line2}</div>` : `<div class="formula-step" style="margin-top:8px">Activation is separate from the dot product. Apply ReLU to the corresponding z value.</div>`}</div>`;

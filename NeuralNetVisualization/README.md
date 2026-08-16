@@ -1,44 +1,52 @@
 # Neural Net Visualization
 
-A browser-only instructional app for teaching forward propagation through three connected views:
+Static browser app for teaching forward propagation through three instructional steps:
 
-1. **Calculate the Diagram** — understand one neuron's weighted sum, bias, and ReLU activation.
-2. **Map to Matrices** — map prior activations, connection weights, and biases into row-vector/matrix form without doing matrix arithmetic yet.
-3. **Matrix Math** — reproduce the same neuron calculations using a row-vector × weight-matrix + bias-vector calculation, then apply ReLU element-by-element.
+1. **Calculate the Diagram**
+2. **Map to Matrices**
+3. **Matrix Math**
 
-## Run locally
+## Run it
 
-No build process is required. Put these files in the same folder and open `index.html` in a browser, or serve the folder with any simple static web server.
+Open `index.html` in a current Chrome/Edge browser or deploy the folder to GitHub Pages. `index.html` is intentionally self-contained: its CSS and JavaScript are embedded so the diagram renders even when a preview environment does not resolve sibling assets correctly.
 
-## GitHub Pages deployment
+`styles.css` and `app.js` are also included as maintained source copies for easier editing. If those source files are changed, rebuild the embedded sections in `index.html` before deployment.
 
-Copy the entire `NeuralNetVisualization` folder into:
+## GitHub Pages location
+
+Place this folder at:
 
 ```text
 IntroToAI/
   NeuralNetVisualization/
+    index.html
+    styles.css
+    app.js
 ```
 
-Commit and push. With GitHub Pages already enabled for the repository, the intended URL is:
+Expected URL:
 
 ```text
 https://gkozak1.github.io/IntroToAI/NeuralNetVisualization/
 ```
 
-## Files
+No server, package manager, framework, API, or build process is required at runtime.
 
-- `index.html` — page structure
-- `styles.css` — visual design and responsive layout
-- `app.js` — network model, calculations, SVG rendering, interactions, checking, editing, and state
-- `SPECIFICATION.md` — source functional/instructional specification used for this build
+## Core behavior
 
-## Implementation notes
+- Default network: 3 → 4 → 3 → 2
+- Architecture controls: 1–4 neurons per layer
+- Shared authoritative calculation engine for Diagram and Matrix views
+- Per-neuron biases
+- ReLU activation
+- Guidance ON/OFF
+- Diagram calculation practice with layer dependencies
+- Exact diagram-edge ↔ matrix-cell mapping
+- Matrix dot-product-plus-bias practice
+- Check My Work with blanks left neutral
+- Manual input/weight/bias editing
+- Generate Values and Reset Work
+- SVG network rendering
+- Chromebook/desktop responsive layout
 
-- Vanilla HTML/CSS/JavaScript only; no external libraries or APIs.
-- SVG network supports 1–4 neurons in each of four layers.
-- Default architecture is 3 → 4 → 3 → 2.
-- Row-vector convention: `a (1×m) · W (m×n) + b (1×n) = z (1×n)`.
-- ReLU is the default and only activation in this initial build.
-- One authoritative calculation engine supplies every representation so Diagram and Matrix Math cannot disagree.
-- Student work is stored separately for Diagram, Mapping, and Matrix Math.
-- Blank answers remain neutral when checking; incorrect answers do not reveal the solution.
+See `SPECIFICATION.md` for the complete instructional and technical specification.
