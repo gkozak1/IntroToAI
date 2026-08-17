@@ -372,23 +372,23 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
         <div class="compact-control">
           <span class="guidance-label">Biases</span>
           <div class="segmented" id="biasControl" role="group" aria-label="Biases">
-            <button data-biases="on" class="active">ON</button>
-            <button data-biases="off">OFF</button>
+            <button data-biases="on">ON</button>
+            <button data-biases="off" class="active">OFF</button>
           </div>
         </div>
         <div class="compact-control">
           <span class="guidance-label">Activation</span>
           <div class="segmented" id="activationControl" role="group" aria-label="Activation">
-            <button data-activation="relu" class="active">ReLU</button>
-            <button data-activation="off">OFF</button>
+            <button data-activation="relu">ReLU</button>
+            <button data-activation="off" class="active">OFF</button>
           </div>
         </div>
         <div class="guidance-control">
           <span class="guidance-label">Guidance</span>
           <div class="segmented" id="guidanceControl" role="group" aria-label="Guidance level">
-            <button data-guidance="high">HIGH</button>
+            <button data-guidance="high" class="active">HIGH</button>
             <button data-guidance="medium">MEDIUM</button>
-            <button data-guidance="low" class="active">LOW</button>
+            <button data-guidance="low">LOW</button>
           </div>
         </div>
       </div>
@@ -424,9 +424,9 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     architecture: [3, 4, 3, 2],
     network: null,
     currentStep: 0,
-    guidance: "low",
-    biasesEnabled: true,
-    activationEnabled: true,
+    guidance: "high",
+    biasesEnabled: false,
+    activationEnabled: false,
     transition: 0,
     selection: null,
     feedback: { diagram: null, mapping: null, math: null },
@@ -928,7 +928,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     const b=state.network.b[t].map((_,j)=>state.biasesEnabled?state.network.b[t][j]:0), rows=prev.length, cols=b.length, work=state.work.math[t], checks=state.checks.math[t];
     const zCells=Array.from({length:cols},(_,j)=>{const cls=matrixSelectionClass("z",null,null,j,"math"); if(isHighGuidance()) return `<div class="matrix-static-cell${cls}" data-math-select="1" data-kind="z" data-index="${j}">${fmt(state.network.z[t+1][j])}</div>`; return `<div class="matrix-cell${matrixStatusClass(checks.z[j])}${cls}" data-math-select="1" data-kind="z" data-index="${j}"><input type="number" step="any" value="${work.z[j]}" data-math-input="1" data-kind="z" data-index="${j}" placeholder="?" aria-label="${info.z} cell ${j+1}"></div>`;}).join("");
     const aCells=Array.from({length:cols},(_,j)=>{const cls=matrixSelectionClass("a",null,null,j,"math"); if(isHighGuidance()) return `<div class="matrix-static-cell${cls}" data-math-select="1" data-kind="a" data-index="${j}">${fmt(state.network.a[t+1][j])}</div>`; const zSolved=equalNum(work.z[j],state.network.z[t+1][j]); return `<div class="matrix-cell${matrixStatusClass(checks.a[j])}${cls}${zSolved?"":" disabled"}" data-math-select="1" data-kind="a" data-index="${j}"><input type="number" step="any" value="${work.a[j]}" data-math-input="1" data-kind="a" data-index="${j}" placeholder="?" aria-label="${info.outA} cell ${j+1}" ${zSolved?"":"disabled"}></div>`;}).join("");
-    const zDisplay=Array.from({length:cols},(_,j)=>`<div class="matrix-static-cell${matrixSelectionClass("z",null,null,j,"math")}">${isHighGuidance()?fmt(state.network.z[t+1][j]):(work.z[j]===""?"?":fmt(Number(work.z[j])))}</div>`).join("");
+    const zDisplay=Array.from({length:cols},(_,j)=>`<div class="matrix-static-cell${matrixSelectionClass("z",null,null,j,"math")}" data-math-select="1" data-kind="z" data-index="${j}">${isHighGuidance()?fmt(state.network.z[t+1][j]):(work.z[j]===""?"?":fmt(Number(work.z[j])))}</div>`).join("");
     const activationText=state.activationEnabled?"→ ReLU →":"→ activation off →", biasNote=state.biasesEnabled?"":` <span class="mode-note">(biases off: b = 0)</span>`;
     return `<div class="math-equation"><span>${info.a}</span><span class="op">·</span><span>${info.W}</span><span class="op">+</span><span>${info.b}</span><span class="equals">= ${info.z}</span>${biasNote}</div>
       <div class="matrix-math-grid"><div class="math-object"><div class="math-label">${info.a} <span class="dim">1 × ${rows}</span></div>${staticVector(prev,"priorA")}</div><div class="math-operator">·</div><div class="math-object"><div class="math-label">${info.W} <span class="dim">${rows} × ${cols}</span></div>${staticMatrix(W)}</div><div class="math-operator">+</div><div class="math-object"><div class="math-label">${info.b} <span class="dim">1 × ${cols}</span></div>${staticVector(b,"b")}</div><div class="math-operator">=</div><div class="math-object"><div class="math-label">${info.z} <span class="dim">1 × ${cols}</span></div><div class="matrix-grid" style="--matrix-cols:${cols};grid-template-columns:repeat(${cols},minmax(0,1fr))">${zCells}</div></div></div>
@@ -1038,8 +1038,22 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
       const layer = Number(value.dataset.layer), index = Number(value.dataset.index), valueType = value.dataset.nodeValue;
       if (state.currentStep === 0) state.selection = { context: "diagram", kind: "value", layer, index, valueType };
       else if (state.currentStep === 1 && hasGuidanceHighlights()) {
-        if (valueType === "a" && layer === state.transition) state.selection = { context: "mapping", kind: "a", index };
-        else if (layer === state.transition + 1) state.selection = { context: "mapping", kind: "dest", col: index };
+        if (isHighGuidance()) {
+          // In High Mapping guidance, any neuron can be used as the starting point.
+          // A non-input neuron focuses its incoming layer transition so students
+          // immediately see the source activation vector, matching W column,
+          // and matching bias. Input neurons map directly to a⁽⁰⁾.
+          if (layer === 0) {
+            state.transition = 0;
+            state.selection = { context: "mapping", kind: "a", index };
+          } else {
+            state.transition = layer - 1;
+            state.selection = { context: "mapping", kind: "dest", col: index };
+          }
+        } else {
+          if (valueType === "a" && layer === state.transition) state.selection = { context: "mapping", kind: "a", index };
+          else if (layer === state.transition + 1) state.selection = { context: "mapping", kind: "dest", col: index };
+        }
       }
       render();
       return true;
@@ -1050,9 +1064,12 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
       render(); return true;
     }
     const inputNode = target.closest("[data-input-node]");
-    if (inputNode && state.currentStep === 1 && hasGuidanceHighlights() && state.transition === 0) {
-      state.selection = { context: "mapping", kind: "a", index: Number(inputNode.dataset.inputNode) };
-      render(); return true;
+    if (inputNode && state.currentStep === 1 && hasGuidanceHighlights()) {
+      if (isHighGuidance()) state.transition = 0;
+      if (state.transition === 0) {
+        state.selection = { context: "mapping", kind: "a", index: Number(inputNode.dataset.inputNode) };
+        render(); return true;
+      }
     }
     return false;
   }
