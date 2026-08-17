@@ -372,23 +372,23 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
         <div class="compact-control">
           <span class="guidance-label">Biases</span>
           <div class="segmented" id="biasControl" role="group" aria-label="Biases">
-            <button data-biases="on">ON</button>
-            <button data-biases="off" class="active">OFF</button>
+            <button data-biases="on" class="active">ON</button>
+            <button data-biases="off">OFF</button>
           </div>
         </div>
         <div class="compact-control">
           <span class="guidance-label">Activation</span>
           <div class="segmented" id="activationControl" role="group" aria-label="Activation">
-            <button data-activation="relu">ReLU</button>
-            <button data-activation="off" class="active">OFF</button>
+            <button data-activation="relu" class="active">ReLU</button>
+            <button data-activation="off">OFF</button>
           </div>
         </div>
         <div class="guidance-control">
           <span class="guidance-label">Guidance</span>
           <div class="segmented" id="guidanceControl" role="group" aria-label="Guidance level">
-            <button data-guidance="high" class="active">HIGH</button>
+            <button data-guidance="high">HIGH</button>
             <button data-guidance="medium">MEDIUM</button>
-            <button data-guidance="low">LOW</button>
+            <button data-guidance="low" class="active">LOW</button>
           </div>
         </div>
       </div>
@@ -424,9 +424,9 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     architecture: [3, 4, 3, 2],
     network: null,
     currentStep: 0,
-    guidance: "high",
-    biasesEnabled: false,
-    activationEnabled: false,
+    guidance: "low",
+    biasesEnabled: true,
+    activationEnabled: true,
     transition: 0,
     selection: null,
     feedback: { diagram: null, mapping: null, math: null },
@@ -851,9 +851,11 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     const solved = isHighGuidance() || equalNum(entered, correctValue), status = isPracticeGuidance() ? correctDiagramStatus(layer, valueType, j) : null;
     const zSolved = isHighGuidance() || equalNum(state.work.diagram[layer - 1].z[j], state.network.z[layer][j]);
     const aLocked = valueType === "a" && !zSolved, f = valueType === "z" ? formulaForZ(layer, j) : formulaForA(layer, j);
-    const prompt = state.guidance === "medium" ? "Use the highlighted relationship to calculate this value. The numerical answer stays hidden until you solve it correctly." : "Calculate this value from the diagram. The numerical answer stays hidden until you solve it correctly.";
+    const prompt = state.guidance === "medium" ? "Use the highlighted relationship to calculate this value. The numerical answer stays hidden until you check your work." : "Calculate this value from the diagram. The numerical answer stays hidden until you solve it correctly.";
+    const revealCheckedMediumZ = state.guidance === "medium" && valueType === "z" && status !== null;
+    const showDerivation = solved || revealCheckedMediumZ;
     return `<div class="inspector-title"><span class="value-badge">${valueType}<sub>${j + 1}</sub><sup>(${layer})</sup></span>${valueType === "z" ? "Pre-activation" : "Activated value"}</div>
-      <div class="formula-block"><div class="symbolic">${f.symbolic}</div>${solved ? `<div class="formula-main" style="margin-top:8px">${f.line1}</div><div class="formula-step">${f.line2}</div>${f.line3 ? `<div class="formula-step">${f.line3}</div>` : ""}` : `<div class="formula-step" style="margin-top:8px">${aLocked ? "Calculate and correctly check this neuron's z value first." : prompt}</div>`}</div>
+      <div class="formula-block"><div class="symbolic">${f.symbolic}</div>${showDerivation ? `<div class="formula-main" style="margin-top:8px">${f.line1}</div><div class="formula-step">${f.line2}</div>${f.line3 ? `<div class="formula-step">${f.line3}</div>` : ""}` : `<div class="formula-step" style="margin-top:8px">${aLocked ? "Calculate and correctly check this neuron's z value first." : prompt}</div>`}</div>
       ${isPracticeGuidance() ? `<div class="answer-entry"><label for="diagramAnswer">Your ${valueType} value</label><div class="answer-row"><input id="diagramAnswer" type="number" step="any" value="${entered}" data-diagram-entry="1" data-layer="${layer}" data-index="${j}" data-value-type="${valueType}" placeholder="Enter value" ${aLocked ? "disabled" : ""}><button class="btn small" data-action="check-one-diagram" data-layer="${layer}" data-index="${j}" data-value-type="${valueType}" ${aLocked ? "disabled" : ""}>Check</button></div>${status ? `<div class="status-text ${status}" style="margin-top:6px">${status === "correct" ? "Correct" : "Not yet correct"}</div>` : ""}</div>` : ""}
       ${valueType === "z" ? `<p class="help-copy">z is the weighted sum${state.biasesEnabled ? " plus this neuron's bias" : " (biases are currently off, so b = 0)"}, before activation.</p>` : `<p class="help-copy">${state.activationEnabled ? "ReLU is a separate step: negative z values become 0; positive values stay unchanged." : "Activation is off, so the activated value a is exactly equal to z."}</p>`}`;
   }
