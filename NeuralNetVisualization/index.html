@@ -372,23 +372,23 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
         <div class="compact-control">
           <span class="guidance-label">Biases</span>
           <div class="segmented" id="biasControl" role="group" aria-label="Biases">
-            <button data-biases="on" class="active">ON</button>
-            <button data-biases="off">OFF</button>
+            <button data-biases="on">ON</button>
+            <button data-biases="off" class="active">OFF</button>
           </div>
         </div>
         <div class="compact-control">
           <span class="guidance-label">Activation</span>
           <div class="segmented" id="activationControl" role="group" aria-label="Activation">
-            <button data-activation="relu" class="active">ReLU</button>
-            <button data-activation="off">OFF</button>
+            <button data-activation="relu">ReLU</button>
+            <button data-activation="off" class="active">OFF</button>
           </div>
         </div>
         <div class="guidance-control">
           <span class="guidance-label">Guidance</span>
           <div class="segmented" id="guidanceControl" role="group" aria-label="Guidance level">
-            <button data-guidance="high">HIGH</button>
+            <button data-guidance="high" class="active">HIGH</button>
             <button data-guidance="medium">MEDIUM</button>
-            <button data-guidance="low" class="active">LOW</button>
+            <button data-guidance="low">LOW</button>
           </div>
         </div>
       </div>
@@ -424,9 +424,9 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     architecture: [3, 4, 3, 2],
     network: null,
     currentStep: 0,
-    guidance: "low",
-    biasesEnabled: true,
-    activationEnabled: true,
+    guidance: "high",
+    biasesEnabled: false,
+    activationEnabled: false,
     transition: 0,
     selection: null,
     feedback: { diagram: null, mapping: null, math: null },
