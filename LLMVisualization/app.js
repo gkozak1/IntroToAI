@@ -1,25 +1,51 @@
 /*
- * GPT-2 Next Token Explorer
- * Educational static web app designed to align with Transformer Explainer's
- * GPT-2 ONNX model and sampling calculations.
+ * Language Model Next-Token Explorer
+ * Compares the Transformer Explainer GPT-2 model with Liquid AI's
+ * LFM2.5-350M while keeping the sampling calculation visible and identical.
  */
 
 const TEMP_VALUES = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const PLAYBACK_DELAYS = [0, 250, 500, 1000, 2000, 4000];
 const MAX_GENERATED_TOKENS = 50;
-const GPT2_CONTEXT_LIMIT = 1024;
-const MAX_PROMPT_TOKENS_FOR_FINISH = GPT2_CONTEXT_LIMIT - MAX_GENERATED_TOKENS;
 const TOP_CANDIDATES = 50;
 const CANDIDATE_ROW_HEIGHT = 19;
 const CANDIDATE_OVERSCAN = 8;
-const BLOCK_COUNT = 12;
-const HEADS_PER_BLOCK = 12;
 const MOCK_MODE = new URLSearchParams(window.location.search).get('mock') === '1';
 
+const MODEL_PROFILES = {
+  gpt2: {
+    key: 'gpt2',
+    name: 'GPT-2',
+    statusName: 'GPT-2',
+    vocabularySize: 50257,
+    contextLimit: 1024,
+    attentionBlocks: 12,
+    attentionHeads: 12,
+    hasAttention: true,
+    promptMode: 'raw',
+    explanation: 'GPT-2 reads this text directly. Its 12 attention blocks are available below.',
+    completionHelp: 'Click a generated token to inspect its exact r-value, candidates, and attention.'
+  },
+  lfm: {
+    key: 'lfm',
+    name: 'LFM2.5-350M',
+    statusName: 'LFM2.5',
+    vocabularySize: 65536,
+    contextLimit: 32768,
+    attentionBlocks: 0,
+    attentionHeads: 0,
+    hasAttention: false,
+    promptMode: 'instruction',
+    explanation: '<strong>Modern mode:</strong> the model receives a disclosed instruction to continue this passage naturally. Your Temperature and Top-K settings remain unchanged for a controlled comparison.',
+    completionHelp: 'Click a generated token to inspect its exact r-value and candidate distribution.'
+  }
+};
+
 const CDN = {
-  ortScript: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js',
+  ortScriptWasm: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js',
+  ortScriptWebGpu: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.webgpu.min.js',
   ortWasm: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/',
-  transformersModule: 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js'
+  transformersModule: 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.0'
 };
 
 // These are the exact 63 model chunks used by Transformer Explainer.
@@ -31,11 +57,20 @@ const MODEL_SOURCES = [
 ];
 const MODEL_CHUNK_COUNT = 63;
 const MODEL_CACHE = 'gpt2-next-token-explorer-te-model-v2';
+const LFM_MODEL_ID = 'LiquidAI/LFM2.5-350M-ONNX';
+const LFM_MODEL_BASE = `https://huggingface.co/${LFM_MODEL_ID}/resolve/main`;
+const LFM_ONNX_PATH = `${LFM_MODEL_BASE}/onnx/model_q4.onnx`;
+const LFM_DATA_PATH = `${LFM_MODEL_BASE}/onnx/model_q4.onnx_data`;
+const LFM_HIDDEN_SIZE = 1024;
+const LFM_KV_HEADS = 8;
+const LFM_HEAD_DIM = 64;
 
 const $ = (id) => document.getElementById(id);
 const els = {
-  modelBadge: $('modelBadge'),
+  modelSwitcher: $('modelSwitcher'),
+  modelOptions: Array.from(document.querySelectorAll('.model-option')),
   modelStatus: $('modelStatus'),
+  modelExplanation: $('modelExplanation'),
   promptInput: $('promptInput'),
   temperatureSlider: $('temperatureSlider'),
   temperatureValue: $('temperatureValue'),
@@ -62,6 +97,7 @@ const els = {
   jumpRankBtn: $('jumpRankBtn'),
   jumpBottomBtn: $('jumpBottomBtn'),
   candidateTableNote: $('candidateTableNote'),
+  candidateVocabularyNote: $('candidateVocabularyNote'),
   selectionCallout: $('selectionCallout'),
   probabilityChart: $('probabilityChart'),
   attentionChart: $('attentionChart'),
@@ -70,6 +106,9 @@ const els = {
   nextBlockBtn: $('nextBlockBtn'),
   blockButtons: $('blockButtons'),
   sentenceOutput: $('sentenceOutput'),
+  completionHelp: $('completionHelp'),
+  attentionHelp: $('attentionHelp'),
+  attentionNav: $('attentionNav'),
   historyDialog: $('historyDialog'),
   dialogRound: $('dialogRound'),
   dialogTitle: $('dialogTitle'),
@@ -77,14 +116,19 @@ const els = {
   dialogProbabilityChart: $('dialogProbabilityChart'),
   dialogCandidateBody: $('dialogCandidateBody'),
   dialogAttentionChart: $('dialogAttentionChart'),
+  dialogAttentionHelp: $('dialogAttentionHelp'),
+  dialogAttentionNav: $('dialogAttentionNav'),
   dialogBlockNumber: $('dialogBlockNumber'),
   dialogPrevBlockBtn: $('dialogPrevBlockBtn'),
   dialogNextBlockBtn: $('dialogNextBlockBtn')
 };
 
 const state = {
+  modelKey: 'gpt2',
   engine: null,
   ready: false,
+  switchingModel: false,
+  ended: false,
   busy: false,
   stopping: false,
   finishing: false,
@@ -109,7 +153,17 @@ const state = {
   lastAutoR: null
 };
 
-class ProductionEngine {
+function currentProfile() {
+  return MODEL_PROFILES[state.modelKey];
+}
+
+let transformersPromise = null;
+function loadTransformers() {
+  transformersPromise ??= import(CDN.transformersModule);
+  return transformersPromise;
+}
+
+class GPT2Engine {
   constructor(onProgress) {
     this.onProgress = onProgress;
     this.tokenizer = null;
@@ -119,14 +173,14 @@ class ProductionEngine {
 
   async init() {
     this.onProgress({ phase: 'runtime', text: 'Loading browser inference runtime…', fraction: 0.01 });
-    await loadScript(CDN.ortScript);
+    await loadScript(CDN.ortScriptWasm);
     this.ort = window.ort;
     if (!this.ort) throw new Error('ONNX Runtime Web did not initialize.');
     this.ort.env.wasm.wasmPaths = CDN.ortWasm;
     this.ort.env.logLevel = 'error';
 
     this.onProgress({ phase: 'tokenizer', text: 'Loading the GPT-2 tokenizer…', fraction: 0.03 });
-    const transformers = await import(CDN.transformersModule);
+    const transformers = await loadTransformers();
     this.tokenizer = await transformers.AutoTokenizer.from_pretrained('Xenova/gpt2');
 
     this.onProgress({ phase: 'model', text: 'Loading Transformer Explainer GPT-2 model…', fraction: 0.04 });
@@ -134,7 +188,7 @@ class ProductionEngine {
     const modelUrl = URL.createObjectURL(modelBlob);
     try {
       // Deliberately use the same default WASM execution path as Transformer Explainer.
-      this.session = await this.ort.InferenceSession.create(modelUrl);
+      this.session = await this.ort.InferenceSession.create(modelUrl, { executionProviders: ['wasm'] });
     } finally {
       URL.revokeObjectURL(modelUrl);
     }
@@ -195,35 +249,207 @@ class ProductionEngine {
   }
 
   async infer(tokenIds) {
-    const input = new this.ort.Tensor('int64', tokenIds, [1, tokenIds.length]);
+    const input = new this.ort.Tensor('int64', new BigInt64Array(tokenIds.map(BigInt)), [1, tokenIds.length]);
     const feeds = { input };
     const requestedOutputs = ['linear_output'];
-    for (let b = 0; b < BLOCK_COUNT; b += 1) {
-      for (let h = 0; h < HEADS_PER_BLOCK; h += 1) {
+    for (let b = 0; b < MODEL_PROFILES.gpt2.attentionBlocks; b += 1) {
+      for (let h = 0; h < MODEL_PROFILES.gpt2.attentionHeads; h += 1) {
         requestedOutputs.push(`block_${b}_attn_head_${h}_attn_softmax`);
       }
     }
 
     let results;
     try {
-      results = await this.session.run(feeds, requestedOutputs);
-    } catch (error) {
-      // Compatibility fallback for ORT builds that do not accept an output-name array.
-      console.warn('Requested-output inference failed; retrying with all graph outputs.', error);
-      results = await this.session.run(feeds);
+      try {
+        results = await this.session.run(feeds, requestedOutputs);
+      } catch (error) {
+        // Compatibility fallback for ORT builds that do not accept an output-name array.
+        console.warn('Requested-output inference failed; retrying with all graph outputs.', error);
+        results = await this.session.run(feeds);
+      }
+
+      const linear = results.linear_output;
+      if (!linear) throw new Error('The model did not return linear_output logits.');
+      const logits = Array.from(linear.data, Number);
+      const contextTokens = this.decodeContext(tokenIds);
+      const attentionByBlock = extractAverageAttention(results, tokenIds.length);
+      return { logits, contextTokens, attentionByBlock };
+    } finally {
+      try { input.dispose?.(); } catch { /* best-effort release */ }
+      for (const tensor of Object.values(results || {})) {
+        try { tensor?.dispose?.(); } catch { /* best-effort release */ }
+      }
+    }
+  }
+
+  isEndToken() { return false; }
+
+  async dispose() {
+    try { await this.session?.release?.(); } catch (error) { console.warn('Could not release GPT-2 session.', error); }
+    this.session = null;
+  }
+}
+
+class LFMEngine {
+  constructor(onProgress) {
+    this.onProgress = onProgress;
+    this.tokenizer = null;
+    this.session = null;
+    this.ort = null;
+    this.cache = null;
+    this.cachedTokenIds = [];
+  }
+
+  async init() {
+    if (!navigator.gpu) {
+      throw new Error('This Chromebook does not expose WebGPU. Choose GPT-2, or update Chrome and check that WebGPU is allowed on this device.');
+    }
+    this.onProgress({ phase: 'runtime', text: 'Checking WebGPU and loading the browser runtime…', fraction: 0.02 });
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) throw new Error('WebGPU is present, but no compatible graphics adapter is available. Choose GPT-2 on this device.');
+
+    await loadScript(CDN.ortScriptWebGpu);
+    this.ort = window.ort;
+    if (!this.ort) throw new Error('ONNX Runtime WebGPU did not initialize.');
+    this.ort.env.wasm.wasmPaths = CDN.ortWasm;
+    this.ort.env.wasm.numThreads = 1;
+    this.ort.env.logLevel = 'error';
+
+    this.onProgress({ phase: 'tokenizer', text: 'Loading the LFM2.5 tokenizer…', fraction: 0.06 });
+    const transformers = await loadTransformers();
+    this.tokenizer = await transformers.AutoTokenizer.from_pretrained(LFM_MODEL_ID);
+
+    this.onProgress({ phase: 'model', text: 'Loading the modern model (~294 MB on first use)…', fraction: 0.10, indeterminate: true });
+    this.session = await this.ort.InferenceSession.create(LFM_ONNX_PATH, {
+      executionProviders: ['webgpu'],
+      externalData: [{ path: 'model_q4.onnx_data', data: LFM_DATA_PATH }]
+    });
+    this.onProgress({ phase: 'ready', text: 'LFM2.5-350M is ready.', fraction: 1 });
+  }
+
+  formatPrompt(text) {
+    const messages = [
+      {
+        role: 'system',
+        content: 'Continue the user\'s passage naturally. Write only the continuation. Do not explain, quote, or restart the passage.'
+      },
+      { role: 'user', content: text.trim() }
+    ];
+    return this.tokenizer.apply_chat_template(messages, { add_generation_prompt: true, tokenize: false });
+  }
+
+  encode(text) {
+    return Array.from(this.tokenizer.encode(this.formatPrompt(text === '' ? ' ' : text), { add_special_tokens: false }), Number);
+  }
+
+  decode(tokenId) {
+    if (this.isEndToken(tokenId)) return '[END]';
+    return this.tokenizer.decode([tokenId], { skip_special_tokens: false });
+  }
+
+  decodeContext(tokenIds) {
+    return tokenIds.map((id) => this.decode(id));
+  }
+
+  isEndToken(tokenId) {
+    const eos = this.tokenizer?.eos_token_id;
+    return Array.isArray(eos) ? eos.includes(tokenId) : tokenId === eos;
+  }
+
+  resetCache() {
+    if (this.cache) {
+      for (const tensor of Object.values(this.cache)) {
+        try { tensor?.dispose?.(); } catch { /* best-effort release */ }
+      }
+    }
+    this.cache = this.createEmptyCache();
+    this.cachedTokenIds = [];
+  }
+
+  createEmptyCache() {
+    const cache = {};
+    for (const name of this.session.inputNames) {
+      if (name.startsWith('past_conv')) {
+        cache[name] = new this.ort.Tensor('float32', new Float32Array(LFM_HIDDEN_SIZE * 3), [1, LFM_HIDDEN_SIZE, 3]);
+      } else if (name.startsWith('past_key_values')) {
+        cache[name] = new this.ort.Tensor('float32', new Float32Array(0), [1, LFM_KV_HEADS, 0, LFM_HEAD_DIM]);
+      }
+    }
+    return cache;
+  }
+
+  canContinueCache(tokenIds) {
+    if (!this.cache || tokenIds.length !== this.cachedTokenIds.length + 1) return false;
+    return this.cachedTokenIds.every((id, index) => tokenIds[index] === id);
+  }
+
+  updateCache(outputs) {
+    const nextCache = {};
+    for (const [name, tensor] of Object.entries(outputs)) {
+      if (name.startsWith('present_conv')) nextCache[name.replace('present_conv', 'past_conv')] = tensor;
+      else if (name.startsWith('present.')) nextCache[name.replace('present.', 'past_key_values.')] = tensor;
+    }
+    for (const tensor of Object.values(this.cache || {})) {
+      if (!Object.values(nextCache).includes(tensor)) {
+        try { tensor?.dispose?.(); } catch { /* best-effort release */ }
+      }
+    }
+    this.cache = nextCache;
+  }
+
+  async infer(tokenIds) {
+    if (!tokenIds.length) throw new Error('The model needs at least one input token.');
+    const incremental = this.canContinueCache(tokenIds);
+    if (!incremental) this.resetCache();
+
+    const ids = incremental ? [tokenIds[tokenIds.length - 1]] : tokenIds;
+    const contextStart = incremental ? tokenIds.length - 1 : 0;
+    const inputIds = new this.ort.Tensor('int64', new BigInt64Array(ids.map(BigInt)), [1, ids.length]);
+    const attentionMask = new this.ort.Tensor('int64', new BigInt64Array(tokenIds.length).fill(1n), [1, tokenIds.length]);
+    const feeds = { input_ids: inputIds, attention_mask: attentionMask, ...this.cache };
+    if (this.session.inputNames.includes('position_ids')) {
+      const positions = Array.from({ length: ids.length }, (_, i) => BigInt(contextStart + i));
+      feeds.position_ids = new this.ort.Tensor('int64', new BigInt64Array(positions), [1, positions.length]);
     }
 
-    const linear = results.linear_output;
-    if (!linear) throw new Error('The model did not return linear_output logits.');
-    const logits = Array.from(linear.data, Number);
-    const contextTokens = this.decodeContext(tokenIds);
-    const attentionByBlock = extractAverageAttention(results, tokenIds.length);
-    return { logits, contextTokens, attentionByBlock };
+    try {
+      const outputs = await this.session.run(feeds);
+      const logitsTensor = outputs.logits || Object.values(outputs)[0];
+      if (!logitsTensor?.data || logitsTensor.dims.length < 3) throw new Error('LFM2.5 did not return next-token logits.');
+      const vocabularySize = logitsTensor.dims[logitsTensor.dims.length - 1];
+      const offset = logitsTensor.data.length - vocabularySize;
+      const logits = Array.from(logitsTensor.data.slice(offset), Number);
+      this.updateCache(outputs);
+      this.cachedTokenIds = [...tokenIds];
+
+      const retainedOutputs = new Set(Object.values(this.cache));
+      for (const tensor of Object.values(outputs)) {
+        if (!retainedOutputs.has(tensor)) {
+          try { tensor?.dispose?.(); } catch { /* best-effort release */ }
+        }
+      }
+      return { logits, contextTokens: [], attentionByBlock: [] };
+    } finally {
+      try { inputIds.dispose?.(); } catch { /* best-effort release */ }
+      try { attentionMask.dispose?.(); } catch { /* best-effort release */ }
+      try { feeds.position_ids?.dispose?.(); } catch { /* best-effort release */ }
+    }
+  }
+
+  async dispose() {
+    for (const tensor of Object.values(this.cache || {})) {
+      try { tensor?.dispose?.(); } catch { /* best-effort release */ }
+    }
+    this.cache = null;
+    this.cachedTokenIds = [];
+    try { await this.session?.release?.(); } catch (error) { console.warn('Could not release LFM2.5 session.', error); }
+    this.session = null;
   }
 }
 
 class MockEngine {
-  constructor(onProgress) {
+  constructor(profile, onProgress) {
+    this.profile = profile;
     this.onProgress = onProgress;
     this.dynamicTokens = new Map();
     this.reverseDynamic = new Map();
@@ -241,7 +467,7 @@ class MockEngine {
     ];
   }
   async init() {
-    this.onProgress({ phase: 'model', text: 'Mock test engine ready.', fraction: 1 });
+    this.onProgress({ phase: 'model', text: `${this.profile.name} mock engine ready.`, fraction: 1 });
     await sleep(40);
   }
   encode(text) {
@@ -275,7 +501,7 @@ class MockEngine {
   decodeContext(ids) { return ids.map((id) => this.decode(id)); }
   async infer(tokenIds) {
     await sleep(25);
-    const logits = new Array(50257);
+    const logits = new Array(this.profile.vocabularySize);
     const seed = tokenIds.reduce((a, b, i) => (a + (b + 17) * (i + 3)) % 100003, 19);
     for (let i = 0; i < logits.length; i += 1) {
       const wave = Math.sin((i + 1) * 0.73 + seed * 0.0017) * 1.8;
@@ -292,13 +518,16 @@ class MockEngine {
     }
     const n = tokenIds.length;
     const attentionByBlock = [];
-    for (let b = 0; b < BLOCK_COUNT; b += 1) {
+    for (let b = 0; b < this.profile.attentionBlocks; b += 1) {
       const raw = Array.from({ length: n }, (_, i) => 0.08 + Math.abs(Math.sin((i + 1) * (b + 2) * 0.37 + seed * 0.0003)));
       const sum = raw.reduce((a, v) => a + v, 0);
       attentionByBlock.push(raw.map((v) => v / sum));
     }
     return { logits, contextTokens: this.decodeContext(tokenIds), attentionByBlock };
   }
+
+  isEndToken() { return false; }
+  async dispose() { /* no resources in mock mode */ }
 }
 
 async function fetchCachedArrayBuffer(url) {
@@ -337,10 +566,10 @@ function loadScript(src) {
 
 function extractAverageAttention(results, seqLen) {
   const blocks = [];
-  for (let b = 0; b < BLOCK_COUNT; b += 1) {
+  for (let b = 0; b < MODEL_PROFILES.gpt2.attentionBlocks; b += 1) {
     const sums = new Array(seqLen).fill(0);
     let foundHeads = 0;
-    for (let h = 0; h < HEADS_PER_BLOCK; h += 1) {
+    for (let h = 0; h < MODEL_PROFILES.gpt2.attentionHeads; h += 1) {
       const tensor = results[`block_${b}_attn_head_${h}_attn_softmax`];
       if (!tensor?.data || tensor.data.length < seqLen) continue;
       const data = tensor.data;
@@ -386,9 +615,8 @@ function formatPlaybackDelay(ms) {
 }
 
 function getFullRanking(logits) {
-  // Transformer Explainer already sorts the entire GPT-2 vocabulary before
-  // keeping its top 50 candidates. Preserve that same sort, but cache the full
-  // ranking so students can inspect all 50,257 tokens without extra model work.
+  // Both modes sort the model's entire vocabulary before keeping the top 50.
+  // Cache that ranking so students can inspect every token without extra inference.
   if (state.rankingSource !== logits) {
     state.currentFullRanking = Array.from(logits)
       .map((logit, tokenId) => ({ tokenId, logit: Number(logit) }))
@@ -549,7 +777,7 @@ function renderCandidateWindow() {
     rows.push(`
       <tr class="${[d.probability === 0 ? 'filtered' : '', selected ? 'selected-row' : ''].filter(Boolean).join(' ')}"${selected ? ` style="--rank-color:${selectionColor(d.rank, currentTopK())};--rank-text:${selectionTextColor(d.rank, currentTopK())}"` : ''}>
         <td>${d.rank}</td>
-        <td class="token-cell" title="GPT-2 token ID ${d.tokenId}">${escapeHtml(d.token)}</td>
+        <td class="token-cell" title="${escapeHtml(currentProfile().name)} token ID ${d.tokenId}">${escapeHtml(d.token)}</td>
         <td>${formatNumber(d.logit)}</td>
         <td>${formatNumber(d.scaledLogit)}</td>
         <td>${formatNumber(d.topKLogit)}</td>
@@ -593,16 +821,31 @@ function renderProbabilityChart(distribution, host, selectedTokenId) {
 }
 
 function renderAttention() {
+  if (!currentProfile().hasAttention) {
+    els.attentionChart.className = 'chart-host attention-chart architecture-note';
+    els.attentionChart.innerHTML = `
+      <div class="architecture-note-inner">
+        <div class="architecture-note-title">This modern model is not an all-attention transformer.</div>
+        <p>LFM2.5 combines 10 efficient convolution blocks with 6 grouped-query attention blocks. Its browser model exposes the logits used above, but not its internal attention matrices. Switch to GPT-2 to inspect attention directly.</p>
+        <div class="architecture-badges" aria-label="LFM2.5 architecture">
+          <span class="architecture-badge">10 convolution blocks</span>
+          <span class="architecture-badge">6 attention blocks</span>
+          <span class="architecture-badge">16 blocks total</span>
+        </div>
+      </div>`;
+    return;
+  }
   if (!state.currentInference?.attentionByBlock?.length) {
     els.attentionChart.classList.add('placeholder-chart');
     els.attentionChart.textContent = 'Attention data is not available for this round.';
     return;
   }
-  const block = Math.max(0, Math.min(BLOCK_COUNT - 1, state.attentionBlock));
+  const blockCount = currentProfile().attentionBlocks;
+  const block = Math.max(0, Math.min(blockCount - 1, state.attentionBlock));
   state.attentionBlock = block;
   els.blockNumber.textContent = String(block + 1);
   els.prevBlockBtn.disabled = block === 0;
-  els.nextBlockBtn.disabled = block === BLOCK_COUNT - 1;
+  els.nextBlockBtn.disabled = block === blockCount - 1;
   if (els.blockButtons) {
     els.blockButtons.querySelectorAll('.block-button').forEach((button, i) => {
       button.classList.toggle('active', i === block);
@@ -667,7 +910,8 @@ function renderSentence() {
     const color = selectionColor(record.selected.rank, record.settings.topK);
     const foreground = selectionTextColor(record.selected.rank, record.settings.topK);
     const justAdded = index === state.justAddedIndex ? ' just-added' : '';
-    html += `<button type="button" class="generated-token${justAdded}" data-history-index="${index}" style="background:${color};color:${foreground}" title="GPT-2 token ID ${record.selected.tokenId} · generated token ${index + 1} · rank ${record.selected.rank} of ${record.settings.topK} · ${formatProbability(record.selected.probability, 2)}">${escapeHtml(record.selected.rawToken)}</button>`;
+    const endClass = record.selected.isEndToken ? ' end-token' : '';
+    html += `<button type="button" class="generated-token${justAdded}${endClass}" data-history-index="${index}" style="background:${color};color:${foreground}" title="${escapeHtml(record.modelName)} token ID ${record.selected.tokenId} · generated token ${index + 1} · rank ${record.selected.rank} of ${record.settings.topK} · ${formatProbability(record.selected.probability, 2)}">${escapeHtml(record.selected.rawToken)}</button>`;
   });
   els.sentenceOutput.innerHTML = html;
   els.sentenceOutput.querySelectorAll('.generated-token').forEach((button) => {
@@ -686,11 +930,13 @@ async function analyzePrompt({ force = false } = {}) {
   updateControls();
   try {
     state.basePrompt = prompt;
-    // Transformer Explainer trims the input string before tokenization. Mirror that
-    // behavior so identical visible prompts produce the same GPT-2 token sequence.
+    // GPT-2 sees the trimmed passage directly. LFM2.5's engine transparently
+    // applies the continuation instruction disclosed beside the input.
     state.baseTokenIds = state.engine.encode(prompt.trim());
-    if (state.baseTokenIds.length > MAX_PROMPT_TOKENS_FOR_FINISH) {
-      throw new Error(`Prompt is ${state.baseTokenIds.length} GPT-2 tokens. Use ${MAX_PROMPT_TOKENS_FOR_FINISH} or fewer so a full 50-token continuation stays within GPT-2's ${GPT2_CONTEXT_LIMIT}-token context window.`);
+    const profile = currentProfile();
+    const maxPromptTokens = profile.contextLimit - MAX_GENERATED_TOKENS;
+    if (state.baseTokenIds.length > maxPromptTokens) {
+      throw new Error(`The model input is ${state.baseTokenIds.length.toLocaleString()} tokens. Use ${maxPromptTokens.toLocaleString()} or fewer so a full 50-token continuation stays within ${profile.name}'s ${profile.contextLimit.toLocaleString()}-token context window.`);
     }
     state.tokenIds = [...state.baseTokenIds];
     const inference = await state.engine.infer(state.tokenIds);
@@ -731,8 +977,11 @@ async function chooseNextToken(forFinish = false) {
   const settings = { temperature: currentTemperature(), topK: currentTopK() };
   const distribution = buildDistribution(state.currentInference.logits, settings.temperature, settings.topK);
   const selected = selectByR(distribution, r);
+  selected.isEndToken = Boolean(state.engine.isEndToken?.(selected.tokenId));
   const record = {
     index: state.history.length,
+    modelKey: state.modelKey,
+    modelName: currentProfile().name,
     settings,
     r,
     selected: { ...selected },
@@ -751,6 +1000,16 @@ async function chooseNextToken(forFinish = false) {
   els.selectionCallout.textContent = `Selected Rank ${selected.rank}: “${selected.token}”`;
   renderSentence();
   updateGenerationStatus();
+
+  if (selected.isEndToken) {
+    state.ended = true;
+    state.justAddedIndex = null;
+    renderSentence();
+    els.roundStatus.textContent = `${currentProfile().name} selected its end token.`;
+    setStatus(`Completion ended after ${state.history.length} token${state.history.length === 1 ? '' : 's'}`, 'ready');
+    updateControls();
+    return true;
+  }
 
   if (!els.autoRToggle.checked) els.rValueInput.value = '';
   if (state.history.length >= MAX_GENERATED_TOKENS) {
@@ -801,7 +1060,7 @@ function cloneInferenceSnapshot(inference) {
   return {
     logits: inference.logits.slice(),
     contextTokens: inference.contextTokens.slice(),
-    attentionByBlock: inference.attentionByBlock.map((arr) => arr.slice())
+    attentionByBlock: (inference.attentionByBlock || []).map((arr) => arr.slice())
   };
 }
 
@@ -849,7 +1108,7 @@ async function finishGeneration() {
   state.paused = false;
   updateControls();
   setStatus(`Generating… ${state.history.length}/${MAX_GENERATED_TOKENS}`);
-  while (state.history.length < MAX_GENERATED_TOKENS && !state.stopping) {
+  while (state.history.length < MAX_GENERATED_TOKENS && !state.stopping && !state.ended) {
     await waitUntilResumed();
     if (state.stopping) break;
     const ok = await chooseNextToken(true);
@@ -857,17 +1116,19 @@ async function finishGeneration() {
     await nextAnimationFrame();
   }
   const completed = state.history.length >= MAX_GENERATED_TOKENS;
+  const ended = state.ended;
   state.finishing = false;
   state.paused = false;
   state.stopping = false;
   state.resumeWaiters.splice(0).forEach((resolve) => resolve());
-  setStatus(completed ? '50-token continuation complete' : 'Ready', 'ready');
+  setStatus(completed ? '50-token continuation complete' : ended ? `Completion ended after ${state.history.length} tokens` : 'Ready', 'ready');
   updateControls();
 }
 function backOneToken() {
   if (state.busy || state.history.length === 0) return;
   const record = state.history.pop();
   state.tokenIds.pop();
+  state.ended = false;
   state.currentInference = cloneInferenceSnapshot(record.inference);
   state.attentionBlock = 0;
   if (!els.autoRToggle.checked) els.rValueInput.value = '';
@@ -884,7 +1145,13 @@ async function resetAll() {
   state.finishing = false;
   state.paused = false;
   state.resumeWaiters.splice(0).forEach((resolve) => resolve());
+  clearGenerationState();
+  await analyzePrompt({ force: true });
+}
+
+function clearGenerationState() {
   state.justAddedIndex = null;
+  state.ended = false;
   state.history = [];
   state.currentInference = null;
   state.currentDistribution = null;
@@ -902,7 +1169,6 @@ async function resetAll() {
   renderEmptyData();
   updateGenerationStatus();
   updateControls();
-  await analyzePrompt({ force: true });
 }
 
 function renderEmptyData() {
@@ -913,13 +1179,18 @@ function renderEmptyData() {
   els.selectionCallout.textContent = '';
   els.probabilityChart.className = 'chart-host placeholder-chart';
   els.probabilityChart.textContent = 'Probability bars will appear here.';
-  els.attentionChart.className = 'chart-host attention-chart placeholder-chart';
-  els.attentionChart.textContent = 'Attention bars will appear here.';
+  if (currentProfile().hasAttention) {
+    els.attentionChart.className = 'chart-host attention-chart placeholder-chart';
+    els.attentionChart.textContent = 'Attention bars will appear here.';
+  } else {
+    renderAttention();
+  }
 }
 
 function updateRoundStatus() {
   const contextLength = state.tokenIds.length;
-  els.roundStatus.textContent = `Context: ${contextLength} token${contextLength === 1 ? '' : 's'}`;
+  const qualifier = currentProfile().promptMode === 'instruction' ? 'model context' : 'context';
+  els.roundStatus.textContent = `${qualifier[0].toUpperCase()}${qualifier.slice(1)}: ${contextLength.toLocaleString()} token${contextLength === 1 ? '' : 's'}`;
 }
 
 function updateGenerationStatus() {
@@ -930,7 +1201,7 @@ function updateControls() {
   const hasRound = Boolean(state.currentInference);
   const generating = state.history.length > 0;
   els.promptInput.readOnly = generating || state.busy || state.finishing;
-  els.nextBtn.disabled = !state.ready || state.busy || state.finishing || !hasRound || state.history.length >= MAX_GENERATED_TOKENS;
+  els.nextBtn.disabled = !state.ready || state.busy || state.finishing || state.ended || !hasRound || state.history.length >= MAX_GENERATED_TOKENS;
   els.backBtn.disabled = state.busy || state.finishing || state.history.length === 0;
   els.resetBtn.disabled = state.busy || state.finishing;
   els.autoRToggle.disabled = state.finishing;
@@ -938,9 +1209,10 @@ function updateControls() {
     els.finishBtn.disabled = false;
     els.finishBtn.textContent = state.paused ? 'Resume' : 'Pause';
   } else {
-    els.finishBtn.disabled = !state.ready || state.busy || !hasRound || !els.autoRToggle.checked || state.history.length >= MAX_GENERATED_TOKENS;
+    els.finishBtn.disabled = !state.ready || state.busy || state.ended || !hasRound || !els.autoRToggle.checked || state.history.length >= MAX_GENERATED_TOKENS;
     els.finishBtn.textContent = 'Finish';
   }
+  els.modelOptions.forEach((button) => { button.disabled = state.busy || state.finishing || state.switchingModel; });
 }
 
 function setStatus(text, kind = '') {
@@ -948,10 +1220,85 @@ function setStatus(text, kind = '') {
   els.modelStatus.className = `status-pill${kind ? ` ${kind}` : ''}`;
 }
 
-function setLoadProgress({ text, fraction }) {
+function setLoadProgress({ text, fraction, indeterminate = false }) {
   els.loadProgress.hidden = fraction >= 1;
+  els.loadProgress.classList.toggle('indeterminate', indeterminate);
   els.loadProgressBar.style.width = `${Math.max(0, Math.min(1, fraction)) * 100}%`;
   els.loadProgressText.textContent = text;
+}
+
+function updateModelUI() {
+  const profile = currentProfile();
+  els.modelOptions.forEach((button) => {
+    const active = button.dataset.model === profile.key;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-checked', active ? 'true' : 'false');
+    button.tabIndex = active ? 0 : -1;
+  });
+  els.modelExplanation.innerHTML = profile.explanation;
+  els.completionHelp.textContent = profile.completionHelp;
+  els.candidateVocabularyNote.textContent = `All ${profile.vocabularySize.toLocaleString()} ${profile.name} vocabulary tokens · sorted by logit`;
+  els.candidateJumpRank.max = String(profile.vocabularySize);
+  els.attentionNav.hidden = !profile.hasAttention;
+  els.attentionHelp.textContent = profile.hasAttention
+    ? `Final context token's attention, averaged across the ${profile.attentionHeads} heads in one transformer block.`
+    : 'Modern efficient models can mix attention with other sequence-processing mechanisms.';
+
+  if (profile.hasAttention) {
+    els.blockButtons.innerHTML = Array.from({ length: profile.attentionBlocks }, (_, i) => `<button type="button" class="block-button${i === 0 ? ' active' : ''}" data-block="${i}" aria-label="Transformer block ${i + 1}">${i + 1}</button>`).join('');
+    els.blockButtons.querySelectorAll('.block-button').forEach((button) => {
+      button.addEventListener('click', () => { state.attentionBlock = Number(button.dataset.block); renderAttention(); });
+    });
+    const blockLabel = els.attentionNav.querySelector('.block-label');
+    if (blockLabel) blockLabel.innerHTML = `Block <strong id="blockNumber">1</strong> / ${profile.attentionBlocks}`;
+    els.blockNumber = $('blockNumber');
+  }
+  renderEmptyData();
+  document.title = `Language Model Next-Token Explorer${MOCK_MODE ? ' · Mock' : ''}`;
+}
+
+function makeEngine(profile) {
+  if (MOCK_MODE) return new MockEngine(profile, setLoadProgress);
+  return profile.key === 'lfm' ? new LFMEngine(setLoadProgress) : new GPT2Engine(setLoadProgress);
+}
+
+async function switchModel(modelKey, { force = false } = {}) {
+  if (!MODEL_PROFILES[modelKey] || state.busy || state.finishing || state.switchingModel) return;
+  if (!force && modelKey === state.modelKey && state.ready) return;
+
+  state.switchingModel = true;
+  state.ready = false;
+  state.stopping = true;
+  clearTimeout(state.promptTimer);
+  clearGenerationState();
+  state.modelKey = modelKey;
+  updateModelUI();
+  setStatus(`Loading ${currentProfile().statusName}…`);
+  els.loadProgress.hidden = false;
+  setLoadProgress({ text: `Preparing ${currentProfile().name}…`, fraction: 0.01 });
+  updateControls();
+
+  try {
+    await state.engine?.dispose?.();
+    state.engine = makeEngine(currentProfile());
+    await state.engine.init();
+    state.ready = true;
+    state.stopping = false;
+    setStatus(`${currentProfile().statusName} ready`, 'ready');
+    await analyzePrompt({ force: true });
+  } catch (error) {
+    console.error(error);
+    state.ready = false;
+    setStatus('Model load failed', 'error');
+    els.loadProgress.hidden = false;
+    els.loadProgress.classList.remove('indeterminate');
+    els.loadProgressText.textContent = error.message;
+    els.roundStatus.textContent = currentProfile().key === 'lfm' ? 'Choose GPT-2 to continue on this device.' : 'See the loading message above.';
+  } finally {
+    state.switchingModel = false;
+    state.busy = false;
+    updateControls();
+  }
 }
 
 function openHistory(index) {
@@ -962,6 +1309,7 @@ function openHistory(index) {
   els.dialogRound.textContent = `Generated token ${index + 1} of ${state.history.length}`;
   els.dialogTitle.textContent = `Selected “${formatTokenForDisplay(record.selected.rawToken)}”`;
   els.dialogSummary.innerHTML = [
+    ['Model', record.modelName],
     ['Temperature', record.settings.temperature],
     ['Top-K', record.settings.topK],
     ['r-value', formatR(record.r)],
@@ -974,7 +1322,7 @@ function openHistory(index) {
   els.dialogCandidateBody.innerHTML = eligible.map((d) => `
     <tr class="${d.tokenId === record.selected.tokenId ? 'selected-row' : ''}">
       <td>${d.rank}</td>
-      <td class="token-cell" title="GPT-2 token ID ${d.tokenId}">${escapeHtml(d.token)}</td>
+      <td class="token-cell" title="${escapeHtml(record.modelName)} token ID ${d.tokenId}">${escapeHtml(d.token)}</td>
       <td>${formatProbability(d.probability, 3)}</td>
       <td>${formatR(d.rangeStart)} ≤ r &lt; ${d.rangeEnd >= 0.9999995 ? '1.000000' : formatR(d.rangeEnd)}</td>
     </tr>`).join('');
@@ -985,11 +1333,22 @@ function openHistory(index) {
 function renderDialogAttention() {
   const record = state.dialogRecord;
   if (!record) return;
-  const block = Math.max(0, Math.min(BLOCK_COUNT - 1, state.dialogAttentionBlock));
+  const profile = MODEL_PROFILES[record.modelKey] || MODEL_PROFILES.gpt2;
+  if (!profile.hasAttention || !record.inference.attentionByBlock.length) {
+    els.dialogAttentionNav.hidden = true;
+    els.dialogAttentionHelp.textContent = 'This browser model does not expose attention matrices.';
+    els.dialogAttentionChart.className = 'chart-host attention-chart architecture-note';
+    els.dialogAttentionChart.innerHTML = '<div class="architecture-note-inner"><div class="architecture-note-title">Attention is unavailable in LFM2.5 browser mode.</div><p>The selected token and its full probability distribution are real model outputs. The optimized model file does not return internal attention probabilities.</p></div>';
+    return;
+  }
+  els.dialogAttentionNav.hidden = false;
+  els.dialogAttentionHelp.textContent = `Average of all ${profile.attentionHeads} heads in the selected transformer block.`;
+  els.dialogAttentionChart.className = 'chart-host attention-chart';
+  const block = Math.max(0, Math.min(profile.attentionBlocks - 1, state.dialogAttentionBlock));
   state.dialogAttentionBlock = block;
   els.dialogBlockNumber.textContent = String(block + 1);
   els.dialogPrevBlockBtn.disabled = block === 0;
-  els.dialogNextBlockBtn.disabled = block === BLOCK_COUNT - 1;
+  els.dialogNextBlockBtn.disabled = block === profile.attentionBlocks - 1;
   const values = record.inference.attentionByBlock[block] || [];
   const tokens = record.inference.contextTokens || [];
   els.dialogAttentionChart.innerHTML = makeBarChartSvg({
@@ -1008,6 +1367,19 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function nextAnimationFrame() { return new Promise((resolve) => requestAnimationFrame(() => resolve())); }
 
 function wireEvents() {
+  els.modelOptions.forEach((button) => {
+    button.addEventListener('click', () => switchModel(button.dataset.model));
+    button.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const currentIndex = els.modelOptions.indexOf(button);
+      const nextIndex = (currentIndex + direction + els.modelOptions.length) % els.modelOptions.length;
+      const nextButton = els.modelOptions[nextIndex];
+      nextButton.focus();
+      switchModel(nextButton.dataset.model);
+    });
+  });
   els.temperatureSlider.addEventListener('input', () => {
     els.temperatureValue.textContent = currentTemperature().toFixed(currentTemperature() <= 1 ? 1 : (Number.isInteger(currentTemperature()) ? 0 : 1));
     if (state.currentInference) renderDistribution();
@@ -1057,40 +1429,13 @@ function wireEvents() {
 }
 
 async function init() {
-  if (els.blockButtons) {
-    els.blockButtons.innerHTML = Array.from({ length: BLOCK_COUNT }, (_, i) => `<button type="button" class="block-button${i === 0 ? ' active' : ''}" data-block="${i}" aria-label="Transformer block ${i + 1}">${i + 1}</button>`).join('');
-    els.blockButtons.querySelectorAll('.block-button').forEach((button) => {
-      button.addEventListener('click', () => { state.attentionBlock = Number(button.dataset.block); renderAttention(); });
-    });
-  }
   wireEvents();
+  updateModelUI();
   renderSentence();
   updateGenerationStatus();
   els.temperatureValue.textContent = '1.0';
   els.topKValue.textContent = String(currentTopK());
-
-  if (MOCK_MODE) {
-    els.modelBadge.textContent = 'Mock test mode';
-    document.title += ' · Mock';
-  }
-
-  state.engine = MOCK_MODE ? new MockEngine(setLoadProgress) : new ProductionEngine(setLoadProgress);
-  try {
-    els.loadProgress.hidden = false;
-    await state.engine.init();
-    state.ready = true;
-    setStatus(MOCK_MODE ? 'Mock engine ready' : 'GPT-2 ready', 'ready');
-    await analyzePrompt({ force: true });
-  } catch (error) {
-    console.error(error);
-    state.ready = false;
-    setStatus('Model load failed', 'error');
-    els.loadProgress.hidden = false;
-    els.loadProgressText.textContent = error.message;
-    els.roundStatus.textContent = 'See the loading message above.';
-  } finally {
-    updateControls();
-  }
+  await switchModel('gpt2', { force: true });
 }
 
 init();

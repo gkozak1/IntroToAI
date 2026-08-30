@@ -4,19 +4,26 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ffffff" />
-  <title>GPT-2 Next Token Explorer</title>
+  <title>Language Model Next-Token Explorer</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div id="app" class="app-shell">
     <header class="site-header">
       <div class="header-title-row">
-        <h1>GPT-2 Next Token Explorer</h1>
-        <button class="info-dot" type="button" title="Explore how GPT-2 logits become probabilities and sampled tokens.">i</button>
+        <h1>Language Model Next-Token Explorer</h1>
+        <button class="info-dot" type="button" title="Compare how a 2019 model and a modern small model turn logits into sampled tokens.">i</button>
       </div>
       <div class="header-status-row">
-        <div class="model-badge" id="modelBadge">GPT-2 · Transformer Explainer model</div>
-        <div class="status-pill" id="modelStatus">Preparing…</div>
+        <div class="model-switcher" id="modelSwitcher" role="radiogroup" aria-label="Language model">
+          <button class="model-option active" type="button" data-model="gpt2" role="radio" aria-checked="true" tabindex="0">
+            <span>GPT-2</span><small>2019 baseline</small>
+          </button>
+          <button class="model-option" type="button" data-model="lfm" role="radio" aria-checked="false" tabindex="-1">
+            <span>LFM2.5-350M</span><small>modern small model</small>
+          </button>
+        </div>
+        <div class="status-pill" id="modelStatus" role="status" aria-live="polite">Preparing…</div>
       </div>
     </header>
 
@@ -60,6 +67,9 @@
           <span class="mini-help" title="The prompt locks after generation starts. Reset to edit it again.">Locks after generation starts</span>
         </div>
         <textarea id="promptInput" rows="2" spellcheck="true">The banker left the bank, sat on the left river bank</textarea>
+        <div id="modelExplanation" class="model-explanation" aria-live="polite">
+          GPT-2 reads this text directly. Its 12 attention blocks are available below.
+        </div>
       </div>
 
       <div class="action-row compact-actions">
@@ -70,7 +80,7 @@
         <div class="generation-status" id="generationStatus">Generated: 0 / 50 tokens</div>
       </div>
 
-      <div class="load-progress" id="loadProgress" hidden>
+      <div class="load-progress" id="loadProgress" role="status" aria-live="polite" hidden>
         <div class="load-progress-track"><div class="load-progress-bar" id="loadProgressBar"></div></div>
         <div id="loadProgressText">Loading model…</div>
       </div>
@@ -82,7 +92,7 @@
           <div class="workbench-heading candidate-workbench-heading">
             <div>
               <h2 id="candidateHeading">Next-token candidates</h2>
-              <span class="microcopy">All GPT-2 vocabulary tokens · sorted by logit</span>
+              <span class="microcopy" id="candidateVocabularyNote">All 50,257 GPT-2 vocabulary tokens · sorted by logit</span>
             </div>
             <div class="candidate-heading-tools">
               <div id="roundStatus" class="small-status">Waiting for model</div>
@@ -132,7 +142,7 @@
           </div>
           <div id="sentenceOutput" class="sentence-output completion-stage"></div>
           <div class="completion-footer">
-            <span>Click a generated token to inspect its exact r-value, candidates, and attention.</span>
+            <span id="completionHelp">Click a generated token to inspect its exact r-value, candidates, and attention.</span>
           </div>
         </section>
       </section>
@@ -152,9 +162,9 @@
           <div class="section-heading-row attention-heading compact-heading">
             <div>
               <h2 id="attentionHeading">Attention to earlier tokens</h2>
-              <p class="section-help">Final context token's attention, averaged across the 12 heads in one transformer block.</p>
+              <p class="section-help" id="attentionHelp">Final context token's attention, averaged across the 12 heads in one transformer block.</p>
             </div>
-            <div class="block-nav block-stepper" aria-label="Transformer block navigation">
+            <div class="block-nav block-stepper" id="attentionNav" aria-label="Transformer block navigation">
               <button id="prevBlockBtn" class="icon-button" type="button" aria-label="Previous transformer block">‹</button>
               <div id="blockButtons" class="block-buttons" aria-label="Select transformer block"></div>
               <button id="nextBlockBtn" class="icon-button" type="button" aria-label="Next transformer block">›</button>
@@ -167,7 +177,7 @@
     </main>
 
     <footer>
-      <p>Educational interface built around the GPT-2 inference model used by Transformer Explainer. Model computation happens in your browser.</p>
+      <p>Both models run locally in your browser after their files download. No prompt is sent to an AI service.</p>
     </footer>
   </div>
 
@@ -194,13 +204,13 @@
         <h3>Probability distribution used for this selection</h3>
         <div id="dialogProbabilityChart" class="chart-host"></div>
       </div>
-      <div class="dialog-section">
+      <div class="dialog-section" id="dialogAttentionSection">
         <div class="section-heading-row attention-heading">
           <div>
             <h3>Attention before this token was selected</h3>
-            <p class="section-help">Average of all 12 heads in the selected transformer block.</p>
+            <p class="section-help" id="dialogAttentionHelp">Average of all 12 heads in the selected transformer block.</p>
           </div>
-          <div class="block-nav">
+          <div class="block-nav" id="dialogAttentionNav">
             <button id="dialogPrevBlockBtn" class="icon-button" type="button">‹</button>
             <div class="block-label">Transformer Block <strong id="dialogBlockNumber">1</strong></div>
             <button id="dialogNextBlockBtn" class="icon-button" type="button">›</button>

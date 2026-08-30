@@ -1,59 +1,71 @@
-# GPT-2 Next Token Explorer
+# Language Model Next-Token Explorer
 
-Static browser-based teaching tool for exploring GPT-2 next-token generation. The production app uses the same Transformer Explainer GPT-2 ONNX model family and sampling pipeline already used by this project; the interface has been reorganized so the core experiment fits in one laptop viewport.
+A static, browser-based teaching tool for comparing a 2019 GPT-2 model with Liquid AI's modern LFM2.5-350M model. Both models run locally after their files download; prompts and continuations are not sent to an inference service.
+
+## Two model modes
+
+| Mode | Browser runtime | Download | Context | What students can inspect |
+| --- | --- | ---: | ---: | --- |
+| GPT-2 (2019 baseline) | ONNX Runtime Web / WASM | Transformer Explainer's 63 model chunks | 1,024 tokens | All 50,257 logits, sampling probabilities, and attention for 12 blocks |
+| LFM2.5-350M (modern small model) | ONNX Runtime Web / WebGPU | Q4 ONNX, about 294 MB plus a small graph file | 32,768 tokens | All 65,536 logits and the same sampling calculation |
+
+LFM2.5 is a hybrid model with 10 convolution blocks and 6 grouped-query-attention blocks. Its optimized browser graph returns logits and key/value caches, but not attention matrices, so the app explains that architectural difference instead of inventing attention data.
+
+LFM2.5-350M is instruction-tuned. In modern mode the app therefore uses its chat template and adds this disclosed system instruction:
+
+> Continue the user's passage naturally. Write only the continuation. Do not explain, quote, or restart the passage.
+
+The visible Temperature, Top-K, and r-value pipeline is otherwise the same in both modes. Preserving those controls makes it possible to compare model behavior while also teaching exactly how a logit becomes a sampled token.
+
+## Student workflow
+
+1. Choose GPT-2 or LFM2.5-350M in the header.
+2. Edit the passage and wait for the model to analyze it.
+3. Inspect the full-vocabulary ranking, Top-K filter, and probability chart.
+4. Select `Next` to sample one token, or `Finish` to generate up to 50 tokens.
+5. Select any generated token to reopen that round's model, settings, r-value, probability interval, and candidates.
+6. Use `Back` or `Reset` to repeat an experiment.
+
+The model selector preserves the visible sampling controls so students can make a controlled comparison. Switching models clears the current continuation because the two tokenizers and vocabularies are different.
+
+## Chromebook requirements
+
+GPT-2 uses WASM and is the compatibility mode. LFM2.5 requires WebGPU, a recent Chrome/ChromeOS build, and enough available memory for the model and runtime. The first LFM2.5 load downloads about 294 MB of weights; later loads can use the browser cache. If Chrome does not expose a compatible WebGPU adapter, the app keeps GPT-2 available and gives a plain-language device message.
+
+For a classroom rollout, load the modern model once on each Chromebook while it is on the intended school network. Managed-device policy, content filters, storage limits, and GPU blocklists can differ between devices even when Chrome versions match.
 
 ## Main interface
 
-The primary workspace keeps these elements together:
+- Temperature, Top-K, Auto r-value, and pause-between-tokens controls
+- Virtualized full-vocabulary table, sorted by raw model logit
+- Progressive completion with selected-rank color bands
+- Full Top-K probability chart
+- GPT-2 attention chart with all 12 transformer blocks
+- Per-token history dialog
+- Pause/resume playback up to a 50-token continuation
+- Keyboard-accessible controls and responsive single-column layout
 
-- Temperature, Top-K, Auto r-value, and Pause-between-tokens controls
-- Input prompt
-- Reset / Back / Next / Finish controls
-- Virtualized full-vocabulary next-token table (all 50,257 GPT-2 tokens), sorted by raw GPT-2 logit, with Jump to Rank and Jump to Bottom navigation
-- Progressive completion beside the table
-- Selected candidate highlighted while it is appended to the completion
+The pause setting is a target minimum interval between visible selections. Inference runs during that interval; slower hardware may necessarily take longer.
 
-Below the main workspace are full-width probability and attention charts. Their bars dynamically narrow to fit the available width rather than requiring horizontal scrolling.
+## GitHub Pages files
 
-## Finish playback
-
-`Finish` generates until the continuation reaches 50 tokens. The Pause-between-tokens control uses these stops:
-
-- 0 s
-- 0.25 s
-- 0.5 s
-- 1.0 s
-- 2.0 s
-- 4.0 s
-
-While Finish is running, its button becomes `Pause`; while paused, it becomes `Resume`. Playback is controlled only with this visible button.
-
-The **Pause between tokens** setting is a target minimum interval between visible token selections. GPT-2 inference runs during that interval, so model-computation time is not intentionally added on top of the chosen delay. If inference itself takes longer than the selected interval on a slower device, the actual interval will necessarily be longer.
-
-## Attention
-
-The attention chart shows attention from the final context token, averaged across the 12 heads in the selected GPT-2 transformer block. Use the 1–12 block buttons or the arrow controls to move through all 12 blocks.
-
-## Files to upload to GitHub Pages
-
-Upload these files to your `IntroToAI/LLMVisualization/` directory:
+Deploy these files together in `IntroToAI/LLMVisualization/`:
 
 - `index.html`
 - `styles.css`
 - `app.js`
-- `.nojekyll`
 - `THIRD_PARTY_NOTICES.md`
 
-The production URL is expected to be:
+Expected URL:
 
 `https://gkozak1.github.io/IntroToAI/LLMVisualization/`
 
-## Simulation
+This remains a static GitHub Pages app. It needs no server, API key, build step, or paid inference API. It does need network access to jsDelivr, Hugging Face, and the Transformer Explainer model host for first-time downloads.
 
-`simulation.html` is a standalone mock-engine version of the interface. It does not download GPT-2 and is intended only for testing the UI and controls. Its candidate values are deterministic mock values, not GPT-2 logits.
+## Testing without model downloads
 
-The production app also retains `?mock=1` support when served from a web server.
+Open `index.html?mock=1` through a web server to exercise both model modes, the 50,257- and 65,536-row virtualized tables, controls, charts, playback, model switching, and responsive layout without downloading either model.
 
-## Model loading
+`simulation.html` is the same interface with mock mode permanently enabled. Its values are deterministic test data, not model outputs.
 
-The production app downloads the Transformer Explainer GPT-2 ONNX model chunks in the browser and caches them when browser cache storage is available. No paid inference API is used.
+See `TEST_REPORT.md` for the current verification record.
