@@ -15,13 +15,9 @@ The browser runtime is pinned to the same ONNX Runtime Web build used by Transfo
 
 LFM's recurrent cache outputs remain in GPU memory, matching Transformers.js's WebGPU session configuration. The app also rebuilds the cache from the full context after 24 incremental steps, and immediately retries from the full context if an adapter nevertheless returns an invalid cached result. This costs two occasional longer inference steps during a 50-token run but is more reliable across classroom hardware.
 
-LFM2.5-350M is instruction-tuned. In modern mode the app therefore uses its chat template and adds this disclosed system instruction:
+Although LFM2.5-350M is instruction-tuned, modern mode deliberately does not wrap the passage in a chat conversation. It supplies LFM's required invisible beginning-of-text token followed immediately by the same raw passage GPT-2 receives. The model therefore predicts the token directly after the student's final character rather than treating the passage as a topic, rewriting its opening, or beginning a separate response.
 
-> Continue the passage naturally from the exact point where it ends. Do not explain or restart it.
-
-The app prefills the assistant response with the visible passage. The prefilled words remain model context but are not counted or displayed as generated tokens, so a prompt such as `The sun` should visibly continue with a new token rather than generate `The` and ` sun` again.
-
-The visible Temperature, Top-K, and r-value pipeline is otherwise the same in both modes. Preserving those controls makes it possible to compare model behavior while also teaching exactly how a logit becomes a sampled token.
+The visible Temperature, Top-K, and r-value pipeline is the same in both modes. Both models now perform the same raw-completion task, making their behavior a cleaner controlled comparison while also teaching exactly how a logit becomes a sampled token.
 
 ## Student workflow
 

@@ -27,6 +27,7 @@ assert.equal(config.num_hidden_layers, 16);
 assert.equal(config.num_attention_heads, 16);
 assert.equal(config.num_key_value_heads, 8);
 assert.equal(config.vocab_size, 65536);
+assert.equal(config.bos_token_id, 1);
 assert.equal(config.conv_L_cache, 3);
 assert.equal(config.layer_types.filter((type) => type === 'conv').length, 10);
 assert.equal(config.layer_types.filter((type) => type === 'full_attention').length, 6);

@@ -12,6 +12,8 @@ A subsequent Windows 11 / Chrome run exposed a second, distinct compatibility pr
 
 A longer Windows 11 / Chrome run then showed valid generation for about 32 tokens before its incremental cache returned all-`NaN` logits. Revision `20260830-4` aligns the session more closely with Transformers.js by keeping all 22 LFM recurrent-cache outputs in GPU buffers. As cross-device safeguards, it rebuilds the cache from the full context after 24 incremental steps and automatically retries a failed cached inference from the full context. Invalid output can no longer enter the probability table. This revision also prefills the assistant response with the visible passage, preventing the first generated tokens from repeating short inputs such as `The sun`.
 
+The assistant-prefill approach prevented exact repetition but could still make the instruction-tuned model treat the passage as a subject to rewrite rather than a character sequence to continue. Revision `20260830-5` removes the chat wrapper completely. LFM now receives only its required beginning-of-text token followed by the same raw passage GPT-2 receives. A native greedy test using the classroom prompt `The banker left the bank, sat on the left river bank` began `, and walked to the riverbank.` and generated 50 valid continuation tokens.
+
 A native ONNX Runtime test executed the complete 294 MB Q4 graph successfully for both the initial 49-token prompt and the next incremental cached token. A final WebGPU smoke test on Chrome and one representative managed Chromebook is still required after deployment because this test environment has no WebGPU adapter.
 
 ## Source provenance
@@ -56,7 +58,8 @@ All checks passed.
 - All 22 recurrent-cache outputs are requested as GPU-resident buffers, matching the Transformers.js WebGPU path.
 - The incremental cache is refreshed after 24 steps, before the failure point observed on Windows 11 / Chrome.
 - An invalid incremental result triggers one full-context replay; an invalid full-context result remains a visible error.
-- The assistant prompt is prefilled with the visible passage, so generated history begins with the actual continuation.
+- LFM receives BOS plus the raw visible passage; no system, user, assistant, or generation-prompt markers are inserted.
+- GPT-2 and LFM therefore perform the same next-token completion task rather than differently framed tasks.
 
 ### Live official-model contract
 
@@ -69,7 +72,8 @@ The test fetched Liquid AI's current official files rather than relying only on 
 - Official configuration confirms 1,024 hidden size, 16 layers, 16 attention heads, 8 key/value heads, 65,536 vocabulary entries, and convolution cache length 3.
 - Layer types confirm 10 convolution blocks and 6 full-attention blocks.
 - Official tokenizer template supports a system message and generation prompt; the end token is `<|im_end|>` / token ID 7.
-- A live Transformers.js tokenizer smoke test formatted the disclosed continuation instruction and sample passage into 49 tokens with the expected system, user, and assistant markers.
+- The official configuration identifies token ID `1` as LFM's required beginning-of-text token.
+- A native raw-completion smoke test encoded BOS plus the 12-token classroom passage and generated 50 valid greedy continuation tokens beginning `, and walked to the riverbank.`
 - Pinned ONNX Runtime WASM/WebGPU and Transformers.js CDN assets are reachable and CORS-enabled for GitHub Pages.
 - ONNX Runtime Web is pinned to the same `1.25.0-dev.20260327-722743c0e2` build declared by Transformers.js 4.0.0; both browser bundles are reachable from jsDelivr.
 - Native full-prompt inference returned logits shaped `[1, 1, 65536]` in 0.099 seconds on the diagnostic CPU runtime.
@@ -82,7 +86,7 @@ The test fetched Liquid AI's current official files rather than relying only on 
 - Switching models clears the continuation but preserves the visible Temperature and Top-K controls.
 - Production model switching starts a fresh page lifecycle so only one large inference runtime occupies memory.
 - The selected `?model=lfm` URL initializes modern mode directly, while GPT-2 remains the default URL.
-- Modern mode explicitly discloses that it uses a continuation instruction.
+- Modern mode explicitly discloses that it receives the same raw passage as GPT-2.
 - A plain-language explanation replaces the attention graph in modern mode; it does not display fabricated attention data.
 - A failed WebGPU check leaves GPT-2 available and gives a direct device explanation.
 - All JavaScript element references resolve to unique IDs in `index.html`.

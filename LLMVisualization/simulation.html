@@ -628,8 +628,9 @@ const MODEL_PROFILES = {
     attentionBlocks: 0,
     attentionHeads: 0,
     hasAttention: false,
-    promptMode: 'instruction',
-    explanation: '<strong>Modern mode:</strong> the model receives a disclosed instruction to continue this passage naturally. Your Temperature and Top-K settings remain unchanged for a controlled comparison.',
+    promptMode: 'raw',
+    hiddenPrefixTokens: 1,
+    explanation: '<strong>Modern mode:</strong> LFM2.5 receives the same raw passage as GPT-2 and predicts the token immediately after it. Your Temperature and Top-K settings remain unchanged for a controlled comparison.',
     completionHelp: 'Click a generated token to inspect its exact r-value and candidate distribution.'
   }
 };
@@ -940,23 +941,17 @@ class LFMEngine {
     this.onProgress({ phase: 'ready', text: 'LFM2.5-350M is ready.', fraction: 1 });
   }
 
-  formatPrompt(text) {
-    const messages = [
-      {
-        role: 'system',
-        content: 'Continue the passage naturally from the exact point where it ends. Do not explain or restart it.'
-      },
-      { role: 'user', content: 'Continue the passage that begins in your response. Write only natural prose.' }
-    ];
-    const assistantPrompt = this.tokenizer.apply_chat_template(messages, { add_generation_prompt: true, tokenize: false });
-    // Prefill the assistant response with the visible passage. Those tokens are
-    // context, not generated history, so the first sampled token continues the
-    // passage instead of repeating its opening words.
-    return `${assistantPrompt}${text.trim()}`;
-  }
-
   encode(text) {
-    return Array.from(this.tokenizer.encode(this.formatPrompt(text === '' ? ' ' : text), { add_special_tokens: false }), Number);
+    const passageIds = Array.from(
+      this.tokenizer.encode(text === '' ? ' ' : text, { add_special_tokens: false }),
+      Number
+    );
+    const bosTokenId = Number(this.tokenizer.bos_token_id);
+    if (!Number.isInteger(bosTokenId)) throw new Error('LFM2.5 tokenizer did not provide its required beginning-of-text token.');
+    // LFM is instruction-tuned, but its causal model still performs true raw
+    // completion when the passage follows its BOS token. This gives both modes
+    // the same task: predict the token immediately after the visible passage.
+    return passageIds[0] === bosTokenId ? passageIds : [bosTokenId, ...passageIds];
   }
 
   decode(tokenId) {
@@ -1586,8 +1581,8 @@ async function analyzePrompt({ force = false } = {}) {
   updateControls();
   try {
     state.basePrompt = prompt;
-    // GPT-2 sees the trimmed passage directly. LFM2.5's engine transparently
-    // applies the continuation instruction disclosed beside the input.
+    // Both engines receive the trimmed passage directly. LFM2.5 prepends only
+    // its required invisible beginning-of-text token.
     state.baseTokenIds = state.engine.encode(prompt.trim());
     const profile = currentProfile();
     const maxPromptTokens = profile.contextLimit - MAX_GENERATED_TOKENS;
@@ -1856,7 +1851,7 @@ function renderEmptyData() {
 }
 
 function updateRoundStatus() {
-  const contextLength = state.tokenIds.length;
+  const contextLength = Math.max(0, state.tokenIds.length - (currentProfile().hiddenPrefixTokens || 0));
   const qualifier = currentProfile().promptMode === 'instruction' ? 'model context' : 'context';
   els.roundStatus.textContent = `${qualifier[0].toUpperCase()}${qualifier.slice(1)}: ${contextLength.toLocaleString()} token${contextLength === 1 ? '' : 's'}`;
 }

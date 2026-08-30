@@ -129,20 +129,19 @@ assert.deepEqual(Array.from(feedsSeen[2].input_ids.dims), [1, 4], 'the cache sho
 assert.equal(engine.incrementalSteps, 0, 'a full-context refresh should restart the incremental-step counter');
 
 const promptEngine = new LFMEngine(() => {});
-let promptMessages;
 promptEngine.tokenizer = {
-  apply_chat_template(messages, options) {
-    promptMessages = messages;
-    assert.equal(options.add_generation_prompt, true);
-    return '<|im_start|>assistant\n';
+  bos_token_id: 1,
+  encode(text, options) {
+    assert.equal(text, 'The sun');
+    assert.equal(options.add_special_tokens, false);
+    return [450, 812];
   }
 };
-assert.equal(
-  promptEngine.formatPrompt('The sun'),
-  '<|im_start|>assistant\nThe sun',
-  'the visible passage should prefill the assistant response so generated tokens begin after it'
+assert.deepEqual(
+  Array.from(promptEngine.encode('The sun')),
+  [1, 450, 812],
+  'LFM should receive only its BOS token followed by the raw visible passage'
 );
-assert.ok(promptMessages.every((message) => !message.content.includes('The sun')), 'the passage should not also be repeated in the instruction messages');
 
 const recoveringEngine = new LFMEngine(() => {});
 recoveringEngine.ort = { Tensor: FakeTensor };
@@ -178,4 +177,4 @@ await assert.rejects(
   'a non-finite full-context result must be reported before it reaches the candidate table'
 );
 
-console.log('PASS sampling math, assistant prefill, preventive cache refresh, cache recovery, invalid-logit rejection, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');
+console.log('PASS sampling math, raw LFM completion, preventive cache refresh, cache recovery, invalid-logit rejection, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');

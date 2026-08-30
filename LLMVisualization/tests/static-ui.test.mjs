@@ -44,8 +44,9 @@ assert.match(app, /feeds\.num_logits_to_keep = new this\.ort\.Tensor\('int64', n
 assert.match(app, /ORT_WEB_VERSION = '1\.25\.0-dev\.20260327-722743c0e2'/, 'the runtime should match the version pinned by Transformers.js 4.0.0');
 assert.match(app, /invalidLogitCount[\s\S]+Number\.isFinite\(value\)/, 'modern-mode inference should reject invalid numeric logits before sampling');
 assert.match(app, /return this\.infer\(tokenIds\)/, 'an invalid incremental cache should retry from the full context');
-assert.match(app, /return `\$\{assistantPrompt\}\$\{text\.trim\(\)\}`/, 'the visible passage should prefill the assistant response instead of being regenerated');
-assert.match(app, /Continue the passage naturally from the exact point where it ends/, 'the instruction-tuned model wrapper should explicitly request immediate continuation');
+assert.match(app, /LFM2\.5 receives the same raw passage as GPT-2/, 'the interface should disclose that both models perform the same raw-completion task');
+assert.match(app, /return passageIds\[0\] === bosTokenId \? passageIds : \[bosTokenId, \.\.\.passageIds\]/, 'LFM should receive only BOS plus the raw passage');
+assert.doesNotMatch(app, /apply_chat_template/, 'modern mode should not wrap the passage in a chat conversation');
 assert.match(app, /Your Temperature and Top-K settings remain unchanged for a controlled comparison/, 'the student-facing interface should disclose comparison behavior');
 assert.match(app, /inference failed: \$\{message\}/, 'first-inference errors should be visible with their underlying message');
 assert.match(app, /10 efficient convolution blocks with 6 grouped-query attention blocks/, 'the attention panel should explain the hybrid architecture');
