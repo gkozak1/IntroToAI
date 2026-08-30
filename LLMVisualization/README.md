@@ -15,9 +15,9 @@ The browser runtime is pinned to the same ONNX Runtime Web build used by Transfo
 
 LFM's recurrent cache outputs remain in GPU memory, matching Transformers.js's WebGPU session configuration. The app also rebuilds the cache from the full context after 24 incremental steps, and immediately retries from the full context if an adapter nevertheless returns an invalid cached result. This costs two occasional longer inference steps during a 50-token run but is more reliable across classroom hardware.
 
-Although LFM2.5-350M is instruction-tuned, modern mode deliberately does not wrap the passage in a chat conversation. It supplies LFM's required invisible beginning-of-text token followed immediately by the same raw passage GPT-2 receives. The model therefore predicts the token directly after the student's final character rather than treating the passage as a topic, rewriting its opening, or beginning a separate response.
+LFM2.5-350M is instruction-tuned rather than a base completion model. Modern mode therefore uses its native chat format: a short invisible instruction asks for a continuation, and the student's passage is prefilled as the beginning of the assistant response. The first generated token is still sampled immediately after the student's final character. This prevents the model from quoting or restarting the passage while using it in the format for which it was trained.
 
-The visible Temperature, Top-K, and r-value pipeline is the same in both modes. Both models now perform the same raw-completion task, making their behavior a cleaner controlled comparison while also teaching exactly how a logit becomes a sampled token.
+The interface discloses this conditioning instead of presenting it as a raw, apples-to-apples model benchmark. The visible Temperature, Top-K, r-value, logits, filtering, softmax probabilities, and selected token are still exact. Students can use identical sampling values to study the same mathematical pipeline, while recognizing that the two models have different tokenizers, training objectives, logit calibration, and input formats.
 
 ## Student workflow
 
@@ -28,7 +28,7 @@ The visible Temperature, Top-K, and r-value pipeline is the same in both modes. 
 5. Select any generated token to reopen that round's model, settings, r-value, probability interval, and candidates.
 6. Use `Back` or `Reset` to repeat an experiment.
 
-The model selector preserves the visible sampling-control values so students can make a controlled comparison. In production, switching models reloads the page and starts only the selected inference runtime. This both clears the continuation—necessary because the tokenizers differ—and prevents the large GPT-2/WASM heap from competing with LFM2.5 for Chromebook memory.
+The model selector preserves the visible sampling-control values so students can compare what the same numerical controls do to each model. Equal temperatures do not guarantee equal amounts of randomness across different models because their logit scales are not calibrated identically. In production, switching models reloads the page and starts only the selected inference runtime. This both clears the continuation—necessary because the tokenizers differ—and prevents the large GPT-2/WASM heap from competing with LFM2.5 for Chromebook memory.
 
 ## Chromebook requirements
 
@@ -71,5 +71,7 @@ Open `index.html?mock=1` through a web server to exercise both model modes, the 
 To open production directly in modern mode without first loading GPT-2, use `index.html?model=lfm`. The model selector does this automatically.
 
 `simulation.html` is the same interface with mock mode permanently enabled. Its values are deterministic test data, not model outputs.
+
+After changing the interface, rebuild the standalone simulation with `node tests/build-simulation.mjs`.
 
 See `TEST_REPORT.md` for the current verification record.

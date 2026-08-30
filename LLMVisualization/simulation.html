@@ -372,7 +372,6 @@ footer { display: none; }
   .candidate-heading-tools { max-width: 48%; }
   .formula-cue { font-size: 0.5rem; }
 }
-
   </style>
 </head>
 <body>
@@ -588,7 +587,6 @@ footer { display: none; }
       </div>
     </form>
   </dialog>
-
   <script>
 /*
  * Language Model Next-Token Explorer
@@ -628,9 +626,8 @@ const MODEL_PROFILES = {
     attentionBlocks: 0,
     attentionHeads: 0,
     hasAttention: false,
-    promptMode: 'raw',
-    hiddenPrefixTokens: 1,
-    explanation: '<strong>Modern mode:</strong> LFM2.5 receives the same raw passage as GPT-2 and predicts the token immediately after it. Your Temperature and Top-K settings remain unchanged for a controlled comparison.',
+    promptMode: 'instruction',
+    explanation: '<strong>Modern mode:</strong> LFM2.5 is instruction-tuned, so it receives a short invisible continuation instruction and your passage is prefilled as the start of its answer. New tokens still begin immediately after your final character, and the displayed Temperature, Top-K, logits, and probabilities are the exact values used for sampling.',
     completionHelp: 'Click a generated token to inspect its exact r-value and candidate distribution.'
   }
 };
@@ -670,6 +667,20 @@ const LFM_CACHE_OUTPUT_NAMES = [
   ...LFM_CONV_LAYERS.map((layer) => `present_conv.${layer}`),
   ...LFM_ATTENTION_LAYERS.flatMap((layer) => [`present.${layer}.key`, `present.${layer}.value`])
 ];
+const LFM_CONTINUATION_INSTRUCTION = 'Continue the supplied passage from its exact final character. Write only the continuation: do not quote, restart, explain, summarize, or label the passage.';
+
+function buildLfmCompletionContext(passage) {
+  // LFM2.5-350M is instruction-tuned. The passage appears in the user request
+  // and is then prefilled as the beginning of the assistant response. This
+  // makes the next causal-model position the exact character boundary the
+  // student sees, without exposing a duplicated passage in the completion UI.
+  return [
+    '<|startoftext|>',
+    `<|im_start|>system\n${LFM_CONTINUATION_INSTRUCTION}<|im_end|>\n`,
+    `<|im_start|>user\nPassage: ${passage}<|im_end|>\n`,
+    `<|im_start|>assistant\n${passage}`
+  ].join('');
+}
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -942,16 +953,18 @@ class LFMEngine {
   }
 
   encode(text) {
-    const passageIds = Array.from(
-      this.tokenizer.encode(text === '' ? ' ' : text, { add_special_tokens: false }),
+    const passage = text === '' ? ' ' : text;
+    const modelContext = buildLfmCompletionContext(passage);
+    const contextIds = Array.from(
+      this.tokenizer.encode(modelContext, { add_special_tokens: false }),
       Number
     );
     const bosTokenId = Number(this.tokenizer.bos_token_id);
     if (!Number.isInteger(bosTokenId)) throw new Error('LFM2.5 tokenizer did not provide its required beginning-of-text token.');
-    // LFM is instruction-tuned, but its causal model still performs true raw
-    // completion when the passage follows its BOS token. This gives both modes
-    // the same task: predict the token immediately after the visible passage.
-    return passageIds[0] === bosTokenId ? passageIds : [bosTokenId, ...passageIds];
+    if (contextIds[0] !== bosTokenId) {
+      throw new Error('LFM2.5 tokenizer did not recognize the chat template beginning-of-text token.');
+    }
+    return contextIds;
   }
 
   decode(tokenId) {
@@ -1581,8 +1594,8 @@ async function analyzePrompt({ force = false } = {}) {
   updateControls();
   try {
     state.basePrompt = prompt;
-    // Both engines receive the trimmed passage directly. LFM2.5 prepends only
-    // its required invisible beginning-of-text token.
+    // GPT-2 receives the passage directly. LFM2.5's encode method builds the
+    // disclosed instruction context and prefills the passage in its response.
     state.baseTokenIds = state.engine.encode(prompt.trim());
     const profile = currentProfile();
     const maxPromptTokens = profile.contextLimit - MAX_GENERATED_TOKENS;
@@ -2130,7 +2143,6 @@ async function init() {
 }
 
 init();
-
   </script>
 </body>
 </html>

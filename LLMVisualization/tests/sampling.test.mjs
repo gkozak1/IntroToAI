@@ -24,8 +24,8 @@ const context = vm.createContext({
   }
 });
 
-vm.runInContext(`${appSource}\nthis.testApi = { state, MODEL_PROFILES, LFMEngine, buildDistribution, selectByR, selectionStyle };`, context);
-const { state, MODEL_PROFILES, LFMEngine, buildDistribution, selectByR, selectionStyle } = context.testApi;
+vm.runInContext(`${appSource}\nthis.testApi = { state, MODEL_PROFILES, LFMEngine, buildLfmCompletionContext, buildDistribution, selectByR, selectionStyle };`, context);
+const { state, MODEL_PROFILES, LFMEngine, buildLfmCompletionContext, buildDistribution, selectByR, selectionStyle } = context.testApi;
 
 state.engine = { decode: (id) => `token-${id}` };
 state.rankingSource = null;
@@ -132,15 +132,28 @@ const promptEngine = new LFMEngine(() => {});
 promptEngine.tokenizer = {
   bos_token_id: 1,
   encode(text, options) {
-    assert.equal(text, 'The sun');
+    assert.equal(text, buildLfmCompletionContext('The sun'));
+    assert.match(text, /<\|im_start\|>user\nPassage: The sun<\|im_end\|>/);
+    assert.ok(text.endsWith('<|im_start|>assistant\nThe sun'));
     assert.equal(options.add_special_tokens, false);
-    return [450, 812];
+    return [1, 450, 812];
   }
 };
 assert.deepEqual(
   Array.from(promptEngine.encode('The sun')),
   [1, 450, 812],
-  'LFM should receive only its BOS token followed by the raw visible passage'
+  'LFM should receive the disclosed instruction context and assistant-prefilled passage'
+);
+
+const malformedPromptEngine = new LFMEngine(() => {});
+malformedPromptEngine.tokenizer = {
+  bos_token_id: 1,
+  encode() { return [450, 812]; }
+};
+assert.throws(
+  () => malformedPromptEngine.encode('The sun'),
+  /did not recognize the chat template beginning-of-text token/,
+  'LFM should fail clearly if a tokenizer cannot encode its required chat template'
 );
 
 const recoveringEngine = new LFMEngine(() => {});
@@ -177,4 +190,4 @@ await assert.rejects(
   'a non-finite full-context result must be reported before it reaches the candidate table'
 );
 
-console.log('PASS sampling math, raw LFM completion, preventive cache refresh, cache recovery, invalid-logit rejection, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');
+console.log('PASS sampling math, instruction-prefilled LFM continuation, preventive cache refresh, cache recovery, invalid-logit rejection, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');

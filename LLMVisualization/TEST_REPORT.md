@@ -2,7 +2,7 @@
 
 ## Result
 
-The dual-model build is ready for a GitHub Pages trial. GPT-2 remains the default compatibility mode, and LFM2.5-350M is available as an explicit modern WebGPU mode. The sampling calculation and the modern model's incremental-cache contract pass automated tests.
+The dual-model build is ready for a GitHub Pages trial. GPT-2 remains the default compatibility mode, and LFM2.5-350M is available as an explicit modern WebGPU mode. The sampling calculation, native continuation format, and modern model's incremental-cache contract pass automated tests.
 
 The August 30 revision isolates the two production runtimes: selecting LFM2.5 reloads into `?model=lfm` and loads LFM2.5 directly instead of retaining a previously loaded GPT-2/WASM heap.
 
@@ -12,9 +12,11 @@ A subsequent Windows 11 / Chrome run exposed a second, distinct compatibility pr
 
 A longer Windows 11 / Chrome run then showed valid generation for about 32 tokens before its incremental cache returned all-`NaN` logits. Revision `20260830-4` aligns the session more closely with Transformers.js by keeping all 22 LFM recurrent-cache outputs in GPU buffers. As cross-device safeguards, it rebuilds the cache from the full context after 24 incremental steps and automatically retries a failed cached inference from the full context. Invalid output can no longer enter the probability table. This revision also prefills the assistant response with the visible passage, preventing the first generated tokens from repeating short inputs such as `The sun`.
 
-The assistant-prefill approach prevented exact repetition but could still make the instruction-tuned model treat the passage as a subject to rewrite rather than a character sequence to continue. Revision `20260830-5` removes the chat wrapper completely. LFM now receives only its required beginning-of-text token followed by the same raw passage GPT-2 receives. A native greedy test using the classroom prompt `The banker left the bank, sat on the left river bank` began `, and walked to the riverbank.` and generated 50 valid continuation tokens.
+The assistant-prefill approach prevented exact repetition, but its first instruction was too vague and could still make the model treat the passage as a subject to rewrite. Revision `20260830-5` tried raw completion instead. That was mechanically clean but a poor match for an instruction-tuned model: sampled runs became repetitive and ungrammatical after roughly 20–30 tokens.
 
-A native ONNX Runtime test executed the complete 294 MB Q4 graph successfully for both the initial 49-token prompt and the next incremental cached token. A final WebGPU smoke test on Chrome and one representative managed Chromebook is still required after deployment because this test environment has no WebGPU adapter.
+Revision `20260830-6` restores LFM's native chat format with a stricter continuation contract. The passage appears in the user request and is prefilled as the beginning of the assistant response, so the next causal position is exactly after the visible final character. The hidden context is disclosed in the interface. In 20 independent Temperature `1.0`, Top-K `5` runs of the reported banker prompt, all 20 began as direct syntactic continuations; none repeated the passage, emitted a special token, or became a zero-probability padding loop. Examples included `, and watched the sun set slowly on the horizon.` and ` and the river whispered secrets to him.`
+
+A native ONNX Runtime test executed the complete 294 MB Q4 graph successfully for both the initial 71-token conditioned context and incremental cached tokens. A final WebGPU smoke test on Chrome and one representative managed Chromebook is still required after deployment because this test environment has no WebGPU adapter.
 
 ## Source provenance
 
@@ -24,6 +26,18 @@ The uploaded copies of `app.js`, `README(1).md`, `simulation.html`, `styles.css`
 
 `index(3).html` was not part of this app. It is a self-contained copy of the separate “Neural Net Visualization and Calculation” project. The active LLM file was the repository's `LLMVisualization/index.html`, and that is the file updated here.
 
+## Model-selection research
+
+Three browser-ready small models were executed locally through their real quantized ONNX graphs, not judged only from leaderboard scores:
+
+| Candidate | Browser artifact tested | Observed at Temperature 1.0 / Top-K 5 | Decision |
+| --- | ---: | --- | --- |
+| LFM2.5-350M | Official Q4, about 294 MB | Direct and generally fluent continuations when used with its native instruction format and assistant prefill | Selected |
+| SmolLM2-360M Base | Community Q4, about 386 MB | Correct raw-completion interface, but frequent phrase loops and weak handling of the banker prompt | Rejected |
+| Qwen2.5-0.5B Base | Community Q4F16, about 483 MB | Some fluent passages, but frequent drift into multiple-choice/task formatting; substantially slower and a 151,936-token output vocabulary | Rejected |
+
+Liquid AI also publishes an LFM2.5-350M Base checkpoint, but no official browser-ready ONNX conversion was available in the tested distribution. Converting and hosting a new third-party model artifact would increase deployment and provenance risk without evidence of better classroom output. The official instruction-tuned ONNX model is smaller than the two tested alternatives and produced the strongest continuation behavior after its input contract was corrected.
+
 ## Automated checks
 
 Run from `LLMVisualization/`:
@@ -32,6 +46,7 @@ Run from `LLMVisualization/`:
 node tests/sampling.test.mjs
 node tests/static-ui.test.mjs
 node tests/model-contract.test.mjs
+node tests/build-simulation.mjs
 node --check app.js
 git diff --check
 ```
@@ -58,8 +73,9 @@ All checks passed.
 - All 22 recurrent-cache outputs are requested as GPU-resident buffers, matching the Transformers.js WebGPU path.
 - The incremental cache is refreshed after 24 steps, before the failure point observed on Windows 11 / Chrome.
 - An invalid incremental result triggers one full-context replay; an invalid full-context result remains a visible error.
-- LFM receives BOS plus the raw visible passage; no system, user, assistant, or generation-prompt markers are inserted.
-- GPT-2 and LFM therefore perform the same next-token completion task rather than differently framed tasks.
+- LFM's context uses its official system/user/assistant markers, a narrowly scoped continuation instruction, and the visible passage prefilled at the assistant boundary.
+- The first sampled position follows the prefilled passage exactly, so the completion neither quotes nor restarts the visible input.
+- The UI explicitly distinguishes LFM's input conditioning from the exact sampling calculation; it does not claim the two modes are a raw apples-to-apples benchmark.
 
 ### Live official-model contract
 
@@ -73,7 +89,9 @@ The test fetched Liquid AI's current official files rather than relying only on 
 - Layer types confirm 10 convolution blocks and 6 full-attention blocks.
 - Official tokenizer template supports a system message and generation prompt; the end token is `<|im_end|>` / token ID 7.
 - The official configuration identifies token ID `1` as LFM's required beginning-of-text token.
-- A native raw-completion smoke test encoded BOS plus the 12-token classroom passage and generated 50 valid greedy continuation tokens beginning `, and walked to the riverbank.`
+- A native Q4 benchmark exercised the exact instruction-and-prefill context at Temperature `1.0`, Top-K `5`, without a repetition penalty. Seventy distinct seeded paths covered the reported banker prompt, four additional general fragments, and six challenge fragments; all began as direct continuations and produced finite probabilities.
+- All 20 banker paths avoided prompt repetition and token loops. Most stopped naturally after one sentence; one contained a minor agreement error and several made mildly odd semantic choices, which is realistic for a 350M-parameter model.
+- The selected-token rank traces included ranks 1–5, confirming that the test exercised stochastic sampling rather than only greedy selection.
 - Pinned ONNX Runtime WASM/WebGPU and Transformers.js CDN assets are reachable and CORS-enabled for GitHub Pages.
 - ONNX Runtime Web is pinned to the same `1.25.0-dev.20260327-722743c0e2` build declared by Transformers.js 4.0.0; both browser bundles are reachable from jsDelivr.
 - Native full-prompt inference returned logits shaped `[1, 1, 65536]` in 0.099 seconds on the diagnostic CPU runtime.
@@ -86,7 +104,8 @@ The test fetched Liquid AI's current official files rather than relying only on 
 - Switching models clears the continuation but preserves the visible Temperature and Top-K controls.
 - Production model switching starts a fresh page lifecycle so only one large inference runtime occupies memory.
 - The selected `?model=lfm` URL initializes modern mode directly, while GPT-2 remains the default URL.
-- Modern mode explicitly discloses that it receives the same raw passage as GPT-2.
+- Modern mode explicitly discloses its invisible continuation instruction and assistant-prefilled passage.
+- The completion panel displays the passage only once and begins generated token controls after its final character.
 - A plain-language explanation replaces the attention graph in modern mode; it does not display fabricated attention data.
 - A failed WebGPU check leaves GPT-2 available and gives a direct device explanation.
 - All JavaScript element references resolve to unique IDs in `index.html`.

@@ -44,15 +44,16 @@ assert.match(app, /feeds\.num_logits_to_keep = new this\.ort\.Tensor\('int64', n
 assert.match(app, /ORT_WEB_VERSION = '1\.25\.0-dev\.20260327-722743c0e2'/, 'the runtime should match the version pinned by Transformers.js 4.0.0');
 assert.match(app, /invalidLogitCount[\s\S]+Number\.isFinite\(value\)/, 'modern-mode inference should reject invalid numeric logits before sampling');
 assert.match(app, /return this\.infer\(tokenIds\)/, 'an invalid incremental cache should retry from the full context');
-assert.match(app, /LFM2\.5 receives the same raw passage as GPT-2/, 'the interface should disclose that both models perform the same raw-completion task');
-assert.match(app, /return passageIds\[0\] === bosTokenId \? passageIds : \[bosTokenId, \.\.\.passageIds\]/, 'LFM should receive only BOS plus the raw passage');
-assert.doesNotMatch(app, /apply_chat_template/, 'modern mode should not wrap the passage in a chat conversation');
-assert.match(app, /Your Temperature and Top-K settings remain unchanged for a controlled comparison/, 'the student-facing interface should disclose comparison behavior');
+assert.match(app, /LFM2\.5 is instruction-tuned, so it receives a short invisible continuation instruction/, 'the interface should disclose LFM prompt conditioning');
+assert.match(app, /your passage is prefilled as the start of its answer/, 'the interface should explain how LFM continues at the visible boundary');
+assert.match(app, /displayed Temperature, Top-K, logits, and probabilities are the exact values used for sampling/, 'the interface should distinguish prompt conditioning from visible sampling');
+assert.match(app, /<\|im_start\|>assistant\\n\$\{passage\}/, 'LFM should prefill the assistant response with the visible passage');
 assert.match(app, /inference failed: \$\{message\}/, 'first-inference errors should be visible with their underlying message');
 assert.match(app, /10 efficient convolution blocks with 6 grouped-query attention blocks/, 'the attention panel should explain the hybrid architecture');
 
 assert.match(simulation, /const MOCK_MODE = true;/, 'the standalone simulation should permanently use mock mode');
 assert.doesNotMatch(simulation, /src="\.\/app\.js"|href="\.\/styles\.css"/, 'the simulation should contain its own app and styles');
 assert.match(simulation, /LFM2\.5-350M/, 'the simulation should include modern mode');
+assert.match(simulation, /LFM2\.5 is instruction-tuned, so it receives a short invisible continuation instruction/, 'the simulation should contain the current modern-mode disclosure');
 
 console.log('PASS DOM wiring, labels, model controls, responsive/accessibility rules, WebGPU integration markers, and standalone simulation');
