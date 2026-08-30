@@ -39,6 +39,14 @@ assert.equal(graph.byteLength, 183442, 'the official Q4 graph file should have t
 for (const name of ['input_ids', 'attention_mask', 'num_logits_to_keep', 'logits', 'past_conv.0', 'past_key_values.2.key', 'present_conv.0', 'present.2.key', 'model_q4.onnx_data']) {
   assert.ok(graphText.includes(name), `the official Q4 graph should expose ${name}`);
 }
+const cacheOutputNames = [
+  ...[0, 1, 3, 4, 6, 7, 9, 11, 13, 15].map((layer) => `present_conv.${layer}`),
+  ...[2, 5, 8, 10, 12, 14].flatMap((layer) => [`present.${layer}.key`, `present.${layer}.value`])
+];
+assert.equal(cacheOutputNames.length, 22);
+for (const name of cacheOutputNames) {
+  assert.ok(graphText.includes(name), `the official Q4 graph should expose GPU-resident cache output ${name}`);
+}
 
 assert.equal(weightRangeResponse.status, 206, 'the external weight file should support byte-range requests');
 assert.match(weightRangeResponse.headers.get('content-range') || '', /\/293629952$/, 'the Q4 external weights should be 293,629,952 bytes');

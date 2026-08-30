@@ -10,6 +10,8 @@ The reported first-inference failure was then reproduced against the graph metad
 
 A subsequent Windows 11 / Chrome run exposed a second, distinct compatibility problem: ONNX Runtime Web 1.23.0 completed the graph but returned `NaN` for every one of the 65,536 logits. That explains both the `0.00%` candidate probabilities and repeated `<|pad|>` output—the old sort fallback was effectively ranking token IDs rather than model scores. Revision `20260830-3` pins the WebGPU runtime to `1.25.0-dev.20260327-722743c0e2`, the exact runtime dependency of the independently working Transformers.js 4.0.0 LFM2.5 WebGPU demo. It also rejects non-finite logits before ranking or sampling and reports their exact count.
 
+A longer Windows 11 / Chrome run then showed valid generation for about 32 tokens before its incremental cache returned all-`NaN` logits. Revision `20260830-4` aligns the session more closely with Transformers.js by keeping all 22 LFM recurrent-cache outputs in GPU buffers. As cross-device safeguards, it rebuilds the cache from the full context after 24 incremental steps and automatically retries a failed cached inference from the full context. Invalid output can no longer enter the probability table. This revision also prefills the assistant response with the visible passage, preventing the first generated tokens from repeating short inputs such as `The sun`.
+
 A native ONNX Runtime test executed the complete 294 MB Q4 graph successfully for both the initial 49-token prompt and the next incremental cached token. A final WebGPU smoke test on Chrome and one representative managed Chromebook is still required after deployment because this test environment has no WebGPU adapter.
 
 ## Source provenance
@@ -51,6 +53,10 @@ All checks passed.
 - `present_conv` and `present.*` outputs map back to the correct `past_conv` and `past_key_values.*` inputs.
 - Input, output, and superseded cache tensors are released after use.
 - Any `NaN` or infinite logit stops inference before ranking, probability calculation, or token selection.
+- All 22 recurrent-cache outputs are requested as GPU-resident buffers, matching the Transformers.js WebGPU path.
+- The incremental cache is refreshed after 24 steps, before the failure point observed on Windows 11 / Chrome.
+- An invalid incremental result triggers one full-context replay; an invalid full-context result remains a visible error.
+- The assistant prompt is prefilled with the visible passage, so generated history begins with the actual continuation.
 
 ### Live official-model contract
 

@@ -70,6 +70,13 @@ const LFM_DATA_PATH = `${LFM_MODEL_BASE}/onnx/model_q4.onnx_data`;
 const LFM_HIDDEN_SIZE = 1024;
 const LFM_KV_HEADS = 8;
 const LFM_HEAD_DIM = 64;
+const LFM_MAX_INCREMENTAL_STEPS = 24;
+const LFM_CONV_LAYERS = [0, 1, 3, 4, 6, 7, 9, 11, 13, 15];
+const LFM_ATTENTION_LAYERS = [2, 5, 8, 10, 12, 14];
+const LFM_CACHE_OUTPUT_NAMES = [
+  ...LFM_CONV_LAYERS.map((layer) => `present_conv.${layer}`),
+  ...LFM_ATTENTION_LAYERS.flatMap((layer) => [`present.${layer}.key`, `present.${layer}.value`])
+];
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -304,6 +311,7 @@ class LFMEngine {
     this.ort = null;
     this.cache = null;
     this.cachedTokenIds = [];
+    this.incrementalSteps = 0;
   }
 
   async init() {
@@ -329,7 +337,13 @@ class LFMEngine {
     this.onProgress({ phase: 'model', text: 'Loading the modern model (~294 MB on first use)…', fraction: 0.10, indeterminate: true });
     this.session = await this.ort.InferenceSession.create(LFM_ONNX_PATH, {
       executionProviders: ['webgpu'],
-      externalData: [{ path: 'model_q4.onnx_data', data: LFM_DATA_PATH }]
+      externalData: [{ path: 'model_q4.onnx_data', data: LFM_DATA_PATH }],
+      // Transformers.js keeps LFM's 22 recurrent/cache outputs on the GPU.
+      // Doing the same avoids a GPU→CPU→GPU round trip on every generated token
+      // and prevents the growing WebGPU cache from degrading into invalid logits.
+      preferredOutputLocation: Object.fromEntries(
+        LFM_CACHE_OUTPUT_NAMES.map((name) => [name, 'gpu-buffer'])
+      )
     });
     this.onProgress({ phase: 'ready', text: 'LFM2.5-350M is ready.', fraction: 1 });
   }
@@ -338,11 +352,15 @@ class LFMEngine {
     const messages = [
       {
         role: 'system',
-        content: 'Continue the user\'s passage naturally. Write only the continuation. Do not explain, quote, or restart the passage.'
+        content: 'Continue the passage naturally from the exact point where it ends. Do not explain or restart it.'
       },
-      { role: 'user', content: text.trim() }
+      { role: 'user', content: 'Continue the passage that begins in your response. Write only natural prose.' }
     ];
-    return this.tokenizer.apply_chat_template(messages, { add_generation_prompt: true, tokenize: false });
+    const assistantPrompt = this.tokenizer.apply_chat_template(messages, { add_generation_prompt: true, tokenize: false });
+    // Prefill the assistant response with the visible passage. Those tokens are
+    // context, not generated history, so the first sampled token continues the
+    // passage instead of repeating its opening words.
+    return `${assistantPrompt}${text.trim()}`;
   }
 
   encode(text) {
@@ -371,6 +389,7 @@ class LFMEngine {
     }
     this.cache = this.createEmptyCache();
     this.cachedTokenIds = [];
+    this.incrementalSteps = 0;
   }
 
   createEmptyCache() {
@@ -387,6 +406,7 @@ class LFMEngine {
 
   canContinueCache(tokenIds) {
     if (!this.cache || tokenIds.length !== this.cachedTokenIds.length + 1) return false;
+    if (this.incrementalSteps >= LFM_MAX_INCREMENTAL_STEPS) return false;
     return this.cachedTokenIds.every((id, index) => tokenIds[index] === id);
   }
 
@@ -437,6 +457,14 @@ class LFMEngine {
         for (const tensor of Object.values(outputs)) {
           try { tensor?.dispose?.(); } catch { /* best-effort release */ }
         }
+        if (incremental) {
+          // A few Windows/Chrome WebGPU adapters can invalidate a long-running
+          // recurrent cache. Rebuild from the complete context once; no invalid
+          // output is ever exposed to the sampling UI.
+          console.warn('LFM2.5 incremental cache returned invalid logits; rebuilding the full context.');
+          this.resetCache();
+          return this.infer(tokenIds);
+        }
         throw new Error(
           `LFM2.5 WebGPU returned ${invalidLogitCount.toLocaleString()} invalid logits out of ${logits.length.toLocaleString()}. ` +
           'Reload this page to use the updated inference runtime; if it persists, update Chrome and include chrome://gpu details in the report.'
@@ -444,6 +472,7 @@ class LFMEngine {
       }
       this.updateCache(outputs);
       this.cachedTokenIds = [...tokenIds];
+      this.incrementalSteps = incremental ? this.incrementalSteps + 1 : 0;
 
       const retainedOutputs = new Set(Object.values(this.cache));
       for (const tensor of Object.values(outputs)) {
@@ -466,6 +495,7 @@ class LFMEngine {
     }
     this.cache = null;
     this.cachedTokenIds = [];
+    this.incrementalSteps = 0;
     try { await this.session?.release?.(); } catch (error) { console.warn('Could not release LFM2.5 session.', error); }
     this.session = null;
   }
@@ -1148,11 +1178,15 @@ async function finishGeneration() {
   state.paused = false;
   updateControls();
   setStatus(`Generating… ${state.history.length}/${MAX_GENERATED_TOKENS}`);
+  let failed = false;
   while (state.history.length < MAX_GENERATED_TOKENS && !state.stopping && !state.ended) {
     await waitUntilResumed();
     if (state.stopping) break;
     const ok = await chooseNextToken(true);
-    if (!ok) break;
+    if (!ok) {
+      failed = true;
+      break;
+    }
     await nextAnimationFrame();
   }
   const completed = state.history.length >= MAX_GENERATED_TOKENS;
@@ -1161,7 +1195,9 @@ async function finishGeneration() {
   state.paused = false;
   state.stopping = false;
   state.resumeWaiters.splice(0).forEach((resolve) => resolve());
-  setStatus(completed ? '50-token continuation complete' : ended ? `Completion ended after ${state.history.length} tokens` : 'Ready', 'ready');
+  if (!failed) {
+    setStatus(completed ? '50-token continuation complete' : ended ? `Completion ended after ${state.history.length} tokens` : 'Ready', 'ready');
+  }
   updateControls();
 }
 function backOneToken() {

@@ -13,9 +13,13 @@ LFM2.5 is a hybrid model with 10 convolution blocks and 6 grouped-query-attentio
 
 The browser runtime is pinned to the same ONNX Runtime Web build used by Transformers.js 4.0.0. Do not downgrade it to 1.23.0: that older WebGPU build can return non-finite LFM2.5 Q4 logits on Windows/Chrome. The app validates every logit before sampling, so an incompatible GPU/runtime combination produces a specific error instead of a misleading row of `0.00%` probabilities or repeated `<|pad|>` tokens.
 
+LFM's recurrent cache outputs remain in GPU memory, matching Transformers.js's WebGPU session configuration. The app also rebuilds the cache from the full context after 24 incremental steps, and immediately retries from the full context if an adapter nevertheless returns an invalid cached result. This costs two occasional longer inference steps during a 50-token run but is more reliable across classroom hardware.
+
 LFM2.5-350M is instruction-tuned. In modern mode the app therefore uses its chat template and adds this disclosed system instruction:
 
-> Continue the user's passage naturally. Write only the continuation. Do not explain, quote, or restart the passage.
+> Continue the passage naturally from the exact point where it ends. Do not explain or restart it.
+
+The app prefills the assistant response with the visible passage. The prefilled words remain model context but are not counted or displayed as generated tokens, so a prompt such as `The sun` should visibly continue with a new token rather than generate `The` and ` sun` again.
 
 The visible Temperature, Top-K, and r-value pipeline is otherwise the same in both modes. Preserving those controls makes it possible to compare model behavior while also teaching exactly how a logit becomes a sampled token.
 

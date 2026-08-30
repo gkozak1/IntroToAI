@@ -37,12 +37,15 @@ assert.match(app, /const INITIAL_MODEL_KEY = MODEL_PROFILES\[PAGE_PARAMS\.get\('
 assert.match(app, /window\.location\.replace\(destination\.href\)/, 'production model changes should reload and release the previous runtime heap');
 assert.match(app, /await switchModel\(INITIAL_MODEL_KEY, \{ force: true \}\)/, 'initialization should load only the requested model');
 assert.match(app, /executionProviders: \['webgpu'\]/, 'modern mode should use the WebGPU execution provider');
+assert.match(app, /preferredOutputLocation:[\s\S]+LFM_CACHE_OUTPUT_NAMES[\s\S]+gpu-buffer/, 'LFM recurrent-cache outputs should remain GPU-resident');
 assert.match(app, /onnx\/model_q4\.onnx/, 'modern mode should use the official Q4 graph');
 assert.match(app, /externalData: \[\{ path: 'model_q4\.onnx_data'/, 'the Q4 external weights should be supplied to ONNX Runtime');
 assert.match(app, /feeds\.num_logits_to_keep = new this\.ort\.Tensor\('int64', new BigInt64Array\(\[1n\]\), \[\]\)/, 'the current graph should receive its required scalar logit-count input');
 assert.match(app, /ORT_WEB_VERSION = '1\.25\.0-dev\.20260327-722743c0e2'/, 'the runtime should match the version pinned by Transformers.js 4.0.0');
 assert.match(app, /invalidLogitCount[\s\S]+Number\.isFinite\(value\)/, 'modern-mode inference should reject invalid numeric logits before sampling');
-assert.match(app, /Continue the user\\'s passage naturally/, 'the instruction-tuned model wrapper should remain explicit in source');
+assert.match(app, /return this\.infer\(tokenIds\)/, 'an invalid incremental cache should retry from the full context');
+assert.match(app, /return `\$\{assistantPrompt\}\$\{text\.trim\(\)\}`/, 'the visible passage should prefill the assistant response instead of being regenerated');
+assert.match(app, /Continue the passage naturally from the exact point where it ends/, 'the instruction-tuned model wrapper should explicitly request immediate continuation');
 assert.match(app, /Your Temperature and Top-K settings remain unchanged for a controlled comparison/, 'the student-facing interface should disclose comparison behavior');
 assert.match(app, /inference failed: \$\{message\}/, 'first-inference errors should be visible with their underlying message');
 assert.match(app, /10 efficient convolution blocks with 6 grouped-query attention blocks/, 'the attention panel should explain the hybrid architecture');

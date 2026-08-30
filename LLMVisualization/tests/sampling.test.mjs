@@ -123,6 +123,47 @@ assert.deepEqual(Array.from(feedsSeen[1].attention_mask.dims), [1, 3], 'the mask
 assert.deepEqual(Array.from(feedsSeen[1].num_logits_to_keep.data), [1n]);
 assert.deepEqual(Array.from(feedsSeen[1].position_ids.data), [2n], 'the incremental position should continue the sequence');
 
+engine.incrementalSteps = 24;
+await engine.infer([10, 11, 12, 13]);
+assert.deepEqual(Array.from(feedsSeen[2].input_ids.dims), [1, 4], 'the cache should refresh from full context before a 25th incremental step');
+assert.equal(engine.incrementalSteps, 0, 'a full-context refresh should restart the incremental-step counter');
+
+const promptEngine = new LFMEngine(() => {});
+let promptMessages;
+promptEngine.tokenizer = {
+  apply_chat_template(messages, options) {
+    promptMessages = messages;
+    assert.equal(options.add_generation_prompt, true);
+    return '<|im_start|>assistant\n';
+  }
+};
+assert.equal(
+  promptEngine.formatPrompt('The sun'),
+  '<|im_start|>assistant\nThe sun',
+  'the visible passage should prefill the assistant response so generated tokens begin after it'
+);
+assert.ok(promptMessages.every((message) => !message.content.includes('The sun')), 'the passage should not also be repeated in the instruction messages');
+
+const recoveringEngine = new LFMEngine(() => {});
+recoveringEngine.ort = { Tensor: FakeTensor };
+recoveringEngine.cache = {};
+recoveringEngine.cachedTokenIds = [10];
+let recoveryRuns = 0;
+recoveringEngine.session = {
+  inputNames: ['input_ids', 'attention_mask', 'num_logits_to_keep'],
+  async run(feeds) {
+    recoveryRuns += 1;
+    const data = recoveryRuns === 1
+      ? new Float32Array([Number.NaN, Number.NaN, Number.NaN, Number.NaN])
+      : new Float32Array([1, 2, 3, 4]);
+    if (recoveryRuns === 2) assert.deepEqual(Array.from(feeds.input_ids.dims), [1, 2], 'cache recovery should replay the complete context');
+    return { logits: new FakeTensor('float32', data, [1, 1, 4]) };
+  }
+};
+const recoveredInference = await recoveringEngine.infer([10, 11]);
+assert.deepEqual(Array.from(recoveredInference.logits), [1, 2, 3, 4]);
+assert.equal(recoveryRuns, 2, 'one invalid incremental result should trigger one full-context retry');
+
 const invalidEngine = new LFMEngine(() => {});
 invalidEngine.ort = { Tensor: FakeTensor };
 invalidEngine.session = {
@@ -134,7 +175,7 @@ invalidEngine.session = {
 await assert.rejects(
   invalidEngine.infer([10, 11]),
   /returned 4 invalid logits out of 4/,
-  'LFM inference must report non-finite WebGPU output before it reaches the candidate table'
+  'a non-finite full-context result must be reported before it reaches the candidate table'
 );
 
-console.log('PASS sampling math, invalid-logit rejection, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');
+console.log('PASS sampling math, assistant prefill, preventive cache refresh, cache recovery, invalid-logit rejection, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');
