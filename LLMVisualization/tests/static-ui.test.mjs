@@ -33,11 +33,15 @@ assert.match(css, /\.model-option:focus-visible/, 'model choices should have a v
 assert.match(css, /\.generated-token:hover, \.generated-token:focus/, 'generated-token history controls should have a visible focus style');
 
 assert.match(app, /navigator\.gpu\.requestAdapter\(\)/, 'modern mode should verify a usable WebGPU adapter');
+assert.match(app, /const INITIAL_MODEL_KEY = MODEL_PROFILES\[PAGE_PARAMS\.get\('model'\)\]/, 'a direct modern-mode page load should be supported');
+assert.match(app, /window\.location\.replace\(destination\.href\)/, 'production model changes should reload and release the previous runtime heap');
+assert.match(app, /await switchModel\(INITIAL_MODEL_KEY, \{ force: true \}\)/, 'initialization should load only the requested model');
 assert.match(app, /executionProviders: \['webgpu'\]/, 'modern mode should use the WebGPU execution provider');
 assert.match(app, /onnx\/model_q4\.onnx/, 'modern mode should use the official Q4 graph');
 assert.match(app, /externalData: \[\{ path: 'model_q4\.onnx_data'/, 'the Q4 external weights should be supplied to ONNX Runtime');
 assert.match(app, /Continue the user\\'s passage naturally/, 'the instruction-tuned model wrapper should remain explicit in source');
 assert.match(app, /Your Temperature and Top-K settings remain unchanged for a controlled comparison/, 'the student-facing interface should disclose comparison behavior');
+assert.match(app, /inference failed: \$\{message\}/, 'first-inference errors should be visible with their underlying message');
 assert.match(app, /10 efficient convolution blocks with 6 grouped-query attention blocks/, 'the attention panel should explain the hybrid architecture');
 
 assert.match(simulation, /const MOCK_MODE = true;/, 'the standalone simulation should permanently use mock mode');

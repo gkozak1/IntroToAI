@@ -1,8 +1,10 @@
-# Dual-Model Verification Report — August 29, 2026
+# Dual-Model Verification Report — August 30, 2026
 
 ## Result
 
 The dual-model build is ready for a GitHub Pages trial. GPT-2 remains the default compatibility mode, and LFM2.5-350M is available as an explicit modern WebGPU mode. The sampling calculation and the modern model's incremental-cache contract pass automated tests.
+
+The August 30 revision isolates the two production runtimes: selecting LFM2.5 reloads into `?model=lfm` and loads LFM2.5 directly instead of retaining a previously loaded GPT-2/WASM heap. This addresses the strongest identified cause of the initial-inference failure reported after the first deployment. Exact inference exceptions are now also displayed in the loading message rather than only showing the generic `Analysis error` status.
 
 A final smoke test on one representative managed Chromebook is still required after deployment. This environment could verify the live official files and interfaces, but it could not execute the complete 294 MB WebGPU graph inside the local app.
 
@@ -63,6 +65,8 @@ The test fetched Liquid AI's current official files rather than relying only on 
 - The model choice is a labeled two-option radio group, with one keyboard tab stop and Left/Right Arrow switching.
 - Model, loading, and selection messages use polite live regions.
 - Switching models clears the continuation but preserves the visible Temperature and Top-K controls.
+- Production model switching starts a fresh page lifecycle so only one large inference runtime occupies memory.
+- The selected `?model=lfm` URL initializes modern mode directly, while GPT-2 remains the default URL.
 - Modern mode explicitly discloses that it uses a continuation instruction.
 - A plain-language explanation replaces the attention graph in modern mode; it does not display fabricated attention data.
 - A failed WebGPU check leaves GPT-2 available and gives a direct device explanation.
@@ -79,6 +83,7 @@ Before using modern mode with a whole class, test one school-managed Chromebook 
 
 1. Open the deployed GitHub Pages URL and confirm GPT-2 reaches `ready`.
 2. Choose `LFM2.5-350M` and allow the first roughly 294 MB download to finish.
+   Confirm the page reloads with `?model=lfm` before the download begins.
 3. Confirm the candidate table contains 65,536 ranked tokens and `Next` adds one natural continuation token.
 4. Generate 10–20 tokens, use `Back`, and generate again to exercise cache reset.
 5. Switch back to GPT-2 and confirm its 12 attention-block controls return.

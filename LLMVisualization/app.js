@@ -10,7 +10,8 @@ const MAX_GENERATED_TOKENS = 50;
 const TOP_CANDIDATES = 50;
 const CANDIDATE_ROW_HEIGHT = 19;
 const CANDIDATE_OVERSCAN = 8;
-const MOCK_MODE = new URLSearchParams(window.location.search).get('mock') === '1';
+const PAGE_PARAMS = new URLSearchParams(window.location.search);
+const MOCK_MODE = PAGE_PARAMS.get('mock') === '1';
 
 const MODEL_PROFILES = {
   gpt2: {
@@ -40,6 +41,7 @@ const MODEL_PROFILES = {
     completionHelp: 'Click a generated token to inspect its exact r-value and candidate distribution.'
   }
 };
+const INITIAL_MODEL_KEY = MODEL_PROFILES[PAGE_PARAMS.get('model')] ? PAGE_PARAMS.get('model') : 'gpt2';
 
 const CDN = {
   ortScriptWasm: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js',
@@ -124,7 +126,7 @@ const els = {
 };
 
 const state = {
-  modelKey: 'gpt2',
+  modelKey: INITIAL_MODEL_KEY,
   engine: null,
   ready: false,
   switchingModel: false,
@@ -949,7 +951,12 @@ async function analyzePrompt({ force = false } = {}) {
   } catch (error) {
     console.error(error);
     setStatus('Analysis error', 'error');
-    els.roundStatus.textContent = error.message;
+    const message = error?.message || String(error);
+    els.roundStatus.textContent = message;
+    els.loadProgress.hidden = false;
+    els.loadProgress.classList.remove('indeterminate');
+    els.loadProgressBar.style.width = '100%';
+    els.loadProgressText.textContent = `${currentProfile().name} inference failed: ${message}`;
   } finally {
     state.busy = false;
     updateControls();
@@ -1212,7 +1219,14 @@ function updateControls() {
     els.finishBtn.disabled = !state.ready || state.busy || state.ended || !hasRound || !els.autoRToggle.checked || state.history.length >= MAX_GENERATED_TOKENS;
     els.finishBtn.textContent = 'Finish';
   }
-  els.modelOptions.forEach((button) => { button.disabled = state.busy || state.finishing || state.switchingModel; });
+  // In production, changing models reloads the page so the previous runtime
+  // and its large memory heap are fully released. Keep that escape route
+  // available even while the selected model is loading.
+  els.modelOptions.forEach((button) => {
+    button.disabled = MOCK_MODE
+      ? state.busy || state.finishing || state.switchingModel
+      : state.finishing;
+  });
 }
 
 function setStatus(text, kind = '') {
@@ -1260,6 +1274,26 @@ function updateModelUI() {
 function makeEngine(profile) {
   if (MOCK_MODE) return new MockEngine(profile, setLoadProgress);
   return profile.key === 'lfm' ? new LFMEngine(setLoadProgress) : new GPT2Engine(setLoadProgress);
+}
+
+function requestModelSwitch(modelKey) {
+  if (!MODEL_PROFILES[modelKey]) return;
+  if (modelKey === state.modelKey) {
+    if (!state.ready && !state.switchingModel) {
+      if (MOCK_MODE) switchModel(modelKey);
+      else window.location.reload();
+    }
+    return;
+  }
+  if (!MOCK_MODE) {
+    state.stopping = true;
+    const destination = new URL(window.location.href);
+    if (modelKey === 'gpt2') destination.searchParams.delete('model');
+    else destination.searchParams.set('model', modelKey);
+    window.location.replace(destination.href);
+    return;
+  }
+  switchModel(modelKey);
 }
 
 async function switchModel(modelKey, { force = false } = {}) {
@@ -1368,7 +1402,7 @@ function nextAnimationFrame() { return new Promise((resolve) => requestAnimation
 
 function wireEvents() {
   els.modelOptions.forEach((button) => {
-    button.addEventListener('click', () => switchModel(button.dataset.model));
+    button.addEventListener('click', () => requestModelSwitch(button.dataset.model));
     button.addEventListener('keydown', (event) => {
       if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
       event.preventDefault();
@@ -1377,7 +1411,7 @@ function wireEvents() {
       const nextIndex = (currentIndex + direction + els.modelOptions.length) % els.modelOptions.length;
       const nextButton = els.modelOptions[nextIndex];
       nextButton.focus();
-      switchModel(nextButton.dataset.model);
+      requestModelSwitch(nextButton.dataset.model);
     });
   });
   els.temperatureSlider.addEventListener('input', () => {
@@ -1435,7 +1469,7 @@ async function init() {
   updateGenerationStatus();
   els.temperatureValue.textContent = '1.0';
   els.topKValue.textContent = String(currentTopK());
-  await switchModel('gpt2', { force: true });
+  await switchModel(INITIAL_MODEL_KEY, { force: true });
 }
 
 init();

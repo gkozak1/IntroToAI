@@ -26,7 +26,7 @@ The visible Temperature, Top-K, and r-value pipeline is otherwise the same in bo
 5. Select any generated token to reopen that round's model, settings, r-value, probability interval, and candidates.
 6. Use `Back` or `Reset` to repeat an experiment.
 
-The model selector preserves the visible sampling controls so students can make a controlled comparison. Switching models clears the current continuation because the two tokenizers and vocabularies are different.
+The model selector preserves the visible sampling-control values so students can make a controlled comparison. In production, switching models reloads the page and starts only the selected inference runtime. This both clears the continuation—necessary because the tokenizers differ—and prevents the large GPT-2/WASM heap from competing with LFM2.5 for Chromebook memory.
 
 ## Chromebook requirements
 
@@ -65,6 +65,8 @@ This remains a static GitHub Pages app. It needs no server, API key, build step,
 ## Testing without model downloads
 
 Open `index.html?mock=1` through a web server to exercise both model modes, the 50,257- and 65,536-row virtualized tables, controls, charts, playback, model switching, and responsive layout without downloading either model.
+
+To open production directly in modern mode without first loading GPT-2, use `index.html?model=lfm`. The model selector does this automatically.
 
 `simulation.html` is the same interface with mock mode permanently enabled. Its values are deterministic test data, not model outputs.
 

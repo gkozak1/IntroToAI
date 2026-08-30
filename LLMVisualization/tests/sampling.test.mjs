@@ -63,6 +63,18 @@ assert.equal(MODEL_PROFILES.lfm.vocabularySize, 65536);
 assert.equal(MODEL_PROFILES.gpt2.hasAttention, true);
 assert.equal(MODEL_PROFILES.lfm.hasAttention, false);
 
+const directLfmContext = vm.createContext({
+  console,
+  URLSearchParams,
+  window: { location: { search: '?model=lfm' } },
+  document: {
+    getElementById: fakeElement,
+    querySelectorAll: () => []
+  }
+});
+vm.runInContext(`${appSource}\nthis.initialModel = state.modelKey;`, directLfmContext);
+assert.equal(directLfmContext.initialModel, 'lfm', 'the model query parameter should start directly in modern mode');
+
 class FakeTensor {
   constructor(type, data, dims) {
     this.type = type;
