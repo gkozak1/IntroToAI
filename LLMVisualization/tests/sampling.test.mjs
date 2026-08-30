@@ -52,6 +52,11 @@ state.rankingSource = null;
 const topOne = buildDistribution(logits, 1, 1);
 assert.equal(topOne[0].probability, 1, 'Top-K=1 should be deterministic');
 assert.equal(selectByR(topOne, 0.999999).tokenId, 3, 'Top-K=1 should always select the highest logit');
+assert.throws(
+  () => buildDistribution([Number.NaN, 1], 1, 1),
+  /invalid numeric logits/,
+  'sampling must stop instead of silently turning non-finite logits into zero probabilities'
+);
 assert.deepEqual(
   [1, 3, 5, 7, 10].map((rank) => selectionStyle(rank, 10).background),
   ['#00B050', '#C6EFCE', '#FFEB9C', '#FFC7CE', '#FF0000'],
@@ -118,4 +123,18 @@ assert.deepEqual(Array.from(feedsSeen[1].attention_mask.dims), [1, 3], 'the mask
 assert.deepEqual(Array.from(feedsSeen[1].num_logits_to_keep.data), [1n]);
 assert.deepEqual(Array.from(feedsSeen[1].position_ids.data), [2n], 'the incremental position should continue the sequence');
 
-console.log('PASS sampling math, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');
+const invalidEngine = new LFMEngine(() => {});
+invalidEngine.ort = { Tensor: FakeTensor };
+invalidEngine.session = {
+  inputNames: ['input_ids', 'attention_mask', 'num_logits_to_keep'],
+  async run() {
+    return { logits: new FakeTensor('float32', new Float32Array([Number.NaN, Number.NaN, Number.NaN, Number.NaN]), [1, 1, 4]) };
+  }
+};
+await assert.rejects(
+  invalidEngine.infer([10, 11]),
+  /returned 4 invalid logits out of 4/,
+  'LFM inference must report non-finite WebGPU output before it reaches the candidate table'
+);
+
+console.log('PASS sampling math, invalid-logit rejection, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');

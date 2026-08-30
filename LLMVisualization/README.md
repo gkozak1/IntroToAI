@@ -11,6 +11,8 @@ A static, browser-based teaching tool for comparing a 2019 GPT-2 model with Liqu
 
 LFM2.5 is a hybrid model with 10 convolution blocks and 6 grouped-query-attention blocks. Its optimized browser graph returns logits and key/value caches, but not attention matrices, so the app explains that architectural difference instead of inventing attention data.
 
+The browser runtime is pinned to the same ONNX Runtime Web build used by Transformers.js 4.0.0. Do not downgrade it to 1.23.0: that older WebGPU build can return non-finite LFM2.5 Q4 logits on Windows/Chrome. The app validates every logit before sampling, so an incompatible GPU/runtime combination produces a specific error instead of a misleading row of `0.00%` probabilities or repeated `<|pad|>` tokens.
+
 LFM2.5-350M is instruction-tuned. In modern mode the app therefore uses its chat template and adds this disclosed system instruction:
 
 > Continue the user's passage naturally. Write only the continuation. Do not explain, quote, or restart the passage.

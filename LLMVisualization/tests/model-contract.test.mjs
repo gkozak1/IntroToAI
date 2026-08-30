@@ -8,15 +8,17 @@ async function fetchOk(url, options) {
   return response;
 }
 
-const [configResponse, tokenizerResponse, graphResponse, weightRangeResponse] = await Promise.all([
+const [configResponse, tokenizerResponse, graphResponse, weightRangeResponse, transformersPackageResponse] = await Promise.all([
   fetchOk(`${modelBase}/config.json`),
   fetchOk(`${modelBase}/tokenizer_config.json`),
   fetchOk(`${modelBase}/onnx/model_q4.onnx`),
-  fetchOk(`${modelBase}/onnx/model_q4.onnx_data`, { headers: { Range: 'bytes=0-0' } })
+  fetchOk(`${modelBase}/onnx/model_q4.onnx_data`, { headers: { Range: 'bytes=0-0' } }),
+  fetchOk('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.0/package.json')
 ]);
 
 const config = await configResponse.json();
 const tokenizer = await tokenizerResponse.json();
+const transformersPackage = await transformersPackageResponse.json();
 const graph = Buffer.from(await graphResponse.arrayBuffer());
 const graphText = graph.toString('latin1');
 
@@ -41,10 +43,15 @@ for (const name of ['input_ids', 'attention_mask', 'num_logits_to_keep', 'logits
 assert.equal(weightRangeResponse.status, 206, 'the external weight file should support byte-range requests');
 assert.match(weightRangeResponse.headers.get('content-range') || '', /\/293629952$/, 'the Q4 external weights should be 293,629,952 bytes');
 assert.equal(weightRangeResponse.headers.get('access-control-allow-origin'), '*', 'the weight host should allow browser cross-origin loading');
+assert.equal(
+  transformersPackage.dependencies['onnxruntime-web'],
+  '1.25.0-dev.20260327-722743c0e2',
+  'the app runtime pin should match Transformers.js 4.0.0 exactly'
+);
 
 for (const url of [
-  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js',
-  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.webgpu.min.js',
+  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.25.0-dev.20260327-722743c0e2/dist/ort.min.js',
+  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.25.0-dev.20260327-722743c0e2/dist/ort.webgpu.min.js',
   'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.0'
 ]) {
   const response = await fetchOk(url, { method: 'HEAD' });

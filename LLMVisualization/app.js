@@ -43,10 +43,14 @@ const MODEL_PROFILES = {
 };
 const INITIAL_MODEL_KEY = MODEL_PROFILES[PAGE_PARAMS.get('model')] ? PAGE_PARAMS.get('model') : 'gpt2';
 
+// Keep this exactly aligned with the ONNX Runtime Web build pinned by
+// @huggingface/transformers 4.0.0. LFM2.5's Q4 WebGPU graph produces invalid
+// numeric output with the older 1.23.0 runtime on some Windows/Chrome GPUs.
+const ORT_WEB_VERSION = '1.25.0-dev.20260327-722743c0e2';
 const CDN = {
-  ortScriptWasm: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js',
-  ortScriptWebGpu: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.webgpu.min.js',
-  ortWasm: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/',
+  ortScriptWasm: `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_WEB_VERSION}/dist/ort.min.js`,
+  ortScriptWebGpu: `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_WEB_VERSION}/dist/ort.webgpu.min.js`,
+  ortWasm: `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_WEB_VERSION}/dist/`,
   transformersModule: 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.0'
 };
 
@@ -315,6 +319,7 @@ class LFMEngine {
     if (!this.ort) throw new Error('ONNX Runtime WebGPU did not initialize.');
     this.ort.env.wasm.wasmPaths = CDN.ortWasm;
     this.ort.env.wasm.numThreads = 1;
+    this.ort.env.webgpu.powerPreference = 'high-performance';
     this.ort.env.logLevel = 'error';
 
     this.onProgress({ phase: 'tokenizer', text: 'Loading the LFM2.5 tokenizer…', fraction: 0.06 });
@@ -427,6 +432,16 @@ class LFMEngine {
       const vocabularySize = logitsTensor.dims[logitsTensor.dims.length - 1];
       const offset = logitsTensor.data.length - vocabularySize;
       const logits = Array.from(logitsTensor.data.slice(offset), Number);
+      const invalidLogitCount = logits.reduce((count, value) => count + (Number.isFinite(value) ? 0 : 1), 0);
+      if (invalidLogitCount > 0) {
+        for (const tensor of Object.values(outputs)) {
+          try { tensor?.dispose?.(); } catch { /* best-effort release */ }
+        }
+        throw new Error(
+          `LFM2.5 WebGPU returned ${invalidLogitCount.toLocaleString()} invalid logits out of ${logits.length.toLocaleString()}. ` +
+          'Reload this page to use the updated inference runtime; if it persists, update Chrome and include chrome://gpu details in the report.'
+        );
+      }
       this.updateCache(outputs);
       this.cachedTokenIds = [...tokenIds];
 
@@ -639,6 +654,16 @@ function getFullRanking(logits) {
 function buildDistribution(logits, temperature, k) {
   // Sampling remains exactly TE-style: use only the top 50 from the full
   // logit ranking, scale by temperature, filter below K, then softmax.
+  let hasInvalidLogit = !logits?.length;
+  for (const value of logits || []) {
+    if (!Number.isFinite(Number(value))) {
+      hasInvalidLogit = true;
+      break;
+    }
+  }
+  if (hasInvalidLogit) {
+    throw new Error('The model returned invalid numeric logits, so no token was sampled.');
+  }
   const sorted = getFullRanking(logits).slice(0, TOP_CANDIDATES);
 
   const filtered = sorted.map((item, index) => ({

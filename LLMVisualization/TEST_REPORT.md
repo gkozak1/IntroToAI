@@ -8,6 +8,8 @@ The August 30 revision isolates the two production runtimes: selecting LFM2.5 re
 
 The reported first-inference failure was then reproduced against the graph metadata and diagnosed precisely. The current official Q4 graph requires an additional scalar `int64` input named `num_logits_to_keep`. Liquid AI's browser example omitted that input, so the first `session.run()` failed after the model had loaded. Revision `20260830-2` supplies the required scalar value `1`, requesting exactly the final logit row needed for next-token sampling. Exact inference exceptions are also displayed in the main status and loading message.
 
+A subsequent Windows 11 / Chrome run exposed a second, distinct compatibility problem: ONNX Runtime Web 1.23.0 completed the graph but returned `NaN` for every one of the 65,536 logits. That explains both the `0.00%` candidate probabilities and repeated `<|pad|>` output—the old sort fallback was effectively ranking token IDs rather than model scores. Revision `20260830-3` pins the WebGPU runtime to `1.25.0-dev.20260327-722743c0e2`, the exact runtime dependency of the independently working Transformers.js 4.0.0 LFM2.5 WebGPU demo. It also rejects non-finite logits before ranking or sampling and reports their exact count.
+
 A native ONNX Runtime test executed the complete 294 MB Q4 graph successfully for both the initial 49-token prompt and the next incremental cached token. A final WebGPU smoke test on Chrome and one representative managed Chromebook is still required after deployment because this test environment has no WebGPU adapter.
 
 ## Source provenance
@@ -48,6 +50,7 @@ All checks passed.
 - Incremental attention masks cover the full cached context, and position IDs continue at the correct offset.
 - `present_conv` and `present.*` outputs map back to the correct `past_conv` and `past_key_values.*` inputs.
 - Input, output, and superseded cache tensors are released after use.
+- Any `NaN` or infinite logit stops inference before ranking, probability calculation, or token selection.
 
 ### Live official-model contract
 
@@ -62,6 +65,7 @@ The test fetched Liquid AI's current official files rather than relying only on 
 - Official tokenizer template supports a system message and generation prompt; the end token is `<|im_end|>` / token ID 7.
 - A live Transformers.js tokenizer smoke test formatted the disclosed continuation instruction and sample passage into 49 tokens with the expected system, user, and assistant markers.
 - Pinned ONNX Runtime WASM/WebGPU and Transformers.js CDN assets are reachable and CORS-enabled for GitHub Pages.
+- ONNX Runtime Web is pinned to the same `1.25.0-dev.20260327-722743c0e2` build declared by Transformers.js 4.0.0; both browser bundles are reachable from jsDelivr.
 - Native full-prompt inference returned logits shaped `[1, 1, 65536]` in 0.099 seconds on the diagnostic CPU runtime.
 - Native incremental inference accepted all 22 returned cache tensors and produced the next logit row; greedy test tokens continued the sample as `The river`.
 

@@ -31,7 +31,7 @@ The model files are fetched at runtime and are not included in this repository.
 
 ## ONNX Runtime Web
 
-The production app loads ONNX Runtime Web 1.23.0 from jsDelivr, using its WASM and WebGPU browser bundles. ONNX Runtime is an open-source Microsoft project. Refer to its upstream repository for license and notices:
+The production app loads ONNX Runtime Web `1.25.0-dev.20260327-722743c0e2` from jsDelivr, using its WASM and WebGPU browser bundles. This is the runtime version pinned by Transformers.js 4.0.0. ONNX Runtime is an open-source Microsoft project. Refer to its upstream repository for license and notices:
 
 https://github.com/microsoft/onnxruntime
 
