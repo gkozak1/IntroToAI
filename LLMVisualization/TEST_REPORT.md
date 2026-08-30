@@ -4,9 +4,11 @@
 
 The dual-model build is ready for a GitHub Pages trial. GPT-2 remains the default compatibility mode, and LFM2.5-350M is available as an explicit modern WebGPU mode. The sampling calculation and the modern model's incremental-cache contract pass automated tests.
 
-The August 30 revision isolates the two production runtimes: selecting LFM2.5 reloads into `?model=lfm` and loads LFM2.5 directly instead of retaining a previously loaded GPT-2/WASM heap. This addresses the strongest identified cause of the initial-inference failure reported after the first deployment. Exact inference exceptions are now also displayed in the loading message rather than only showing the generic `Analysis error` status.
+The August 30 revision isolates the two production runtimes: selecting LFM2.5 reloads into `?model=lfm` and loads LFM2.5 directly instead of retaining a previously loaded GPT-2/WASM heap.
 
-A final smoke test on one representative managed Chromebook is still required after deployment. This environment could verify the live official files and interfaces, but it could not execute the complete 294 MB WebGPU graph inside the local app.
+The reported first-inference failure was then reproduced against the graph metadata and diagnosed precisely. The current official Q4 graph requires an additional scalar `int64` input named `num_logits_to_keep`. Liquid AI's browser example omitted that input, so the first `session.run()` failed after the model had loaded. Revision `20260830-2` supplies the required scalar value `1`, requesting exactly the final logit row needed for next-token sampling. Exact inference exceptions are also displayed in the main status and loading message.
+
+A native ONNX Runtime test executed the complete 294 MB Q4 graph successfully for both the initial 49-token prompt and the next incremental cached token. A final WebGPU smoke test on Chrome and one representative managed Chromebook is still required after deployment because this test environment has no WebGPU adapter.
 
 ## Source provenance
 
@@ -42,6 +44,7 @@ All checks passed.
 - The five rank-color bands span green through red as intended.
 - Model profiles expose the correct vocabulary sizes: GPT-2 `50,257`; LFM2.5 `65,536`.
 - LFM full-context inference uses all prompt tokens; subsequent rounds send only the newly selected token.
+- Every LFM inference supplies scalar `num_logits_to_keep = 1`, matching the current graph and limiting output to the final next-token logit row.
 - Incremental attention masks cover the full cached context, and position IDs continue at the correct offset.
 - `present_conv` and `present.*` outputs map back to the correct `past_conv` and `past_key_values.*` inputs.
 - Input, output, and superseded cache tensors are released after use.
@@ -53,12 +56,14 @@ The test fetched Liquid AI's current official files rather than relying only on 
 - Q4 graph reachable: `onnx/model_q4.onnx`, 183,442 bytes.
 - External weights reachable with byte-range support: 293,629,952 bytes.
 - Hugging Face returns permissive CORS headers for the weight file.
-- Graph exposes `input_ids`, `attention_mask`, `logits`, convolution caches, grouped-query-attention caches, and `model_q4.onnx_data`.
+- Graph exposes required inputs `input_ids`, `attention_mask`, and scalar `num_logits_to_keep`, plus logits, convolution caches, grouped-query-attention caches, and `model_q4.onnx_data`.
 - Official configuration confirms 1,024 hidden size, 16 layers, 16 attention heads, 8 key/value heads, 65,536 vocabulary entries, and convolution cache length 3.
 - Layer types confirm 10 convolution blocks and 6 full-attention blocks.
 - Official tokenizer template supports a system message and generation prompt; the end token is `<|im_end|>` / token ID 7.
 - A live Transformers.js tokenizer smoke test formatted the disclosed continuation instruction and sample passage into 49 tokens with the expected system, user, and assistant markers.
 - Pinned ONNX Runtime WASM/WebGPU and Transformers.js CDN assets are reachable and CORS-enabled for GitHub Pages.
+- Native full-prompt inference returned logits shaped `[1, 1, 65536]` in 0.099 seconds on the diagnostic CPU runtime.
+- Native incremental inference accepted all 22 returned cache tensors and produced the next logit row; greedy test tokens continued the sample as `The river`.
 
 ### Student-use and accessibility checks
 

@@ -89,7 +89,7 @@ const engine = new LFMEngine(() => {});
 engine.ort = { Tensor: FakeTensor };
 const feedsSeen = [];
 engine.session = {
-  inputNames: ['input_ids', 'attention_mask', 'position_ids', 'past_conv.0', 'past_key_values.2.key', 'past_key_values.2.value'],
+  inputNames: ['input_ids', 'attention_mask', 'num_logits_to_keep', 'position_ids', 'past_conv.0', 'past_key_values.2.key', 'past_key_values.2.value'],
   async run(feeds) {
     feedsSeen.push(feeds);
     return {
@@ -105,6 +105,8 @@ const firstInference = await engine.infer([10, 11]);
 assert.deepEqual(Array.from(firstInference.logits), [4, 5, 6, 7], 'only the final sequence position should feed next-token sampling');
 assert.deepEqual(Array.from(feedsSeen[0].input_ids.dims), [1, 2]);
 assert.deepEqual(Array.from(feedsSeen[0].attention_mask.dims), [1, 2]);
+assert.deepEqual(Array.from(feedsSeen[0].num_logits_to_keep.dims), [], 'the logit-count input should be a scalar');
+assert.deepEqual(Array.from(feedsSeen[0].num_logits_to_keep.data), [1n], 'the graph should return only the final logit row');
 assert.deepEqual(Array.from(feedsSeen[0].position_ids.data), [0n, 1n]);
 assert.ok(engine.cache['past_conv.0'], 'convolution cache output should map back to its input name');
 assert.ok(engine.cache['past_key_values.2.key'], 'attention key cache output should map back to its input name');
@@ -113,6 +115,7 @@ const secondInference = await engine.infer([10, 11, 12]);
 assert.deepEqual(Array.from(secondInference.logits), [8, 9, 10, 11]);
 assert.deepEqual(Array.from(feedsSeen[1].input_ids.dims), [1, 1], 'incremental inference should send only the new token');
 assert.deepEqual(Array.from(feedsSeen[1].attention_mask.dims), [1, 3], 'the mask should cover the full cached context');
+assert.deepEqual(Array.from(feedsSeen[1].num_logits_to_keep.data), [1n]);
 assert.deepEqual(Array.from(feedsSeen[1].position_ids.data), [2n], 'the incremental position should continue the sequence');
 
 console.log('PASS sampling math, r-intervals, temperature, rank colors, model profiles, and LFM cache contract');

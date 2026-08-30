@@ -409,6 +409,12 @@ class LFMEngine {
     const inputIds = new this.ort.Tensor('int64', new BigInt64Array(ids.map(BigInt)), [1, ids.length]);
     const attentionMask = new this.ort.Tensor('int64', new BigInt64Array(tokenIds.length).fill(1n), [1, tokenIds.length]);
     const feeds = { input_ids: inputIds, attention_mask: attentionMask, ...this.cache };
+    // The current official graph requires this scalar even though the initial
+    // browser example on its model card omitted it. A value of 1 returns only
+    // the final position's logits, which is exactly what next-token sampling uses.
+    if (this.session.inputNames.includes('num_logits_to_keep')) {
+      feeds.num_logits_to_keep = new this.ort.Tensor('int64', new BigInt64Array([1n]), []);
+    }
     if (this.session.inputNames.includes('position_ids')) {
       const positions = Array.from({ length: ids.length }, (_, i) => BigInt(contextStart + i));
       feeds.position_ids = new this.ort.Tensor('int64', new BigInt64Array(positions), [1, positions.length]);
@@ -434,6 +440,7 @@ class LFMEngine {
     } finally {
       try { inputIds.dispose?.(); } catch { /* best-effort release */ }
       try { attentionMask.dispose?.(); } catch { /* best-effort release */ }
+      try { feeds.num_logits_to_keep?.dispose?.(); } catch { /* best-effort release */ }
       try { feeds.position_ids?.dispose?.(); } catch { /* best-effort release */ }
     }
   }
@@ -950,8 +957,9 @@ async function analyzePrompt({ force = false } = {}) {
     setStatus('Ready', 'ready');
   } catch (error) {
     console.error(error);
-    setStatus('Analysis error', 'error');
     const message = error?.message || String(error);
+    const statusMessage = message.length > 96 ? `${message.slice(0, 93)}…` : message;
+    setStatus(`Analysis error: ${statusMessage}`, 'error', message);
     els.roundStatus.textContent = message;
     els.loadProgress.hidden = false;
     els.loadProgress.classList.remove('indeterminate');
@@ -1229,9 +1237,10 @@ function updateControls() {
   });
 }
 
-function setStatus(text, kind = '') {
+function setStatus(text, kind = '', details = '') {
   els.modelStatus.textContent = text;
   els.modelStatus.className = `status-pill${kind ? ` ${kind}` : ''}`;
+  els.modelStatus.title = details;
 }
 
 function setLoadProgress({ text, fraction, indeterminate = false }) {

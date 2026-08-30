@@ -34,7 +34,7 @@ assert.match(tokenizer.chat_template, /messages\[0\]\["role"\] == "system"/);
 assert.match(tokenizer.chat_template, /add_generation_prompt/);
 
 assert.equal(graph.byteLength, 183442, 'the official Q4 graph file should have the expected size');
-for (const name of ['input_ids', 'attention_mask', 'logits', 'past_conv.0', 'past_key_values.2.key', 'present_conv.0', 'present.2.key', 'model_q4.onnx_data']) {
+for (const name of ['input_ids', 'attention_mask', 'num_logits_to_keep', 'logits', 'past_conv.0', 'past_key_values.2.key', 'present_conv.0', 'present.2.key', 'model_q4.onnx_data']) {
   assert.ok(graphText.includes(name), `the official Q4 graph should expose ${name}`);
 }
 

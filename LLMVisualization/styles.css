@@ -54,6 +54,7 @@ p { margin: 0; }
   border: 1px solid var(--border); background: var(--surface); border-radius: 999px;
   padding: 4px 8px; color: var(--muted); font-size: 0.69rem; white-space: nowrap;
 }
+.status-pill { max-width: min(52vw, 680px); overflow: hidden; text-overflow: ellipsis; }
 .status-pill.ready { color: #1e6a37; border-color: #badfc5; background: #f1fbf4; }
 .status-pill.error { color: #a52c2c; border-color: #f0c4c4; background: #fff4f4; }
 
