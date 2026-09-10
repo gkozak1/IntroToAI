@@ -35,6 +35,12 @@
     #gd-lab * { box-sizing: border-box; }
     #gd-lab button, #gd-lab input, #gd-lab select { font: inherit; }
     #gd-lab .gd-shell { display: grid; gap: 18px; }
+    #gd-lab .gd-titlebar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    #gd-lab .gd-titlebar h1 { margin:0; font-size:1.55rem; letter-spacing:-.025em; }
+    #gd-lab .gd-instruction { display:flex; align-items:flex-start; gap:10px; border:1px solid #b9d0e4; border-left:5px solid var(--accent); border-radius:12px; background:var(--accent-soft); color:#194b74; padding:12px 14px; line-height:1.45; }
+    #gd-lab .gd-instruction strong { white-space:nowrap; }
+    #gd-lab .gd-role-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; }
+    #gd-lab .gd-role-badge { display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; background:var(--accent); color:var(--accent-text); font-size:.72rem; font-weight:750; white-space:nowrap; }
     #gd-lab .gd-note {
       background: var(--accent-soft);
       border: 1px solid var(--border);
@@ -93,12 +99,13 @@
     #gd-lab .gd-tangent { stroke: var(--series-2); stroke-width: 2.1; stroke-dasharray: 7 5; }
     #gd-lab .gd-marker { fill: var(--series-2); stroke: var(--panel); stroke-width: 2; }
     #gd-lab .gd-controls {
-      border: 1px solid var(--border);
+      border: 1px solid var(--accent);
       background: var(--card);
       border-radius: 14px;
       padding: 14px;
       display: grid;
       gap: 13px;
+      box-shadow: 0 0 0 3px rgba(40,95,143,.10);
     }
     #gd-lab .gd-control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     #gd-lab .gd-control { min-width: 0; }
@@ -174,6 +181,19 @@
       box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.18);
       opacity: 1;
     }
+    @keyframes gdWorkPulse { 0%{box-shadow:0 0 0 0 rgba(40,95,143,.38)} 70%{box-shadow:0 0 0 8px rgba(40,95,143,0)} 100%{box-shadow:0 0 0 0 rgba(40,95,143,0)} }
+    #gd-lab .gd-work-pulse { border-color:var(--accent) !important; animation:gdWorkPulse 1.65s ease-out infinite; }
+    #gd-lab .gd-modal-back { position:fixed; inset:0; z-index:100; display:grid; place-items:center; padding:18px; background:rgba(20,32,52,.52); }
+    #gd-lab .gd-modal { width:min(620px,96vw); background:#fff; border-radius:16px; box-shadow:0 24px 70px rgba(0,0,0,.25); overflow:hidden; }
+    #gd-lab .gd-modal-head, #gd-lab .gd-modal-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--border); }
+    #gd-lab .gd-modal-head h2 { font-size:1.15rem; }
+    #gd-lab .gd-modal-body { padding:16px; }
+    #gd-lab .gd-modal-foot { border-top:1px solid var(--border); border-bottom:0; justify-content:flex-end; }
+    #gd-lab .gd-tour-grid { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:stretch; margin-bottom:14px; }
+    #gd-lab .gd-tour-card { border:1px solid var(--border); border-radius:11px; padding:12px; background:var(--chip); }
+    #gd-lab .gd-tour-card p, #gd-lab .gd-tour-copy { color:var(--muted); font-size:.86rem; line-height:1.5; margin:5px 0 0; }
+    #gd-lab .gd-tour-arrow { display:grid; place-items:center; color:var(--accent); font-size:1.5rem; font-weight:800; }
+    #gd-lab .gd-tour-check { display:flex; align-items:center; gap:8px; margin-top:14px; font-size:.84rem; }
     @media (max-width: 850px) {
       #gd-lab .gd-layout { grid-template-columns: 1fr; }
       #gd-lab .gd-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -182,10 +202,14 @@
       #gd-lab .gd-stage-nav { grid-template-columns: 1fr; }
       #gd-lab .gd-control-grid { grid-template-columns: 1fr; }
       #gd-lab .gd-combo { grid-template-columns: 1fr 88px; }
+      #gd-lab .gd-tour-grid { grid-template-columns: 1fr; }
+      #gd-lab .gd-tour-arrow { transform: rotate(90deg); }
+      #gd-lab .gd-titlebar { align-items:flex-start; }
     }
   </style>
 
   <div class="gd-shell">
+    <div class="gd-titlebar"><h1>Gradient Descent Neuron Lab</h1><button id="howItWorks" class="gd-button" type="button">How it works</button></div>
     <nav class="gd-stage-nav" aria-label="Gradient descent stages">
       <button class="gd-stage-btn" type="button" data-stage="1" aria-selected="true">
         <strong>1. Fit by eye</strong><span>Adjust weight and bias</span>
@@ -198,6 +222,7 @@
       </button>
     </nav>
 
+    <div id="nextAction" class="gd-instruction" aria-live="polite"><strong>Next action</strong><span></span></div>
     <div id="stageMessage" class="gd-status" aria-live="polite"></div>
 
     <div class="gd-layout">
@@ -213,7 +238,8 @@
           <svg id="fitChart" viewBox="0 0 680 410" role="img" aria-label="Scatterplot with current regression line"></svg>
         </div>
 
-        <div class="gd-controls">
+        <div class="gd-controls" id="workControls">
+          <div class="gd-role-row"><span class="gd-role-badge">▶ Work here</span><strong>Controls workspace</strong><span class="gd-subtle">Adjust, then observe ↑</span></div>
           <div id="manualControls">
             <div class="gd-control-grid">
               <div class="gd-control">
@@ -336,6 +362,7 @@
       </div>
     </details>
   </div>
+  <div id="tourRoot"></div>
 
   <script>
     (() => {
@@ -581,6 +608,7 @@
           $('metricLabel3').textContent='Gradient magnitude';
           $('metricLabel4').textContent='Status';
           $('metric4').innerHTML=state.manual.lastSubmitted ? (criterion<state.epsilon?'<span class="gd-success">Close enough</span>':'Keep adjusting') : 'Preview';
+          $('nextAction').querySelector('span').textContent=state.manual.attempts===0?'Move the Weight and Bias controls in the blue workspace to fit the line to the points, then press Check current line.':'Continue adjusting weight and bias, then press Check current line to evaluate your fit.';
         } else if (state.stage===2) {
           $('stageBadge').textContent='Core lesson';
           $('stageMessage').innerHTML='<strong>Bias revealed and locked:</strong> b = 1.487. Gradient descent changes only the weight, while the inactive bias controls and loss slice remain visible for continuity.';
@@ -589,6 +617,7 @@
           $('metricLabel3').textContent='Gradient magnitude';
           $('metricLabel4').textContent='Last learning-rate-scaled weight gradient';
           $('metric4').textContent=state.guided.lastStep?signed(state.guided.lastStep.weightStep,6):'—';
+          $('nextAction').querySelector('span').textContent='Press Run one iteration. Watch the weight move downhill while the revealed bias stays fixed.';
         } else {
           $('stageBadge').textContent='Advanced extension';
           $('stageMessage').innerHTML='<strong>Advanced mode:</strong> Gradient descent updates weight and bias together. The two changing curves are slices through the same bowl-shaped loss surface.';
@@ -597,6 +626,7 @@
           $('metricLabel3').textContent='Gradient magnitude';
           $('metricLabel4').textContent='Last learning-rate-scaled gradients';
           $('metric4').textContent=state.advanced.lastStep?`w ${signed(state.advanced.lastStep.weightStep,4)}, b ${signed(state.advanced.lastStep.biasStep,4)}`:'—';
+          $('nextAction').querySelector('span').textContent='Press Run one iteration to update weight and bias together, then inspect both loss-curve slopes.';
         }
 
         $('equationText').textContent=`Current equation: ŷ = ${s.w.toFixed(3)}x ${s.b>=0?'+':'−'} ${Math.abs(s.b).toFixed(3)}`;
@@ -626,6 +656,17 @@
         }
         $('playPause').textContent=state.playing?'Pause':'Play';
         renderCalculationTables();
+        requestAnimationFrame(updateWorkFocus);
+      }
+
+      function updateWorkFocus() {
+        qsa('.gd-work-pulse').forEach(el=>el.classList.remove('gd-work-pulse'));
+        const target=state.stage===1?(state.manual.attempts===0?$('manualWeight'):$('testLine')):$('stepOnce');
+        if (target && !target.disabled) target.classList.add('gd-work-pulse');
+      }
+
+      function openTour() {
+        $('tourRoot').innerHTML=`<div class="gd-modal-back"><div class="gd-modal" role="dialog" aria-modal="true" aria-label="How this lab works"><div class="gd-modal-head"><h2>How this works — quick tour</h2><button class="gd-button" data-tour-close type="button">Close</button></div><div class="gd-modal-body"><div class="gd-tour-grid"><div class="gd-tour-card"><h3>① Watch the model</h3><p>The line, points, loss curves, and tables show the effect of every change.</p></div><div class="gd-tour-arrow">→</div><div class="gd-tour-card"><h3>② Work in blue</h3><p>Use the bordered Controls workspace to adjust values or run iterations.</p></div></div><p class="gd-tour-copy"><b>Three stages:</b> estimate a fit yourself, let gradient descent optimize only the weight, then extend it to weight and bias. The highlighted stage, Next action banner, and pulsing control guide each move.</p><label class="gd-tour-check"><input id="dontShowGdTour" type="checkbox"> Don’t show this again on this browser</label></div><div class="gd-modal-foot"><button class="gd-button primary" data-tour-start type="button">Start exploring</button></div></div></div>`;
       }
 
       function setStage(stage) {
@@ -761,8 +802,15 @@
       $('playPause').addEventListener('click',()=>{state.playing?stopPlaying():scheduleSteps(null);render();});
       $('gdReset').addEventListener('click',resetGradient);
       $('epsilon').addEventListener('change',e=>{state.epsilon=clamp(parseNumber(e.target,state.epsilon),0.001,20);render();});
+      $('howItWorks').addEventListener('click',openTour);
+      $('tourRoot').addEventListener('click',e=>{
+        if (!e.target.closest('[data-tour-close],[data-tour-start]')) return;
+        if (e.target.closest('[data-tour-start]') && $('dontShowGdTour')?.checked) localStorage.setItem('gradientDescentTourHidden','1');
+        $('tourRoot').innerHTML='';
+      });
 
       render();
+      if (localStorage.getItem('gradientDescentTourHidden')!=='1') setTimeout(openTour,180);
     })();
   </script>
 </div>
