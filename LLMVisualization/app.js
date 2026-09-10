@@ -97,6 +97,11 @@ const els = {
   modelSwitcher: $('modelSwitcher'),
   modelOptions: Array.from(document.querySelectorAll('.model-option')),
   modelStatus: $('modelStatus'),
+  howItWorksBtn: $('howItWorksBtn'),
+  introDialog: $('introDialog'),
+  dontShowIntro: $('dontShowIntro'),
+  startExploringBtn: $('startExploringBtn'),
+  instructionBanner: $('instructionBanner'),
   modelExplanation: $('modelExplanation'),
   promptInput: $('promptInput'),
   temperatureSlider: $('temperatureSlider'),
@@ -1306,6 +1311,37 @@ function updateControls() {
       ? state.busy || state.finishing || state.switchingModel
       : state.finishing;
   });
+  updateGuidance();
+}
+
+function updateGuidance() {
+  document.querySelectorAll('.work-pulse').forEach((el) => el.classList.remove('work-pulse'));
+  els.instructionBanner.classList.remove('done');
+  let text = '';
+  let target = null;
+  if (!state.ready || state.switchingModel) {
+    text = `Wait while ${currentProfile().name} prepares. You can edit the prompt now; generation becomes available when the model is ready.`;
+    target = els.promptInput;
+  } else if (state.busy) {
+    text = state.finishing ? 'Watch the Progressive completion panel as the model adds tokens.' : 'The model is analyzing the current text and calculating the next-token distribution.';
+  } else if (state.ended || state.history.length >= MAX_GENERATED_TOKENS) {
+    text = 'Completion finished. Click any generated token to inspect how it was selected, or press Reset to try another prompt.';
+    els.instructionBanner.classList.add('done');
+  } else if (!state.currentInference) {
+    text = 'Type or revise the prompt. The model will analyze it automatically after you pause typing.';
+    target = els.promptInput;
+  } else if (!els.autoRToggle.checked && !(Number(els.rValueInput.value) >= 0 && Number(els.rValueInput.value) < 1)) {
+    text = 'Enter an r-value from 0 up to (but not including) 1, then press Next to select a token.';
+    target = els.rValueInput;
+  } else if (state.history.length === 0) {
+    text = 'Review the candidate probabilities below, then press Next to sample the first continuation token.';
+    target = els.nextBtn;
+  } else {
+    text = 'Press Next for one more token, or Finish to continue automatically to 50 tokens.';
+    target = els.nextBtn;
+  }
+  els.instructionBanner.querySelector('span').textContent = text;
+  if (target && !target.disabled) requestAnimationFrame(() => target.classList.add('work-pulse'));
 }
 
 function setStatus(text, kind = '', details = '') {
@@ -1481,6 +1517,10 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function nextAnimationFrame() { return new Promise((resolve) => requestAnimationFrame(() => resolve())); }
 
 function wireEvents() {
+  els.howItWorksBtn.addEventListener('click', () => els.introDialog.showModal());
+  els.startExploringBtn.addEventListener('click', () => {
+    if (els.dontShowIntro.checked) localStorage.setItem('llmExplorerTourHidden', '1');
+  });
   els.modelOptions.forEach((button) => {
     button.addEventListener('click', () => requestModelSwitch(button.dataset.model));
     button.addEventListener('keydown', (event) => {
@@ -1544,6 +1584,7 @@ function wireEvents() {
 
 async function init() {
   wireEvents();
+  if (localStorage.getItem('llmExplorerTourHidden') !== '1') setTimeout(() => els.introDialog.showModal(), 180);
   updateModelUI();
   renderSentence();
   updateGenerationStatus();

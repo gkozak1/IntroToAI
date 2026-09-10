@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ffffff" />
   <title>Language Model Next-Token Explorer</title>
-  <link rel="stylesheet" href="./styles.css?v=20260830-6" />
+  <link rel="stylesheet" href="./styles.css?v=20260910-ux1" />
 </head>
 <body>
   <div id="app" class="app-shell">
     <header class="site-header">
       <div class="header-title-row">
         <h1>Language Model Next-Token Explorer</h1>
-        <button class="info-dot" type="button" title="Compare how a 2019 model and a modern small model turn logits into sampled tokens.">i</button>
+        <button class="how-button" id="howItWorksBtn" type="button">How it works</button>
       </div>
       <div class="header-status-row">
         <div class="model-switcher" id="modelSwitcher" role="radiogroup" aria-label="Language model">
@@ -27,7 +27,9 @@
       </div>
     </header>
 
-    <section class="card setup-card" aria-labelledby="promptHeading">
+    <section class="card setup-card work-panel" id="setupCard" aria-labelledby="promptHeading">
+      <div class="workspace-role"><span class="work-badge">▶ Work here</span><strong>Prompt and sampling workspace</strong><span>Results appear below ↓</span></div>
+      <div class="instruction-banner" id="instructionBanner" role="status" aria-live="polite"><strong>Next action</strong><span>Choose a model and wait for it to prepare.</span></div>
       <div class="compact-controls" aria-label="Sampling controls">
         <div class="compact-control">
           <div class="compact-label"><label for="temperatureSlider">Temperature</label><output id="temperatureValue">1.0</output></div>
@@ -91,7 +93,7 @@
         <section class="card table-card workbench-card" aria-labelledby="candidateHeading">
           <div class="workbench-heading candidate-workbench-heading">
             <div>
-              <h2 id="candidateHeading">Next-token candidates</h2>
+              <h2 id="candidateHeading">The model's candidate map</h2>
               <span class="microcopy" id="candidateVocabularyNote">All 50,257 GPT-2 vocabulary tokens · sorted by logit</span>
             </div>
             <div class="candidate-heading-tools">
@@ -128,7 +130,7 @@
           </div>
         </section>
 
-        <section class="card completion-card workbench-card" aria-labelledby="sentenceHeading">
+        <section class="card completion-card workbench-card result-panel" aria-labelledby="sentenceHeading">
           <div class="workbench-heading">
             <div>
               <h2 id="sentenceHeading">Progressive completion</h2>
@@ -181,6 +183,14 @@
     </footer>
   </div>
 
+  <dialog id="introDialog" class="intro-dialog">
+    <form method="dialog" class="intro-shell">
+      <div class="dialog-header"><div><div class="eyebrow">QUICK TOUR</div><h2>How this works</h2></div><button class="dialog-close" value="close" aria-label="Close">×</button></div>
+      <div class="intro-body"><div class="intro-grid"><div class="intro-card"><h3>① Work at the top</h3><p>Choose a model, adjust sampling settings, enter a prompt, and use Next or Finish.</p></div><div class="intro-arrow">↓</div><div class="intro-card"><h3>② Read the evidence below</h3><p>The candidate table shows the logits and probabilities; Progressive completion shows the selected tokens.</p></div></div><p class="intro-copy">The blue instruction banner and the gently pulsing control always identify the next action. Probability and attention charts provide a deeper view after each token selection.</p><label class="intro-check"><input id="dontShowIntro" type="checkbox"> Don’t show this again on this browser</label></div>
+      <div class="intro-foot"><button class="button primary" id="startExploringBtn" value="close">Start exploring</button></div>
+    </form>
+  </dialog>
+
   <dialog id="historyDialog" class="history-dialog">
     <form method="dialog" class="dialog-shell">
       <div class="dialog-header">
@@ -221,6 +231,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="./app.js?v=20260830-6"></script>
+  <script type="module" src="./app.js?v=20260910-ux1"></script>
 </body>
 </html>
