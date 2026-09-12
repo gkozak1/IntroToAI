@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "numberRecognition": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

@@ -215,6 +215,51 @@ h1{margin:0;font-size:21px;line-height:1.1;letter-spacing:-.02em}
 .sc-label{font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .layer-fill{margin-top:16px;padding-top:12px;border-top:1px dashed var(--line)}
 .btn.block{display:block;width:100%;text-align:center}
+
+/* team mode is dormant until the user explicitly enters it */
+.team-only{display:none}
+body.team-mode .solo-only{display:none!important}
+body.team-mode .team-only{display:flex}
+body.team-lobby #stageRail,body.team-lobby main.layout{display:none}
+.team-strip{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 18px;background:#eef5fc;border-bottom:1px solid #cddffc;font-size:12px;font-weight:750}
+body.team-mode .team-strip{display:flex}
+.team-strip .team-spacer{flex:1}
+.team-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:#fff;border:1px solid var(--line-strong)}
+.team-dot{width:8px;height:8px;border-radius:50%;background:#9aa8b8}
+.team-dot.live{background:var(--success)}
+.team-dot.wait{background:var(--highlight)}
+.team-lobby{display:none;max-width:760px;margin:34px auto;padding:0 18px}
+body.team-lobby .team-lobby{display:block}
+.lobby-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.lobby-head{padding:20px 22px;background:var(--accent-softer);border-bottom:1px solid #d6e4f4}
+.lobby-head h2{margin:0 0 5px;font-size:21px}
+.lobby-body{padding:20px 22px}
+.ready-box{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2);margin-bottom:14px}
+.ready-count{font-weight:850;font-size:16px}
+.ready-detail{color:var(--muted);font-size:12px;margin-top:3px}
+.facilitator{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.facilitator summary{cursor:pointer;padding:12px 14px;font-weight:800;font-size:13px;color:var(--accent-strong)}
+.facilitator-body{border-top:1px solid var(--line);padding:13px 14px}
+.admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.team-message{padding:12px 14px;border-radius:10px;background:var(--accent-soft);border:1px solid #cddffc;font-size:13px;line-height:1.45}
+.team-message.warn{background:#fff8ea;border-color:#e6d3a3;color:#7a5410}
+.team-message.error{background:var(--danger-soft);border-color:#f0c9c9;color:var(--danger)}
+.team-admin-panel{display:none;width:100%;padding-top:8px;margin-top:2px;border-top:1px dashed #b8c6d8}
+body.team-mode.admin-device .team-admin-panel{display:block}
+.team-admin-panel .admin-actions{margin:0}
+.team-status-legend{display:none;gap:14px;flex-wrap:wrap;padding:8px 15px;border-top:1px dashed var(--line);font-size:11px;font-weight:700;color:var(--muted)}
+body.team-mode:not(.team-lobby) .team-status-legend{display:flex}
+.state-swatch{width:13px;height:13px;border-radius:4px;border:2px solid;display:inline-block;vertical-align:-2px;margin-right:4px}
+.state-own{background:#dfeeff;border-color:#2d6dab}.state-other{background:#fff0cf;border-color:#c07a16}.state-future{background:#edf0f4;border-color:#aab4c0}.state-manual{background:var(--success-soft);border-color:var(--success)}.state-auto{background:#f0eafb;border-color:#7650a5}
+.node-group.team-owned .ncirc,.node-group.team-owned .nrect{fill:#dfeeff;stroke:#2d6dab;stroke-width:3}
+.node-group.team-other .ncirc,.node-group.team-other .nrect{fill:#fff0cf;stroke:#c07a16;stroke-width:3}
+.node-group.team-other{cursor:not-allowed}
+.node-group.team-auto .ncirc,.node-group.team-auto .nrect{fill:#f0eafb;stroke:#7650a5}
+.mini.team-other{background:#fff8ea;border-color:#e6c07a;cursor:not-allowed}.mini.team-own{background:#eaf2fb;border-color:#2d6dab}.mini.team-auto{background:#f0eafb;border-color:#9b83bd}
+.ownership-note{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;margin-bottom:12px;border-radius:9px;background:#eaf2fb;border:1px solid #cddffc;font-size:12px;font-weight:750}
+.waiting-panel{text-align:center;padding:20px 12px}
+.waiting-panel h3{margin:0 0 7px;font-size:17px}.waiting-panel p{margin:0 auto 14px;max-width:430px;color:var(--muted);font-size:13px;line-height:1.5}
+@media(max-width:700px){.team-strip{padding:8px 10px}.team-lobby{margin:18px auto}.lobby-body,.lobby-head{padding:16px}.topbar{gap:8px}}
 </style>
 </head>
 <body>
@@ -222,11 +267,30 @@ h1{margin:0;font-size:21px;line-height:1.1;letter-spacing:-.02em}
   <div class="top-actions">
     <span id="selftest" class="selftest">self-test…</span>
     <button id="btnHelp" class="btn ghost small">How it works</button>
-    <button id="btnAll" class="btn small">Complete all remaining</button>
-    <button id="btnFull" class="btn warn small">See full image</button>
-    <button id="btnNew" class="btn primary small">New random image</button>
+    <button id="btnTeam" class="btn small">Work as a Team</button>
+    <button id="btnAll" class="btn small solo-only">Complete all remaining</button>
+    <button id="btnFull" class="btn warn small solo-only">See full image</button>
+    <button id="btnNew" class="btn primary small solo-only">New random image</button>
   </div>
 </header>
+
+<div class="team-strip" id="teamStrip" aria-live="polite">
+  <span class="team-pill"><span class="team-dot" id="connectionDot"></span><span id="connectionText">Connecting…</span></span>
+  <span class="team-pill" id="participantIdentity">Participant —</span>
+  <span class="team-pill" id="teamNumbers">0 participants</span>
+  <span class="team-pill" id="adminStatus">No administrator</span>
+  <span class="team-spacer"></span>
+  <button id="btnReleaseWork" class="btn ghost small" hidden>Release my neuron</button>
+  <button id="btnLeaveTeam" class="btn ghost small">Return to Solo Work</button>
+  <div class="team-admin-panel" id="teamAdminPanel"></div>
+</div>
+
+<section class="team-lobby" id="teamLobby">
+  <div class="lobby-card">
+    <div class="lobby-head"><h2>Team activity lobby</h2><div class="sub">Everyone joins the same classroom activity. No session code is needed.</div></div>
+    <div class="lobby-body" id="lobbyBody"><div class="team-message">Connecting to the classroom…</div></div>
+  </div>
+</section>
 
 <nav class="stage-rail" id="stageRail"></nav>
 
@@ -242,6 +306,13 @@ h1{margin:0;font-size:21px;line-height:1.1;letter-spacing:-.02em}
       <span><span class="lg-line inh"></span> inhibitory (negative)</span>
       <span><span class="lg-line act"></span> selected connection</span>
       <span>z / a shown inside each neuron · rule: z &lt; 1 → a = 0, z ≥ 1 → a = 1</span>
+    </div>
+    <div class="team-status-legend">
+      <span><i class="state-swatch state-own"></i>owned by you</span>
+      <span><i class="state-swatch state-other"></i>owned by another participant</span>
+      <span><i class="state-swatch state-future"></i>future layer</span>
+      <span><i class="state-swatch state-manual"></i>completed manually</span>
+      <span><i class="state-swatch state-auto"></i>auto-completed</span>
     </div>
   </section>
 
@@ -315,6 +386,236 @@ function allInputsDone(){ return state.inputs.every((_,k)=>inputDone(k)); }
 function allHiddenDone(){ return state.hidden.every((_,h)=>hiddenDone(h)); }
 function allOutputsDone(){ return state.output.every((_,o)=>outputDone(o)); }
 
+/* ---------- optional synchronous team mode (Firebase stays dormant in solo mode) ---------- */
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyAd0Y0nYfaXTIl_2LqHuscH2EIwp0YR3-0",
+  authDomain:"fielddossier.firebaseapp.com",
+  databaseURL:"https://fielddossier-default-rtdb.firebaseio.com",
+  projectId:"fielddossier",
+  storageBucket:"fielddossier.firebasestorage.app",
+  messagingSenderId:"80029484829",
+  appId:"1:80029484829:web:a02229743cf115612f03f4"
+};
+const TEAM_PATH="numberRecognition/main";
+const HEARTBEAT_MS=20000, LEASE_MS=60000, EMPTY_RESET_MS=30*60*1000, STALE_ACTIVITY_MS=60*60*1000;
+let soloState=null;
+const team={mode:false,joinToken:null,connected:false,sdk:null,db:null,uid:null,number:null,remote:null,root:null,unsub:null,heartbeat:null,connectionUnsub:null,timeUnsub:null,timeOffset:0,disconnect:null,localClaim:null,runId:null,shownResult:null};
+
+function idToken(){ return (globalThis.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function teamNow(){return Date.now()+(team.timeOffset||0);}
+function emptyRoom(now=teamNow()){
+  return {meta:{status:"lobby",runId:"lobby-"+idToken(),digit:null,createdAt:now,lastActivity:now},nextParticipantNumber:1,participants:{},neurons:{input:{},hidden:{},output:{}}};
+}
+function freshParticipantEntries(room,now=teamNow()){
+  return Object.entries((room&&room.participants)||{}).filter(([,p])=>p&&now-(p.lastSeen||0)<LEASE_MS);
+}
+function adminIsFresh(room=team.remote,now=teamNow()){ return !!(room&&room.admin&&now-(room.admin.heartbeatAt||0)<LEASE_MS); }
+function iAmAdmin(){ return !!(team.uid&&team.remote&&adminIsFresh()&&team.remote.admin.uid===team.uid); }
+function nodeRecord(layer,i,room=team.remote){ return room&&room.neurons&&room.neurons[layer]&&room.neurons[layer][i]||null; }
+function claimIsFresh(rec,now=teamNow()){ return !!(rec&&rec.status==="claimed"&&now-(rec.heartbeatAt||0)<LEASE_MS); }
+function ownClaimRecord(){
+  if(!team.localClaim) return null;
+  const r=nodeRecord(team.localClaim.layer,team.localClaim.i);
+  return r&&claimIsFresh(r)&&r.ownerUid===team.uid&&r.claimId===team.localClaim.claimId?r:null;
+}
+function layerCount(layer){ return layer==="input"?NIN:layer==="hidden"?NH:NO; }
+function layerCompleteRemote(layer,room=team.remote){
+  for(let i=0;i<layerCount(layer);i++){ const r=nodeRecord(layer,i,room); if(!r||!(r.status==="complete"||r.status==="auto")) return false; }
+  return true;
+}
+function currentTeamLayer(room=team.remote){
+  if(!layerCompleteRemote("input",room)) return "input";
+  if(!layerCompleteRemote("hidden",room)) return "hidden";
+  return "output";
+}
+function truthForDigit(d,layer,i){
+  if(layer==="input") return {count:DATA.digits[d].segments[i].count,a:DATA.digits[d].bits[i]};
+  const bits=DATA.digits[d].bits;
+  const H=DATA.hiddenPairs.map(([a,b])=>{const z=.5*bits[a]+.5*bits[b];return {z:round2(z),a:z>=1-1e-9?1:0};});
+  if(layer==="hidden"){
+    const [a,b]=DATA.hiddenPairs[i],z=H[i].z;
+    return {c:[round2(bits[a]*.5),round2(bits[b]*.5)],z,a:H[i].a};
+  }
+  let z=0; const c=DATA.outIn[i].map(x=>{const v=round2(H[x.h].a*x.w);z+=v;return v;});
+  z=round2(z); return {c,z,a:z>=1-1e-9?1:0};
+}
+function teamNodeClass(layer,i){
+  if(!team.mode||!team.remote) return "";
+  const rec=nodeRecord(layer,i), cur=currentTeamLayer();
+  if(rec&&(rec.status==="complete"||rec.status==="auto")) return rec.status==="auto"?" team-auto":" team-manual";
+  if(claimIsFresh(rec)) return rec.ownerUid===team.uid?" team-owned":" team-other";
+  return layer===cur?"":" locked team-future";
+}
+function applyRemoteState(room){
+  if(!room||room.meta.status==="lobby"||room.meta.digit===null||room.meta.digit===undefined) return;
+  const runChanged=team.runId!==room.meta.runId;
+  const oldState=state, oldClaim=team.localClaim;
+  if(runChanged){ state=freshState(room.meta.digit); team.runId=room.meta.runId; team.localClaim=null; }
+  else if(!state||state.digit!==room.meta.digit) state=freshState(room.meta.digit);
+  ["input","hidden","output"].forEach(layer=>{
+    for(let i=0;i<layerCount(layer);i++){
+      const rec=nodeRecord(layer,i,room), target=layer==="input"?state.inputs[i]:state[layer][i];
+      if(rec&&(rec.status==="complete"||rec.status==="auto")){
+        Object.assign(target,rec.data||{}); if(layer==="input") target.revealed=false;
+      } else if(!(oldClaim&&oldClaim.layer===layer&&oldClaim.i===i&&rec&&rec.ownerUid===team.uid&&rec.claimId===oldClaim.claimId)){
+        if(layer==="input") Object.assign(target,{revealed:false,count:null,a:null});
+        else Object.assign(target,{c:layer==="hidden"?[null,null]:[],z:null,a:null});
+      }
+    }
+  });
+  const own=ownClaimRecord();
+  if(!own) team.localClaim=null;
+  if(runChanged){ state.sel={layer:currentTeamLayer(room),i:null};state.activeSeg=null; }
+  if(team.localClaim&&team.localClaim.layer==="input"){state.activeSeg=team.localClaim.i;state.inputs[team.localClaim.i].revealed=true;state.sel={layer:"input",i:team.localClaim.i};}
+  if(room.meta.status==="complete"&&team.shownResult!==room.meta.runId){ team.shownResult=room.meta.runId; setTimeout(showPrediction,350); }
+}
+async function enterTeamMode(){
+  if(team.mode) return;
+  const joinToken=idToken();soloState=state; team.mode=true;team.joinToken=joinToken; document.body.classList.add("team-mode","team-lobby"); renderTeamChrome();
+  try{
+    const [appMod,authMod,dbMod]=await Promise.all([
+      import("https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js")
+    ]);
+    const app=appMod.getApps().length?appMod.getApp():appMod.initializeApp(FIREBASE_CONFIG);
+    const auth=authMod.getAuth(app); await authMod.signInAnonymously(auth);
+    if(!team.mode||team.joinToken!==joinToken)return;
+    team.sdk=dbMod; team.db=dbMod.getDatabase(app); team.uid=auth.currentUser.uid; team.root=dbMod.ref(team.db,TEAM_PATH);
+    team.timeUnsub=dbMod.onValue(dbMod.ref(team.db,".info/serverTimeOffset"),s=>{team.timeOffset=Number(s.val())||0;});
+    const now=teamNow();
+    const joined=await dbMod.runTransaction(team.root,room=>{
+      const active=freshParticipantEntries(room,now).length;
+      if(!room||(now-((room.meta&&room.meta.lastActivity)||0)>STALE_ACTIVITY_MS)||(active===0&&now-((room.meta&&room.meta.lastActivity)||0)>EMPTY_RESET_MS)) room=emptyRoom(now);
+      room.participants=room.participants||{};
+      let number=room.participants[team.uid]&&room.participants[team.uid].number;
+      if(!number){number=room.nextParticipantNumber||1;room.nextParticipantNumber=number+1;}
+      room.participants[team.uid]={number,ready:room.meta.status!=="lobby",lastSeen:now};
+      room.meta.lastActivity=now; return room;
+    });
+    if(!team.mode||team.joinToken!==joinToken)return;
+    const joinedRoom=joined.snapshot.val(); team.number=joinedRoom.participants[team.uid].number;
+    const participantRef=dbMod.ref(team.db,TEAM_PATH+"/participants/"+team.uid);
+    team.disconnect=dbMod.onDisconnect(participantRef); await team.disconnect.remove();
+    team.connectionUnsub=dbMod.onValue(dbMod.ref(team.db,".info/connected"),s=>{team.connected=!!s.val();renderTeamChrome();});
+    team.unsub=dbMod.onValue(team.root,s=>{team.remote=s.val()||emptyRoom();applyRemoteState(team.remote);renderTeamChrome();if(team.remote.meta.status!=="lobby")renderAll();});
+    team.heartbeat=setInterval(teamHeartbeat,HEARTBEAT_MS); await teamHeartbeat();
+  }catch(err){ console.error(err);if(!team.mode||team.joinToken!==joinToken)return;team.connected=false; renderTeamChrome("Could not connect. Check Anonymous Authentication and the database rules supplied with this app."); }
+}
+async function teamHeartbeat(){
+  if(!team.mode||!team.sdk||!team.uid) return;
+  const now=teamNow(), updates={};
+  updates["participants/"+team.uid+"/lastSeen"]=now; updates["meta/lastActivity"]=now;
+  if(iAmAdmin()) updates["admin/heartbeatAt"]=now;
+  const claim=ownClaimRecord(); if(claim) updates[`neurons/${team.localClaim.layer}/${team.localClaim.i}/heartbeatAt`]=now;
+  try{await team.sdk.update(team.root,updates);}catch(e){console.warn("Team heartbeat failed",e);}
+}
+async function leaveTeamMode(){
+  if(!team.mode) return;
+  try{await releaseOwnClaim();if(iAmAdmin())await releaseAdmin();if(team.sdk&&team.uid)await team.sdk.remove(team.sdk.ref(team.db,TEAM_PATH+"/participants/"+team.uid));if(team.disconnect)await team.disconnect.cancel();}catch(e){}
+  if(team.heartbeat)clearInterval(team.heartbeat);if(team.unsub)team.unsub();if(team.connectionUnsub)team.connectionUnsub();if(team.timeUnsub)team.timeUnsub();
+  Object.assign(team,{mode:false,joinToken:null,connected:false,uid:null,number:null,remote:null,root:null,unsub:null,heartbeat:null,connectionUnsub:null,timeUnsub:null,timeOffset:0,disconnect:null,localClaim:null,runId:null});
+  document.body.classList.remove("team-mode","team-lobby","admin-device");state=soloState||freshState(Math.floor(Math.random()*10));renderAll();
+}
+async function toggleReady(){
+  if(!team.remote||!team.uid)return; const p=team.remote.participants&&team.remote.participants[team.uid];
+  await team.sdk.update(team.sdk.ref(team.db,TEAM_PATH+"/participants/"+team.uid),{ready:!(p&&p.ready),lastSeen:teamNow()});
+}
+async function claimAdmin(){
+  const now=teamNow(); const ref=team.sdk.ref(team.db,TEAM_PATH+"/admin");
+  const r=await team.sdk.runTransaction(ref,a=>(!a||now-(a.heartbeatAt||0)>=LEASE_MS||a.uid===team.uid)?{uid:team.uid,number:team.number,claimedAt:a&&a.uid===team.uid?a.claimedAt:now,heartbeatAt:now}:undefined);
+  toast(r.committed?"Administrator controls claimed.":"Another participant is already the administrator.");
+}
+async function releaseAdmin(){ if(iAmAdmin())await team.sdk.remove(team.sdk.ref(team.db,TEAM_PATH+"/admin")); }
+async function startTeam(force=false){
+  if(!iAmAdmin())return; const entries=freshParticipantEntries(team.remote),ready=entries.filter(([,p])=>p.ready).length;
+  if(!force&&ready<entries.length){openModal("Start before everyone is ready?",`<p class='prompt'>${ready} of ${entries.length} active participants are ready.</p>`,[{label:"Cancel",cls:"ghost",onClick:closeModal},{label:"Start Anyway",cls:"primary",onClick:()=>{closeModal();startTeam(true);}}]);return;}
+  const now=teamNow(),d=Math.floor(Math.random()*10);
+  await team.sdk.runTransaction(team.root,room=>{if(!room||!room.admin||room.admin.uid!==team.uid)return;room.meta={...room.meta,status:"active",digit:d,runId:"run-"+idToken(),startedAt:now,lastActivity:now};room.neurons={input:{},hidden:{},output:{}};return room;});
+}
+async function claimTeamNode(layer,i){
+  if(!team.connected){toast("Team connection is offline. Reconnect before claiming a neuron.");return;}
+  if(!team.remote||team.remote.meta.status!=="active"){toast("The activity is not accepting claims yet.");return;}
+  if(layer!==currentTeamLayer()){toast(layer==="hidden"?"The hidden layer opens after all inputs are complete.":"That layer is not open yet.");return;}
+  if(ownClaimRecord()){toast("Finish or release your current neuron first.");return;}
+  const ref=team.sdk.ref(team.db,`${TEAM_PATH}/neurons/${layer}/${i}`),now=teamNow(),claimId=idToken();
+  const r=await team.sdk.runTransaction(ref,rec=>(!rec||(rec.status==="claimed"&&!claimIsFresh(rec,now)))?{status:"claimed",ownerUid:team.uid,ownerNumber:team.number,claimId,claimedAt:now,heartbeatAt:now}:undefined);
+  if(!r.committed){toast("That neuron was just claimed by someone else.");return;}
+  team.localClaim={layer,i,claimId}; state.sel={layer,i}; if(layer==="input")revealSegment(i); renderAll();
+}
+async function releaseOwnClaim(){
+  if(!team.localClaim||!team.sdk)return; const {layer,i,claimId}=team.localClaim,ref=team.sdk.ref(team.db,`${TEAM_PATH}/neurons/${layer}/${i}`);
+  await team.sdk.runTransaction(ref,r=>(r&&r.ownerUid===team.uid&&r.claimId===claimId)?null:r);team.localClaim=null;state.activeSeg=null;
+}
+function localNodeData(layer,i){
+  const n=layer==="input"?state.inputs[i]:state[layer][i];
+  return layer==="input"?{count:n.count,a:n.a}:{c:n.c,z:n.z,a:n.a};
+}
+async function completeTeamNode(layer,i){
+  if(!team.localClaim||team.localClaim.layer!==layer||team.localClaim.i!==i)return;
+  const claimId=team.localClaim.claimId,now=teamNow(),data=localNodeData(layer,i);
+  const r=await team.sdk.runTransaction(team.root,room=>{
+    const rec=room&&room.neurons&&room.neurons[layer]&&room.neurons[layer][i];
+    if(!rec||rec.ownerUid!==team.uid||rec.claimId!==claimId)return;
+    room.neurons[layer][i]={status:"complete",completedBy:"manual",completedByNumber:team.number,data,completedAt:now};room.meta.lastActivity=now;
+    if(layer==="output"){let done=true;for(let x=0;x<NO;x++){const n=room.neurons.output[x];if(!n||!(n.status==="complete"||n.status==="auto")){done=false;break;}}if(done)room.meta.status="complete";}
+    return room;
+  });
+  if(r.committed){team.localClaim=null;state.activeSeg=null;toast("Neuron completed for the team.");}
+}
+async function adminComplete(layer,whole=false){
+  if(!iAmAdmin())return;const now=teamNow();
+  await team.sdk.runTransaction(team.root,room=>{
+    if(!room||!room.admin||room.admin.uid!==team.uid||room.meta.digit===null)return;
+    const layers=whole?["input","hidden","output"]:[layer];
+    for(const lay of layers){room.neurons[lay]=room.neurons[lay]||{};for(let i=0;i<layerCount(lay);i++){const r=room.neurons[lay][i];if(!r||r.status==="claimed")room.neurons[lay][i]={status:"auto",completedBy:"auto",data:truthForDigit(room.meta.digit,lay,i),completedAt:now};}}
+    room.meta.lastActivity=now;if(whole||layers.includes("output"))room.meta.status="complete";return room;
+  });
+}
+async function newTeamImage(){if(!iAmAdmin())return;const now=teamNow(),d=Math.floor(Math.random()*10);await team.sdk.runTransaction(team.root,r=>{if(!r||!r.admin||r.admin.uid!==team.uid)return;r.meta={...r.meta,status:"active",digit:d,runId:"run-"+idToken(),startedAt:now,lastActivity:now};r.neurons={input:{},hidden:{},output:{}};return r;});}
+async function returnToLobby(){if(!iAmAdmin())return;const now=teamNow();await team.sdk.runTransaction(team.root,r=>{if(!r||!r.admin||r.admin.uid!==team.uid)return;r.meta={...r.meta,status:"lobby",digit:null,runId:"lobby-"+idToken(),lastActivity:now};r.neurons={input:{},hidden:{},output:{}};Object.values(r.participants||{}).forEach(p=>p.ready=false);return r;});}
+
+function renderTeamChrome(error){
+  if(!team.mode)return;
+  $("#connectionDot").className="team-dot "+(team.connected?"live":"wait");$("#connectionText").textContent=error?"Connection error":team.connected?"Team connected":"Connecting…";
+  $("#participantIdentity").textContent=team.number?`Participant ${team.number}`:"Participant —";
+  const entries=freshParticipantEntries(team.remote),working=entries.filter(([uid])=>["input","hidden","output"].some(l=>Object.values((team.remote.neurons&&team.remote.neurons[l])||{}).some(r=>claimIsFresh(r)&&r.ownerUid===uid))).length;
+  $("#teamNumbers").textContent=`${entries.length} participant${entries.length===1?"":"s"}${team.remote&&team.remote.meta.status!=="lobby"?` · ${working} working`:""}`;
+  $("#adminStatus").textContent=iAmAdmin()?"You are administrator":adminIsFresh()?`Participant ${team.remote.admin.number} is administrator`:"No administrator";
+  document.body.classList.toggle("admin-device",iAmAdmin());
+  $("#btnReleaseWork").hidden=!ownClaimRecord();
+  const lobby=team.remote&&team.remote.meta.status==="lobby";document.body.classList.toggle("team-lobby",!team.remote||lobby);
+  if(!team.remote){$("#lobbyBody").innerHTML=`<div class="team-message${error?" error":""}">${error||"Connecting to the classroom…"}</div>`;return;}
+  if(lobby){
+    const me=team.remote.participants&&team.remote.participants[team.uid],ready=entries.filter(([,p])=>p.ready).length,all=entries.length>0&&ready===entries.length;
+    $("#lobbyBody").innerHTML=`${error?`<div class="team-message error">${error}</div>`:""}<div class="ready-box"><div><div class="ready-count">Ready Check · ${ready} of ${entries.length}</div><div class="ready-detail">The administrator starts when the class is ready.</div></div><button class="btn ${me&&me.ready?"ghost":"primary"}" id="btnReady">${me&&me.ready?"Cancel Ready":"Ready Up"}</button></div><div class="team-message">You are Participant ${team.number||"—"}. You may wait here while the rest of the class joins.</div><details class="facilitator"><summary>Facilitator Controls</summary><div class="facilitator-body">${iAmAdmin()?`You control the team activity.<div class="admin-actions"><button class="btn primary small" id="btnStart">${all?"Start Team Activity":"Start Anyway"}</button><button class="btn ghost small" id="btnReleaseAdminLobby">Release Admin</button></div>`:adminIsFresh()?`Participant ${team.remote.admin.number} currently has administrator controls.`:`<button class="btn small" id="btnClaimAdmin">Claim Admin</button><div class="ready-detail">If the administrator disconnects, this becomes available after 60 seconds.</div>`}</div></details>`;
+    const rb=$("#btnReady");if(rb)rb.onclick=toggleReady;const ca=$("#btnClaimAdmin");if(ca)ca.onclick=claimAdmin;const st=$("#btnStart");if(st)st.onclick=()=>startTeam(all);const ra=$("#btnReleaseAdminLobby");if(ra)ra.onclick=releaseAdmin;
+  }
+  if(iAmAdmin()&&!lobby){
+    const layer=currentTeamLayer();
+    $("#teamAdminPanel").innerHTML=`<div class="admin-actions"><button class="btn small" id="adminLayer">Complete This Layer</button><button class="btn small" id="adminNetwork">Complete Rest of Network</button><button class="btn ghost small" id="adminNew">New Team Image</button><button class="btn ghost small" id="adminLobby">Return Everyone to Lobby</button><button class="btn ghost small" id="adminRelease">Release Admin</button></div>`;
+    $("#adminLayer").onclick=()=>adminComplete(layer);
+    $("#adminNetwork").onclick=()=>openModal("Complete the rest of the network?","<p class='prompt'>All unfinished neurons will be auto-completed. Manual work already submitted will be preserved.</p>",[{label:"Cancel",cls:"ghost",onClick:closeModal},{label:"Complete Network",cls:"primary",onClick:()=>{closeModal();adminComplete(layer,true);}}]);
+    $("#adminNew").onclick=()=>openModal("Start a new team image?","<p class='prompt'>This clears the current team network and gives everyone a new shared mystery image.</p>",[{label:"Cancel",cls:"ghost",onClick:closeModal},{label:"New Team Image",cls:"primary",onClick:()=>{closeModal();newTeamImage();}}]);
+    $("#adminLobby").onclick=()=>openModal("Return everyone to the lobby?","<p class='prompt'>Current network work will be cleared and every participant will need to Ready Up again.</p>",[{label:"Cancel",cls:"ghost",onClick:closeModal},{label:"Return to Lobby",cls:"primary",onClick:()=>{closeModal();returnToLobby();}}]);
+    $("#adminRelease").onclick=releaseAdmin;
+  }
+}
+
+function renderTeamOverview(){
+  if(team.remote&&team.remote.meta.status==="complete"){
+    $("#inspTitle").textContent="Team network complete";$("#inspHint").textContent="The prediction is ready";
+    $("#inspector").innerHTML=`<div class="waiting-panel"><h3>Every neuron is complete</h3><p>The class finished the shared network. Open the prediction to reveal and check the mystery image.</p><button class="btn primary" id="teamPrediction">Show Prediction</button></div>`;
+    $("#teamPrediction").onclick=showPrediction;return;
+  }
+  const layer=currentTeamLayer(), names={input:"input",hidden:"hidden",output:"output"},prefix={input:"I",hidden:"H",output:"O"};
+  $("#inspTitle").textContent=`Team · ${names[layer]} layer`;$("#inspHint").textContent="Claim one available neuron";
+  const available=[];for(let i=0;i<layerCount(layer);i++){const r=nodeRecord(layer,i);if(!r||!claimIsFresh(r))if(!(r&&(r.status==="complete"||r.status==="auto")))available.push(i);}
+  const own=ownClaimRecord();let html=`<div class="waiting-panel"><h3>${own?"Continue your claimed neuron":available.length?"Choose an available neuron":"All neurons are currently claimed"}</h3><p>${own?"Your work stays private until you complete and submit the neuron.":available.length?"Clicking a neuron claims it for you. Other participants will see it as locked.":"Wait for someone to finish or for a claim to be released."}</p>`;
+  if(!own&&available.length)html+=`<div class="mini-list">${available.map(i=>`<div class="mini" data-team-claim="${layer}:${i}"><span>${prefix[layer]}${layer==="output"?i:i+1}</span><span class="st">claim →</span></div>`).join("")}</div>`;
+  html+=`</div>`;$("#inspector").innerHTML=html;$("#inspector").querySelectorAll("[data-team-claim]").forEach(e=>e.onclick=()=>{const [l,i]=e.dataset.teamClaim.split(":");claimTeamNode(l,+i);});
+}
+
 /* ---------- bulk fill (per-stage + complete all) ---------- */
 function fillInputs(){
   state.inputs.forEach((x,i)=>{ x.revealed=true;
@@ -337,6 +638,7 @@ function fillOutputs(){
 }
 function winnerIndex(){ return state.output.findIndex(n=>n.a===1); }
 function layerFillHTML(layer){
+  if(team.mode) return "";
   const done = layer==="input"?allInputsDone(): layer==="hidden"?allHiddenDone():allOutputsDone();
   const name = layer==="input"?"Input":layer==="hidden"?"Hidden":"Output";
   return `<div class="layer-fill">
@@ -459,6 +761,7 @@ function renderDiagram(){
     if(done) cls+= state.inputs[i].a===1 ? " on":" done";
     if(sel.layer==="input"&&sel.i===i) cls+=" selected";
     if(rel.input.has(i)) cls+=" related";
+    cls+=teamNodeClass("input",i);
     const val = done? state.inputs[i].a : "?";
     s+=`<g class="${cls}" data-node="input" data-i="${i}">
       <circle class="ncirc" cx="${g.inX}" cy="${y}" r="${g.inR}"/>
@@ -476,6 +779,7 @@ function renderDiagram(){
     if(sel.layer==="hidden"&&sel.i===h) cls+=" selected";
     if(rel.hidden.has(h)) cls+=" related";
     if(!done&&!ready) cls+=" locked";
+    cls+=teamNodeClass("hidden",h);
     s+=rectNode(cls,"hidden",h,g.hX,y,`H${h+1}`,`I${a+1}+I${b+1}`,
       done?fmt(state.hidden[h].z):"", done?fmt(state.hidden[h].a):"", state.hidden[h].a===1);
   }
@@ -487,6 +791,7 @@ function renderDiagram(){
     if(ready) cls+=" ready";
     if(sel.layer==="output"&&sel.i===o) cls+=" selected";
     if(!done&&!ready) cls+=" locked";
+    cls+=teamNodeClass("output",o);
     s+=rectNode(cls,"output",o,g.oX,y,`O${o}`,"",
       done?fmt(state.output[o].z):"", done?fmt(state.output[o].a):"", state.output[o].a===1);
     const win = done && state.output[o].a===1;
@@ -521,6 +826,16 @@ function rectNode(cls,node,i,cx,y,label,sub,z,a,on){
 
 /* ---------- node click routing ---------- */
 function onNodeClick(node,i){
+  if(team.mode){
+    const rec=nodeRecord(node,i);
+    if(rec&&(rec.status==="complete"||rec.status==="auto")){
+      if(node==="input"){toast("That input is complete; its image region remains private.");return;}
+      state.sel={layer:node,i};renderAll();return;
+    }
+    if(claimIsFresh(rec)&&rec.ownerUid!==team.uid){toast(`Participant ${rec.ownerNumber} is working on that neuron.`);return;}
+    if(claimIsFresh(rec)&&rec.ownerUid===team.uid){state.sel={layer:node,i};if(node==="input")revealSegment(i);renderAll();return;}
+    claimTeamNode(node,i);return;
+  }
   if(node==="input"){ state.sel={layer:"input",i}; revealSegment(i); renderAll(); return; }
   if(node==="hidden"){
     if(!hiddenDone(i)&&!hiddenSourcesReady(i)){
@@ -555,6 +870,12 @@ function renderRail(){
   $("#stageRail").querySelectorAll("[data-stage]").forEach(el=>el.onclick=()=>gotoStage(el.dataset.stage));
 }
 function gotoStage(stage){
+  if(team.mode){
+    if(stage==="predict"&&allOutputsDone()){showPrediction();return;}
+    const cur=currentTeamLayer();
+    if(stage!==cur&&!(stage==="input"&&allInputsDone())&&!(stage==="hidden"&&allHiddenDone())){toast("That layer is not open yet.");return;}
+    state.sel={layer:stage==="predict"?"output":stage,i:null};state.activeSeg=null;renderAll();return;
+  }
   if(stage==="input"){
     if(state.activeSeg==null){ const r=firstUnrevealed(); revealSegment(r<0?0:r); }
     state.sel={layer:"input",i:state.activeSeg};
@@ -658,12 +979,12 @@ function renderInputInspector(){
   wireLayerFill("input");
 
   // wire
-  $("#randSeg").onclick=()=>{const r=randomUnfinished(); if(r<0){toast("Every region already has a count.");return;} state.sel={layer:"input",i:r}; revealSegment(r); renderAll();};
-  $("#chooseSeg").onchange=e=>{const v=e.target.value; if(v==="")return; const i=+v; state.sel={layer:"input",i}; revealSegment(i); renderAll();};
+  $("#randSeg").onclick=()=>{if(team.mode){const pool=[];for(let i=0;i<NIN;i++){const rec=nodeRecord("input",i);if(!rec||!claimIsFresh(rec))if(!(rec&&(rec.status==="complete"||rec.status==="auto")))pool.push(i);}if(!pool.length){toast("No input neuron is available right now.");return;}claimTeamNode("input",pool[Math.floor(Math.random()*pool.length)]);return;}const r=randomUnfinished(); if(r<0){toast("Every region already has a count.");return;} state.sel={layer:"input",i:r}; revealSegment(r); renderAll();};
+  $("#chooseSeg").onchange=e=>{const v=e.target.value; if(v==="")return; const i=+v;if(team.mode){claimTeamNode("input",i);return;} state.sel={layer:"input",i}; revealSegment(i); renderAll();};
   if($("#cntCheck")) wireCheck("cnt",()=>truthInputCount(k),(val)=>{state.inputs[k].count=val;},"count");
-  if($("#aCheck")) wireCheck("a",()=>truthInputBit(k),(val)=>{state.inputs[k].a=val;},"bit",[0,1]);
-  insp.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>{const i=+el.dataset.goto; state.sel={layer:"input",i}; state.activeSeg=i; renderAll();});
-  insp.querySelectorAll("[data-open]").forEach(el=>el.onclick=()=>{const i=+el.dataset.open; state.sel={layer:"input",i}; revealSegment(i); renderAll();});
+  if($("#aCheck")) wireCheck("a",()=>truthInputBit(k),(val)=>{state.inputs[k].a=val;if(team.mode)completeTeamNode("input",k);},"bit",[0,1]);
+  insp.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>{const i=+el.dataset.goto;if(team.mode){claimTeamNode("input",i);return;}state.sel={layer:"input",i}; state.activeSeg=i; renderAll();});
+  insp.querySelectorAll("[data-open]").forEach(el=>el.onclick=()=>{const i=+el.dataset.open;if(team.mode){onNodeClick("input",i);return;}state.sel={layer:"input",i}; revealSegment(i); renderAll();});
 }
 
 /* generic check wiring for input sub-steps */
@@ -808,11 +1129,13 @@ function renderStepper(layer,idx,node,sources,truth){
 function commitActivation(layer,idx){
   const on = (layer==="hidden"?state.hidden[idx].a:state.output[idx].a)===1;
   toast(on?"Neuron fires! ●":"Neuron stays off.");
+  if(team.mode){ completeTeamNode(layer,idx); renderAll(); return; }
   if(layer==="output" && allOutputsDone()){ setTimeout(showPrediction,300); }
   renderAll();
 }
 
 function stepperNav(layer,idx){
+  if(team.mode) return "";
   // suggest next unfinished neuron in this layer, then advance layer
   let nextHTML="";
   if(layer==="hidden"){
@@ -862,6 +1185,7 @@ function currentStage(){
 function autoAdvanceStage(){
   const order=["input","hidden","output","predict"];
   const cur=currentStage();
+  if(team.mode){state.lastStage=cur;return;}
   if(order.indexOf(cur) > order.indexOf(state.lastStage)){
     // a whole layer just finished — move the inspector to the new stage,
     // exactly as if its stage tab had been clicked
@@ -898,19 +1222,25 @@ function highlightPrimaryField(){
 }
 function renderInspector(){
   const s=state.sel;
-  if(s.layer==="hidden"&&s.i!=null&&(hiddenDone(s.i)||hiddenSourcesReady(s.i))) renderHiddenInspector();
+  const owned=team.mode&&team.localClaim&&team.localClaim.layer===s.layer&&team.localClaim.i===s.i&&ownClaimRecord();
+  const completed=team.mode&&s.i!=null&&(()=>{const r=nodeRecord(s.layer,s.i);return r&&(r.status==="complete"||r.status==="auto");})();
+  if(team.mode&&!owned&&!(completed&&s.layer!=="input")) renderTeamOverview();
+  else if(s.layer==="hidden"&&s.i!=null&&(hiddenDone(s.i)||hiddenSourcesReady(s.i))) renderHiddenInspector();
   else if(s.layer==="output"&&s.i!=null&&(outputDone(s.i)||outputSourcesReady(s.i))) renderOutputInspector();
   else renderInputInspector();
   renderActionBanner();
   highlightPrimaryField();
 }
-function renderAll(){ autoAdvanceStage(); renderRail(); renderDiagram(); renderInspector(); syncTopButton(); }
+function renderAll(){ autoAdvanceStage(); renderRail(); renderDiagram(); renderInspector(); syncTopButton();if(team.mode)renderTeamChrome(); }
 function syncTopButton(){
   const b=$("#btnAll"); if(!b) return;
   b.textContent = allOutputsDone() ? "Show prediction" : "Complete all remaining";
 }
 
 /* ---------- top controls ---------- */
+$("#btnTeam").onclick=enterTeamMode;
+$("#btnLeaveTeam").onclick=leaveTeamMode;
+$("#btnReleaseWork").onclick=async()=>{await releaseOwnClaim();renderAll();toast("Your neuron was released.");};
 function newImage(){
   const d=Math.floor(Math.random()*10);
   state=freshState(d);
