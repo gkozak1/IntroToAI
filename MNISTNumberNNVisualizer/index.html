@@ -388,13 +388,13 @@ function allOutputsDone(){ return state.output.every((_,o)=>outputDone(o)); }
 
 /* ---------- optional synchronous team mode (Firebase stays dormant in solo mode) ---------- */
 const FIREBASE_CONFIG={
-  apiKey:"AIzaSyAd0Y0nYfaXTIl_2LqHuscH2EIwp0YR3-0",
-  authDomain:"fielddossier.firebaseapp.com",
-  databaseURL:"https://fielddossier-default-rtdb.firebaseio.com",
-  projectId:"fielddossier",
-  storageBucket:"fielddossier.firebasestorage.app",
-  messagingSenderId:"80029484829",
-  appId:"1:80029484829:web:a02229743cf115612f03f4"
+  apiKey:"AIzaSyCMv6AvR3otw1S-Kwn4pqzOWpHI912f2Aw",
+  authDomain:"introtoai-2c7f8.firebaseapp.com",
+  databaseURL:"https://introtoai-2c7f8-default-rtdb.firebaseio.com",
+  projectId:"introtoai-2c7f8",
+  storageBucket:"introtoai-2c7f8.firebasestorage.app",
+  messagingSenderId:"476135744098",
+  appId:"1:476135744098:web:cd54cac2901f206063273b"
 };
 const TEAM_PATH="numberRecognition/main";
 const HEARTBEAT_MS=20000, LEASE_MS=60000, EMPTY_RESET_MS=30*60*1000, STALE_ACTIVITY_MS=60*60*1000;
@@ -474,9 +474,9 @@ async function enterTeamMode(){
   const joinToken=idToken();soloState=state; team.mode=true;team.joinToken=joinToken; document.body.classList.add("team-mode","team-lobby"); renderTeamChrome();
   try{
     const [appMod,authMod,dbMod]=await Promise.all([
-      import("https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js"),
-      import("https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js"),
-      import("https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js")
+      import("https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js")
     ]);
     const app=appMod.getApps().length?appMod.getApp():appMod.initializeApp(FIREBASE_CONFIG);
     const auth=authMod.getAuth(app); await authMod.signInAnonymously(auth);
