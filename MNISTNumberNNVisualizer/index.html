@@ -254,6 +254,7 @@ body.team-mode:not(.team-lobby) .team-status-legend{display:flex}
 .node-group.team-owned .ncirc,.node-group.team-owned .nrect{fill:#dfeeff;stroke:#2d6dab;stroke-width:3}
 .node-group.team-other .ncirc,.node-group.team-other .nrect{fill:#fff0cf;stroke:#c07a16;stroke-width:3}
 .node-group.team-other{cursor:not-allowed}
+.node-group.team-manual .ncirc,.node-group.team-manual .nrect{fill:var(--success-soft);stroke:var(--success);stroke-width:3}
 .node-group.team-auto .ncirc,.node-group.team-auto .nrect{fill:#f0eafb;stroke:#7650a5}
 .mini.team-other{background:#fff8ea;border-color:#e6c07a;cursor:not-allowed}.mini.team-own{background:#eaf2fb;border-color:#2d6dab}.mini.team-auto{background:#f0eafb;border-color:#9b83bd}
 .ownership-note{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;margin-bottom:12px;border-radius:9px;background:#eaf2fb;border:1px solid #cddffc;font-size:12px;font-weight:750}
@@ -397,7 +398,7 @@ const FIREBASE_CONFIG={
   appId:"1:476135744098:web:cd54cac2901f206063273b"
 };
 const TEAM_PATH="numberRecognition/main";
-const HEARTBEAT_MS=20000, LEASE_MS=60000, EMPTY_RESET_MS=30*60*1000, STALE_ACTIVITY_MS=60*60*1000;
+const HEARTBEAT_MS=20000, PARTICIPANT_LEASE_MS=60000, CLAIM_LEASE_MS=60000, ADMIN_LEASE_MS=5*60*1000, EMPTY_RESET_MS=30*60*1000, STALE_ACTIVITY_MS=60*60*1000;
 let soloState=null;
 const team={mode:false,joinToken:null,connected:false,sdk:null,db:null,uid:null,number:null,remote:null,root:null,unsub:null,heartbeat:null,connectionUnsub:null,timeUnsub:null,timeOffset:0,disconnect:null,localClaim:null,runId:null,shownResult:null};
 
@@ -407,12 +408,12 @@ function emptyRoom(now=teamNow()){
   return {meta:{status:"lobby",runId:"lobby-"+idToken(),digit:null,createdAt:now,lastActivity:now},nextParticipantNumber:1,participants:{},neurons:{input:{},hidden:{},output:{}}};
 }
 function freshParticipantEntries(room,now=teamNow()){
-  return Object.entries((room&&room.participants)||{}).filter(([,p])=>p&&now-(p.lastSeen||0)<LEASE_MS);
+  return Object.entries((room&&room.participants)||{}).filter(([,p])=>p&&now-(p.lastSeen||0)<PARTICIPANT_LEASE_MS);
 }
-function adminIsFresh(room=team.remote,now=teamNow()){ return !!(room&&room.admin&&now-(room.admin.heartbeatAt||0)<LEASE_MS); }
+function adminIsFresh(room=team.remote,now=teamNow()){ return !!(room&&room.admin&&now-(room.admin.heartbeatAt||0)<ADMIN_LEASE_MS); }
 function iAmAdmin(){ return !!(team.uid&&team.remote&&adminIsFresh()&&team.remote.admin.uid===team.uid); }
 function nodeRecord(layer,i,room=team.remote){ return room&&room.neurons&&room.neurons[layer]&&room.neurons[layer][i]||null; }
-function claimIsFresh(rec,now=teamNow()){ return !!(rec&&rec.status==="claimed"&&now-(rec.heartbeatAt||0)<LEASE_MS); }
+function claimIsFresh(rec,now=teamNow()){ return !!(rec&&rec.status==="claimed"&&now-(rec.heartbeatAt||0)<CLAIM_LEASE_MS); }
 function ownClaimRecord(){
   if(!team.localClaim) return null;
   const r=nodeRecord(team.localClaim.layer,team.localClaim.i);
@@ -464,7 +465,11 @@ function applyRemoteState(room){
     }
   });
   const own=ownClaimRecord();
-  if(!own) team.localClaim=null;
+  if(!own&&oldClaim){
+    team.localClaim=null;
+    state.activeSeg=null;
+    state.sel={layer:currentTeamLayer(room),i:null};
+  }
   if(runChanged){ state.sel={layer:currentTeamLayer(room),i:null};state.activeSeg=null; }
   if(team.localClaim&&team.localClaim.layer==="input"){state.activeSeg=team.localClaim.i;state.inputs[team.localClaim.i].revealed=true;state.sel={layer:"input",i:team.localClaim.i};}
   if(room.meta.status==="complete"&&team.shownResult!==room.meta.runId){ team.shownResult=room.meta.runId; setTimeout(showPrediction,350); }
@@ -506,7 +511,9 @@ async function teamHeartbeat(){
   if(!team.mode||!team.sdk||!team.uid) return;
   const now=teamNow(), updates={};
   updates["participants/"+team.uid+"/lastSeen"]=now; updates["meta/lastActivity"]=now;
-  if(iAmAdmin()) updates["admin/heartbeatAt"]=now;
+  // Renew our stored administrator record even if a throttled background tab
+  // has just crossed the lease boundary. A different administrator UID is never renewed.
+  if(team.remote&&team.remote.admin&&team.remote.admin.uid===team.uid) updates["admin/heartbeatAt"]=now;
   const claim=ownClaimRecord(); if(claim) updates[`neurons/${team.localClaim.layer}/${team.localClaim.i}/heartbeatAt`]=now;
   try{await team.sdk.update(team.root,updates);}catch(e){console.warn("Team heartbeat failed",e);}
 }
@@ -523,7 +530,7 @@ async function toggleReady(){
 }
 async function claimAdmin(){
   const now=teamNow(); const ref=team.sdk.ref(team.db,TEAM_PATH+"/admin");
-  const r=await team.sdk.runTransaction(ref,a=>(!a||now-(a.heartbeatAt||0)>=LEASE_MS||a.uid===team.uid)?{uid:team.uid,number:team.number,claimedAt:a&&a.uid===team.uid?a.claimedAt:now,heartbeatAt:now}:undefined);
+  const r=await team.sdk.runTransaction(ref,a=>(!a||now-(a.heartbeatAt||0)>=ADMIN_LEASE_MS||a.uid===team.uid)?{uid:team.uid,number:team.number,claimedAt:a&&a.uid===team.uid?a.claimedAt:now,heartbeatAt:now}:undefined);
   toast(r.committed?"Administrator controls claimed.":"Another participant is already the administrator.");
 }
 async function releaseAdmin(){ if(iAmAdmin())await team.sdk.remove(team.sdk.ref(team.db,TEAM_PATH+"/admin")); }
@@ -545,7 +552,10 @@ async function claimTeamNode(layer,i){
 }
 async function releaseOwnClaim(){
   if(!team.localClaim||!team.sdk)return; const {layer,i,claimId}=team.localClaim,ref=team.sdk.ref(team.db,`${TEAM_PATH}/neurons/${layer}/${i}`);
-  await team.sdk.runTransaction(ref,r=>(r&&r.ownerUid===team.uid&&r.claimId===claimId)?null:r);team.localClaim=null;state.activeSeg=null;
+  await team.sdk.runTransaction(ref,r=>(r&&r.ownerUid===team.uid&&r.claimId===claimId)?null:r);
+  team.localClaim=null;
+  state.activeSeg=null;
+  state.sel={layer:currentTeamLayer(),i:null};
 }
 function localNodeData(layer,i){
   const n=layer==="input"?state.inputs[i]:state[layer][i];
@@ -588,7 +598,7 @@ function renderTeamChrome(error){
   if(!team.remote){$("#lobbyBody").innerHTML=`<div class="team-message${error?" error":""}">${error||"Connecting to the classroom…"}</div>`;return;}
   if(lobby){
     const me=team.remote.participants&&team.remote.participants[team.uid],ready=entries.filter(([,p])=>p.ready).length,all=entries.length>0&&ready===entries.length;
-    $("#lobbyBody").innerHTML=`${error?`<div class="team-message error">${error}</div>`:""}<div class="ready-box"><div><div class="ready-count">Ready Check · ${ready} of ${entries.length}</div><div class="ready-detail">The administrator starts when the class is ready.</div></div><button class="btn ${me&&me.ready?"ghost":"primary"}" id="btnReady">${me&&me.ready?"Cancel Ready":"Ready Up"}</button></div><div class="team-message">You are Participant ${team.number||"—"}. You may wait here while the rest of the class joins.</div><details class="facilitator"><summary>Facilitator Controls</summary><div class="facilitator-body">${iAmAdmin()?`You control the team activity.<div class="admin-actions"><button class="btn primary small" id="btnStart">${all?"Start Team Activity":"Start Anyway"}</button><button class="btn ghost small" id="btnReleaseAdminLobby">Release Admin</button></div>`:adminIsFresh()?`Participant ${team.remote.admin.number} currently has administrator controls.`:`<button class="btn small" id="btnClaimAdmin">Claim Admin</button><div class="ready-detail">If the administrator disconnects, this becomes available after 60 seconds.</div>`}</div></details>`;
+    $("#lobbyBody").innerHTML=`${error?`<div class="team-message error">${error}</div>`:""}<div class="ready-box"><div><div class="ready-count">Ready Check · ${ready} of ${entries.length}</div><div class="ready-detail">The administrator starts when the class is ready.</div></div><button class="btn ${me&&me.ready?"ghost":"primary"}" id="btnReady">${me&&me.ready?"Cancel Ready":"Ready Up"}</button></div><div class="team-message">You are Participant ${team.number||"—"}. You may wait here while the rest of the class joins.</div><details class="facilitator"><summary>Facilitator Controls</summary><div class="facilitator-body">${iAmAdmin()?`You control the team activity.<div class="admin-actions"><button class="btn primary small" id="btnStart">${all?"Start Team Activity":"Start Anyway"}</button><button class="btn ghost small" id="btnReleaseAdminLobby">Release Admin</button></div>`:adminIsFresh()?`Participant ${team.remote.admin.number} currently has administrator controls.`:`<button class="btn small" id="btnClaimAdmin">Claim Admin</button><div class="ready-detail">If the administrator stops responding, this becomes available after 5 minutes.</div>`}</div></details>`;
     const rb=$("#btnReady");if(rb)rb.onclick=toggleReady;const ca=$("#btnClaimAdmin");if(ca)ca.onclick=claimAdmin;const st=$("#btnStart");if(st)st.onclick=()=>startTeam(all);const ra=$("#btnReleaseAdminLobby");if(ra)ra.onclick=releaseAdmin;
   }
   if(iAmAdmin()&&!lobby){
@@ -1241,6 +1251,8 @@ function syncTopButton(){
 $("#btnTeam").onclick=enterTeamMode;
 $("#btnLeaveTeam").onclick=leaveTeamMode;
 $("#btnReleaseWork").onclick=async()=>{await releaseOwnClaim();renderAll();toast("Your neuron was released.");};
+window.addEventListener("focus",()=>{if(team.mode)teamHeartbeat();});
+document.addEventListener("visibilitychange",()=>{if(team.mode&&!document.hidden)teamHeartbeat();});
 function newImage(){
   const d=Math.floor(Math.random()*10);
   state=freshState(d);
