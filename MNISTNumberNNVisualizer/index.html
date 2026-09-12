@@ -245,7 +245,7 @@ body.team-lobby .team-lobby{display:block}
 .team-message.warn{background:#fff8ea;border-color:#e6d3a3;color:#7a5410}
 .team-message.error{background:var(--danger-soft);border-color:#f0c9c9;color:var(--danger)}
 .team-admin-panel{display:none;width:100%;padding-top:8px;margin-top:2px;border-top:1px dashed #b8c6d8}
-body.team-mode.admin-device .team-admin-panel{display:block}
+body.team-mode.admin-device .team-admin-panel,body.team-mode.admin-available .team-admin-panel{display:block}
 .team-admin-panel .admin-actions{margin:0}
 .team-status-legend{display:none;gap:14px;flex-wrap:wrap;padding:8px 15px;border-top:1px dashed var(--line);font-size:11px;font-weight:700;color:var(--muted)}
 body.team-mode:not(.team-lobby) .team-status-legend{display:flex}
@@ -522,7 +522,7 @@ async function leaveTeamMode(){
   try{await releaseOwnClaim();if(iAmAdmin())await releaseAdmin();if(team.sdk&&team.uid)await team.sdk.remove(team.sdk.ref(team.db,TEAM_PATH+"/participants/"+team.uid));if(team.disconnect)await team.disconnect.cancel();}catch(e){}
   if(team.heartbeat)clearInterval(team.heartbeat);if(team.unsub)team.unsub();if(team.connectionUnsub)team.connectionUnsub();if(team.timeUnsub)team.timeUnsub();
   Object.assign(team,{mode:false,joinToken:null,connected:false,uid:null,number:null,remote:null,root:null,unsub:null,heartbeat:null,connectionUnsub:null,timeUnsub:null,timeOffset:0,disconnect:null,localClaim:null,runId:null});
-  document.body.classList.remove("team-mode","team-lobby","admin-device");state=soloState||freshState(Math.floor(Math.random()*10));renderAll();
+  document.body.classList.remove("team-mode","team-lobby","admin-device","admin-available");state=soloState||freshState(Math.floor(Math.random()*10));renderAll();
 }
 async function toggleReady(){
   if(!team.remote||!team.uid)return; const p=team.remote.participants&&team.remote.participants[team.uid];
@@ -594,12 +594,18 @@ function renderTeamChrome(error){
   $("#adminStatus").textContent=iAmAdmin()?"You are administrator":adminIsFresh()?`Participant ${team.remote.admin.number} is administrator`:"No administrator";
   document.body.classList.toggle("admin-device",iAmAdmin());
   $("#btnReleaseWork").hidden=!ownClaimRecord();
-  const lobby=team.remote&&team.remote.meta.status==="lobby";document.body.classList.toggle("team-lobby",!team.remote||lobby);
+  const lobby=team.remote&&team.remote.meta.status==="lobby";
+  document.body.classList.toggle("team-lobby",!team.remote||lobby);
+  document.body.classList.toggle("admin-available",!!team.remote&&!lobby&&!adminIsFresh());
   if(!team.remote){$("#lobbyBody").innerHTML=`<div class="team-message${error?" error":""}">${error||"Connecting to the classroom…"}</div>`;return;}
   if(lobby){
     const me=team.remote.participants&&team.remote.participants[team.uid],ready=entries.filter(([,p])=>p.ready).length,all=entries.length>0&&ready===entries.length;
     $("#lobbyBody").innerHTML=`${error?`<div class="team-message error">${error}</div>`:""}<div class="ready-box"><div><div class="ready-count">Ready Check · ${ready} of ${entries.length}</div><div class="ready-detail">The administrator starts when the class is ready.</div></div><button class="btn ${me&&me.ready?"ghost":"primary"}" id="btnReady">${me&&me.ready?"Cancel Ready":"Ready Up"}</button></div><div class="team-message">You are Participant ${team.number||"—"}. You may wait here while the rest of the class joins.</div><details class="facilitator"><summary>Facilitator Controls</summary><div class="facilitator-body">${iAmAdmin()?`You control the team activity.<div class="admin-actions"><button class="btn primary small" id="btnStart">${all?"Start Team Activity":"Start Anyway"}</button><button class="btn ghost small" id="btnReleaseAdminLobby">Release Admin</button></div>`:adminIsFresh()?`Participant ${team.remote.admin.number} currently has administrator controls.`:`<button class="btn small" id="btnClaimAdmin">Claim Admin</button><div class="ready-detail">If the administrator stops responding, this becomes available after 5 minutes.</div>`}</div></details>`;
     const rb=$("#btnReady");if(rb)rb.onclick=toggleReady;const ca=$("#btnClaimAdmin");if(ca)ca.onclick=claimAdmin;const st=$("#btnStart");if(st)st.onclick=()=>startTeam(all);const ra=$("#btnReleaseAdminLobby");if(ra)ra.onclick=releaseAdmin;
+  }
+  if(!lobby&&!adminIsFresh()){
+    $("#teamAdminPanel").innerHTML=`<div class="admin-actions"><span class="team-message warn">This activity has no administrator.</span><button class="btn small" id="activeClaimAdmin">Claim Admin</button></div>`;
+    $("#activeClaimAdmin").onclick=claimAdmin;
   }
   if(iAmAdmin()&&!lobby){
     const layer=currentTeamLayer();
