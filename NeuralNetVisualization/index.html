@@ -252,6 +252,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
   padding: 16px;
   overflow: visible;
 }
+.matrix-math-grid.biases-off { grid-template-columns: minmax(0, .85fr) 22px minmax(0, 1.15fr) 22px minmax(0, .85fr); }
 .matrix-math-grid .matrix-grid { grid-template-columns: repeat(var(--matrix-cols, 1), minmax(0, 1fr)) !important; }
 .matrix-math-grid .matrix-static-cell,
 .matrix-math-grid .matrix-cell { min-width: 0; width: 100%; height: 38px; font-size: 12px; }
@@ -330,6 +331,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
   .diagram-layout, .mapping-layout, .math-layout { grid-template-columns: 1fr; }
   .inspector { min-height: 0; }
   .matrix-math-grid { grid-template-columns: minmax(0,.85fr) 20px minmax(0,1.15fr) 20px minmax(0,.85fr) 20px minmax(0,.85fr); }
+  .matrix-math-grid.biases-off { grid-template-columns: minmax(0,.85fr) 20px minmax(0,1.15fr) 20px minmax(0,.85fr); }
   .learning-bar { flex-wrap: wrap; }
   .learning-controls { margin-left: auto; }
 }
@@ -345,7 +347,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
   .setup-actions { flex-wrap: wrap; }
   .learning-bar { align-items: flex-start; flex-direction: column; }
   .learning-controls { margin-left: 0; flex-wrap: wrap; }
-  .matrix-math-grid { grid-template-columns: 1fr; }
+  .matrix-math-grid, .matrix-math-grid.biases-off { grid-template-columns: 1fr; }
   .math-operator { transform: rotate(90deg); height: 22px; }
   .step-nav { width: 100%; }
   .step-button { grid-template-columns: 23px 1fr; padding: 8px; }
@@ -664,9 +666,9 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
         ? (isPracticeGuidance() ? "Use the highlighted connections to calculate the selected value. Type it in the Calculation workspace, then press Check." : "Explore the selected value's calculation here, then click another z or a value in the map.")
         : "Click any z or a value in the network map. Its calculation and your answer field will open in the workspace on the right.";
     } else if (state.currentStep === 1) {
-      text = "Use the completed network map as your source. Enter the activations, weights, biases, and destination values in the blue matrix workspace.";
+      text = `Use the completed network map as your source. Enter the activations and weights${state.biasesEnabled ? ", biases," : ""} in the blue matrix workspace.${state.biasesEnabled ? "" : " Biases are off, so no bias entries are needed."}`;
     } else {
-      text = "For the active layer transition, complete each destination value produced by a × W + b, then apply the activation shown below.";
+      text = `For the active layer transition, complete each destination value produced by a × W${state.biasesEnabled ? " + b" : ""}.${state.activationEnabled ? " Then apply ReLU below." : " With activation off, a is carried forward automatically as z."}`;
     }
     return `<div class="instruction-banner" id="instructionBanner"><strong>Next action</strong><span>${text}</span></div>`;
   }
@@ -709,6 +711,10 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     if (isHighGuidance()) return fmt(correct);
     const selectedLayer = selectedDiagramLayer();
     if (selectedLayer !== null && layer < selectedLayer) return fmt(correct);
+    if (type === "a" && !state.activationEnabled) {
+      const zVal = state.work.diagram[layer - 1].z[j];
+      return zVal === "" ? "?" : fmt(Number(zVal));
+    }
     const val = state.work.diagram[layer - 1][type][j];
     return val === "" ? "?" : fmt(Number(val));
   }
@@ -727,7 +733,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
         if (layer === sel.layer - 1) nodeClass = "related";
         else if (layer !== sel.layer || idx !== sel.index) nodeClass = "muted";
       }
-      if (guided && sel.valueType === "z" && sel.layer === layer && sel.index === idx) biasClass = "active";
+      if (state.biasesEnabled && guided && sel.valueType === "z" && sel.layer === layer && sel.index === idx) biasClass = "active";
     }
 
     if (context === "mapping" && sel?.context === "mapping" && guided) {
@@ -738,14 +744,14 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
       } else if (sel.kind === "a" && layer === t && idx === sel.index) nodeClass = "related";
       else if (sel.kind === "dest" && layer === t) nodeClass = "related";
       else if ((sel.kind === "b" || sel.kind === "dest") && layer === t + 1 && idx === sel.col) nodeClass = "selected";
-      if ((sel.kind === "b" || sel.kind === "dest") && layer === t + 1 && idx === sel.col) biasClass = "active";
-      if (sel.kind === "weight" && layer === t + 1 && idx === sel.col) biasClass = "related";
+      if (state.biasesEnabled && (sel.kind === "b" || sel.kind === "dest") && layer === t + 1 && idx === sel.col) biasClass = "active";
+      if (state.biasesEnabled && sel.kind === "weight" && layer === t + 1 && idx === sel.col) biasClass = "related";
     }
 
     if (context === "math" && sel?.context === "math" && guided) {
       const t = state.transition;
       if (sel.kind === "z" && layer === t + 1 && idx === sel.index) {
-        nodeClass = "selected"; zHalf = "strong"; biasClass = "active";
+        nodeClass = "selected"; zHalf = "strong"; if (state.biasesEnabled) biasClass = "active";
       } else if (sel.kind === "z" && layer === t) nodeClass = "related";
       if (sel.kind === "a" && layer === t + 1 && idx === sel.index) {
         nodeClass = "selected"; aHalf = "strong"; zHalf = "related";
@@ -873,7 +879,8 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     const biasText = b >= 0 ? `+ ${fmt(b)}` : `− ${fmt(Math.abs(b))}`;
     const productExpr = products.map((prod, i) => i === 0 ? prod : Number(prod) >= 0 ? `+ ${prod}` : `− ${fmt(Math.abs(Number(prod)))}`).join(" ");
     const numericBias = b >= 0 ? `+ ${fmt(b)}` : `− ${fmt(Math.abs(b))}`;
-    return { symbolic: `z<sub>${j + 1}</sub><sup>(${layer})</sup> = Σ a<sub>i</sub><sup>(${layer - 1})</sup>w<sub>i,${j + 1}</sub><sup>(${layer})</sup> + b<sub>${j + 1}</sub><sup>(${layer})</sup>`, line1: `z<sub>${j + 1}</sub><sup>(${layer})</sup> = ${terms.join(" + ").replace(/\+ \(-/g, "− (")} ${biasText}`, line2: `= ${productExpr} ${numericBias}`, line3: `= ${fmt(z)}` };
+    const symbolicBias = state.biasesEnabled ? ` + b<sub>${j + 1}</sub><sup>(${layer})</sup>` : "";
+    return { symbolic: `z<sub>${j + 1}</sub><sup>(${layer})</sup> = Σ a<sub>i</sub><sup>(${layer - 1})</sup>w<sub>i,${j + 1}</sub><sup>(${layer})</sup>${symbolicBias}`, line1: `z<sub>${j + 1}</sub><sup>(${layer})</sup> = ${terms.join(" + ").replace(/\+ \(-/g, "− (")}${state.biasesEnabled ? ` ${biasText}` : ""}`, line2: `= ${productExpr}${state.biasesEnabled ? ` ${numericBias}` : ""}`, line3: `= ${fmt(z)}` };
   }
 
   function formulaForA(layer, j) {
@@ -889,7 +896,8 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     if (sel.kind !== "value") return `<div class="empty-state">Select z or a.</div>`;
     const { layer, index: j, valueType } = sel;
     const correctValue = valueType === "z" ? state.network.z[layer][j] : state.network.a[layer][j];
-    const entered = isHighGuidance() ? String(correctValue) : state.work.diagram[layer - 1][valueType][j];
+    const autoActivation = valueType === "a" && !state.activationEnabled;
+    const entered = isHighGuidance() ? String(correctValue) : autoActivation ? state.work.diagram[layer - 1].z[j] : state.work.diagram[layer - 1][valueType][j];
     const solved = isHighGuidance() || equalNum(entered, correctValue), status = isPracticeGuidance() ? correctDiagramStatus(layer, valueType, j) : null;
     const zSolved = isHighGuidance() || equalNum(state.work.diagram[layer - 1].z[j], state.network.z[layer][j]);
     const aLocked = valueType === "a" && !zSolved, f = valueType === "z" ? formulaForZ(layer, j) : formulaForA(layer, j);
@@ -898,7 +906,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     const showDerivation = solved || revealCheckedMediumZ;
     return `<div class="inspector-title"><span class="value-badge">${valueType}<sub>${j + 1}</sub><sup>(${layer})</sup></span>${valueType === "z" ? "Pre-activation" : "Activated value"}</div>
       <div class="formula-block"><div class="symbolic">${f.symbolic}</div>${showDerivation ? `<div class="formula-main" style="margin-top:8px">${f.line1}</div><div class="formula-step">${f.line2}</div>${f.line3 ? `<div class="formula-step">${f.line3}</div>` : ""}` : `<div class="formula-step" style="margin-top:8px">${aLocked ? "Calculate and correctly check this neuron's z value first." : prompt}</div>`}</div>
-      ${isPracticeGuidance() ? `<div class="answer-entry"><label for="diagramAnswer">Your ${valueType} value</label><div class="answer-row"><input id="diagramAnswer" type="number" step="any" value="${entered}" data-diagram-entry="1" data-layer="${layer}" data-index="${j}" data-value-type="${valueType}" placeholder="Enter value" ${aLocked ? "disabled" : ""}><button class="btn small" data-action="check-one-diagram" data-layer="${layer}" data-index="${j}" data-value-type="${valueType}" ${aLocked ? "disabled" : ""}>Check</button></div>${status ? `<div class="status-text ${status}" style="margin-top:6px">${status === "correct" ? "Correct" : "Not yet correct"}</div>` : ""}</div>` : ""}
+      ${isPracticeGuidance() && !autoActivation ? `<div class="answer-entry"><label for="diagramAnswer">Your ${valueType} value</label><div class="answer-row"><input id="diagramAnswer" type="number" step="any" value="${entered}" data-diagram-entry="1" data-layer="${layer}" data-index="${j}" data-value-type="${valueType}" placeholder="Enter value" ${aLocked ? "disabled" : ""}><button class="btn small" data-action="check-one-diagram" data-layer="${layer}" data-index="${j}" data-value-type="${valueType}" ${aLocked ? "disabled" : ""}>Check</button></div>${status ? `<div class="status-text ${status}" style="margin-top:6px">${status === "correct" ? "Correct" : "Not yet correct"}</div>` : ""}</div>` : autoActivation ? `<div class="answer-entry"><p class="help-copy">No entry is needed: with activation off, the app carries z forward as a automatically.</p></div>` : ""}
       ${valueType === "z" ? `<p class="help-copy">z is the weighted sum${state.biasesEnabled ? " plus this neuron's bias" : " (biases are currently off, so b = 0)"}, before activation.</p>` : `<p class="help-copy">${state.activationEnabled ? "ReLU is a separate step: negative z values become 0; positive values stay unchanged." : "Activation is off, so the activated value a is exactly equal to z."}</p>`}`;
   }
 
@@ -950,10 +958,12 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     const rows = state.network.counts[t], cols = state.network.counts[t + 1];
     const aCells = Array.from({length:rows},(_,i)=>mappingCell("a",isHighGuidance()?state.network.a[t][i]:work.a[i],checks.a[i],{index:i},`${info.a} cell ${i+1}`)).join("");
     let wCells=""; for(let i=0;i<rows;i++) for(let j=0;j<cols;j++) wCells+=mappingCell("weight",isHighGuidance()?state.network.W[t][i][j]:work.W[i][j],checks.W[i][j],{row:i,col:j},`${info.W} row ${i+1} column ${j+1}`);
-    const bCells = Array.from({length:cols},(_,j)=>mappingCell("b",isHighGuidance()?(state.biasesEnabled?state.network.b[t][j]:0):work.b[j],checks.b[j],{index:j},`${info.b} cell ${j+1}`)).join("");
+    const bCells = Array.from({length:cols},(_,j)=>state.biasesEnabled
+      ? mappingCell("b",isHighGuidance()?state.network.b[t][j]:work.b[j],checks.b[j],{index:j},`${info.b} cell ${j+1}`)
+      : `<div class="matrix-static-cell" aria-label="${info.b} cell ${j+1}, inactive">0</div>`).join("");
     return `<div class="matrix-card"><div class="matrix-card-title"><strong>${info.a} — prior activated values</strong><span class="dim">1 × ${rows}</span></div><div class="matrix-card-body"><div class="matrix-grid" style="grid-template-columns:repeat(${rows},minmax(0,1fr))">${aCells}</div><p class="matrix-caption">The values leaving the prior layer form a row vector.</p></div></div>
       <div class="matrix-card"><div class="matrix-card-title"><strong>${info.W} — connection weights</strong><span class="dim">${rows} × ${cols}</span></div><div class="matrix-card-body"><div class="matrix-grid" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${wCells}</div><p class="matrix-caption">Each destination neuron is one column. Weight w<sub>ij</sub> maps source i → destination j.</p></div></div>
-      <div class="matrix-card"><div class="matrix-card-title"><strong>${info.b} — destination biases</strong><span class="dim">1 × ${cols}</span></div><div class="matrix-card-body"><div class="matrix-grid" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${bCells}</div>${!state.biasesEnabled?`<p class="matrix-caption">Biases are off, so every effective bias is 0. Stored bias values are preserved.</p>`:""}</div></div>
+      <div class="matrix-card"><div class="matrix-card-title"><strong>${info.b} — destination biases${state.biasesEnabled ? "" : " (off)"}</strong><span class="dim">1 × ${cols}</span></div><div class="matrix-card-body"><div class="matrix-grid" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">${bCells}</div>${!state.biasesEnabled?`<p class="matrix-caption">Biases are off. The zeros are shown for reference; no entries are required.</p>`:""}</div></div>
       <div class="placeholder-row"><strong>${info.z}</strong> = [?] &nbsp;&nbsp; <strong>${info.outA}</strong> = [?] <span>Calculated in Step 3, not here.</span></div>`;
   }
 
@@ -969,19 +979,21 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     const t=state.transition, info=TRANSITIONS[t], prev=state.network.a[t], W=state.network.W[t];
     const b=state.network.b[t].map((_,j)=>state.biasesEnabled?state.network.b[t][j]:0), rows=prev.length, cols=b.length, work=state.work.math[t], checks=state.checks.math[t];
     const zCells=Array.from({length:cols},(_,j)=>{const cls=matrixSelectionClass("z",null,null,j,"math"); if(isHighGuidance()) return `<div class="matrix-static-cell${cls}" data-math-select="1" data-kind="z" data-index="${j}">${fmt(state.network.z[t+1][j])}</div>`; return `<div class="matrix-cell${matrixStatusClass(checks.z[j])}${cls}" data-math-select="1" data-kind="z" data-index="${j}"><input type="number" step="any" value="${work.z[j]}" data-math-input="1" data-kind="z" data-index="${j}" placeholder="?" aria-label="${info.z} cell ${j+1}"></div>`;}).join("");
-    const aCells=Array.from({length:cols},(_,j)=>{const cls=matrixSelectionClass("a",null,null,j,"math"); if(isHighGuidance()) return `<div class="matrix-static-cell${cls}" data-math-select="1" data-kind="a" data-index="${j}">${fmt(state.network.a[t+1][j])}</div>`; const zSolved=equalNum(work.z[j],state.network.z[t+1][j]); return `<div class="matrix-cell${matrixStatusClass(checks.a[j])}${cls}${zSolved?"":" disabled"}" data-math-select="1" data-kind="a" data-index="${j}"><input type="number" step="any" value="${work.a[j]}" data-math-input="1" data-kind="a" data-index="${j}" placeholder="?" aria-label="${info.outA} cell ${j+1}" ${zSolved?"":"disabled"}></div>`;}).join("");
+    const aCells=Array.from({length:cols},(_,j)=>{const cls=matrixSelectionClass("a",null,null,j,"math"); if(isHighGuidance()) return `<div class="matrix-static-cell${cls}" data-math-select="1" data-kind="a" data-index="${j}">${fmt(state.network.a[t+1][j])}</div>`; const zSolved=equalNum(work.z[j],state.network.z[t+1][j]); if(!state.activationEnabled) return `<div class="matrix-static-cell${cls}" data-math-select="1" data-kind="a" data-index="${j}" aria-label="${info.outA} cell ${j+1}, carried forward automatically">${zSolved?fmt(state.network.a[t+1][j]):"?"}</div>`; return `<div class="matrix-cell${matrixStatusClass(checks.a[j])}${cls}${zSolved?"":" disabled"}" data-math-select="1" data-kind="a" data-index="${j}"><input type="number" step="any" value="${work.a[j]}" data-math-input="1" data-kind="a" data-index="${j}" placeholder="?" aria-label="${info.outA} cell ${j+1}" ${zSolved?"":"disabled"}></div>`;}).join("");
     const zDisplay=Array.from({length:cols},(_,j)=>`<div class="matrix-static-cell${matrixSelectionClass("z",null,null,j,"math")}" data-math-select="1" data-kind="z" data-index="${j}">${isHighGuidance()?fmt(state.network.z[t+1][j]):(work.z[j]===""?"?":fmt(Number(work.z[j])))}</div>`).join("");
     const activationText=state.activationEnabled?"→ ReLU →":"→ activation off →", biasNote=state.biasesEnabled?"":` <span class="mode-note">(biases off: b = 0)</span>`;
-    return `<div class="panel-header"><div class="panel-title-group"><span class="role-badge">▶ Work here</span><h3>Matrix-math workspace</h3></div><span class="hint">Complete the active transition</span></div><div class="math-equation"><span>${info.a}</span><span class="op">·</span><span>${info.W}</span><span class="op">+</span><span>${info.b}</span><span class="equals">= ${info.z}</span>${biasNote}</div>
-      <div class="matrix-math-grid"><div class="math-object"><div class="math-label">${info.a} <span class="dim">1 × ${rows}</span></div>${staticVector(prev,"priorA")}</div><div class="math-operator">·</div><div class="math-object"><div class="math-label">${info.W} <span class="dim">${rows} × ${cols}</span></div>${staticMatrix(W)}</div><div class="math-operator">+</div><div class="math-object"><div class="math-label">${info.b} <span class="dim">1 × ${cols}</span></div>${staticVector(b,"b")}</div><div class="math-operator">=</div><div class="math-object"><div class="math-label">${info.z} <span class="dim">1 × ${cols}</span></div><div class="matrix-grid" style="--matrix-cols:${cols};grid-template-columns:repeat(${cols},minmax(0,1fr))">${zCells}</div></div></div>
+    const biasEquation = state.biasesEnabled ? `<span class="op">+</span><span>${info.b}</span>` : "";
+    const biasMatrix = state.biasesEnabled ? `<div class="math-operator">+</div><div class="math-object"><div class="math-label">${info.b} <span class="dim">1 × ${cols}</span></div>${staticVector(b,"b")}</div>` : "";
+    return `<div class="panel-header"><div class="panel-title-group"><span class="role-badge">▶ Work here</span><h3>Matrix-math workspace</h3></div><span class="hint">Complete the active transition</span></div><div class="math-equation"><span>${info.a}</span><span class="op">·</span><span>${info.W}</span>${biasEquation}<span class="equals">= ${info.z}</span>${biasNote}</div>
+      <div class="matrix-math-grid${state.biasesEnabled ? "" : " biases-off"}"><div class="math-object"><div class="math-label">${info.a} <span class="dim">1 × ${rows}</span></div>${staticVector(prev,"priorA")}</div><div class="math-operator">·</div><div class="math-object"><div class="math-label">${info.W} <span class="dim">${rows} × ${cols}</span></div>${staticMatrix(W)}</div>${biasMatrix}<div class="math-operator">=</div><div class="math-object"><div class="math-label">${info.z} <span class="dim">1 × ${cols}</span></div><div class="matrix-grid" style="--matrix-cols:${cols};grid-template-columns:repeat(${cols},minmax(0,1fr))">${zCells}</div></div></div>
       <div class="activation-row"><div><div class="math-label">${info.z}</div><div class="matrix-grid" style="--matrix-cols:${cols};grid-template-columns:repeat(${cols},minmax(0,1fr))">${zDisplay}</div></div><div class="activation-arrow">${activationText}</div><div><div class="math-label">${info.outA}</div><div class="matrix-grid" style="--matrix-cols:${cols};grid-template-columns:repeat(${cols},minmax(0,1fr))">${aCells}</div></div></div>`;
   }
 
   function renderMathBridge() {
     const sel=state.selection,t=state.transition;
-    if(!sel||sel.context!=="math") { const txt=state.guidance==="medium"?" Selecting z highlights the prior activation vector, one weight-matrix column, the matching bias, and the destination neuron.":state.guidance==="low"?" Low Guidance supplies no operand highlighting.":" All result values are filled; select one to inspect the relationship."; return `<div class="bridge-note">Select a <b>z</b> or <b>a</b> cell.${txt}</div>`; }
-    if(sel.kind==="z") { const j=sel.index,solved=isHighGuidance()||equalNum(state.work.math[t].z[j],state.network.z[t+1][j]),f=formulaForZ(t+1,j); const help=state.guidance==="medium"?`One column of W supplies exactly the weights entering this destination neuron. ${state.biasesEnabled?"Add its matching bias.":"Biases are off, so add 0."} The numerical result stays hidden until solved correctly.`:`Calculate the dot product${state.biasesEnabled?" and add the matching bias":" (biases are off)"}. The numerical result stays hidden until solved correctly.`; return `<div class="formula-block"><div class="symbolic">${f.symbolic}</div>${solved?`<div class="formula-main" style="margin-top:8px">${f.line1}</div><div class="formula-step">${f.line2}</div><div class="formula-step">${f.line3}</div>`:`<div class="formula-step" style="margin-top:8px">${help}</div>`}</div>`; }
-    if(sel.kind==="a") { const j=sel.index,zSolved=isHighGuidance()||equalNum(state.work.math[t].z[j],state.network.z[t+1][j]),solved=isHighGuidance()||equalNum(state.work.math[t].a[j],state.network.a[t+1][j]),f=formulaForA(t+1,j); const help=!zSolved?"Calculate and correctly check the corresponding z value first.":state.activationEnabled?"Activation is separate from the dot product. Apply ReLU to the corresponding z value.":"Activation is off, so copy the corresponding z value directly into a."; return `<div class="formula-block"><div class="symbolic">${f.symbolic}</div>${solved?`<div class="formula-main" style="margin-top:8px">${f.line1}</div><div class="formula-step">${f.line2}</div>`:`<div class="formula-step" style="margin-top:8px">${help}</div>`}</div>`; }
+    if(!sel||sel.context!=="math") { const txt=state.guidance==="medium"?` Selecting z highlights the prior activation vector, one weight-matrix column,${state.biasesEnabled ? " the matching bias," : ""} and the destination neuron.`:state.guidance==="low"?" Low Guidance supplies no operand highlighting.":" All result values are filled; select one to inspect the relationship."; return `<div class="bridge-note">Select a <b>z</b> or <b>a</b> cell.${txt}</div>`; }
+    if(sel.kind==="z") { const j=sel.index,solved=isHighGuidance()||equalNum(state.work.math[t].z[j],state.network.z[t+1][j]),f=formulaForZ(t+1,j); const help=state.guidance==="medium"?`One column of W supplies exactly the weights entering this destination neuron.${state.biasesEnabled?" Add its matching bias.":""} The numerical result stays hidden until solved correctly.`:`Calculate the dot product${state.biasesEnabled?" and add the matching bias":""}. The numerical result stays hidden until solved correctly.`; return `<div class="formula-block"><div class="symbolic">${f.symbolic}</div>${solved?`<div class="formula-main" style="margin-top:8px">${f.line1}</div><div class="formula-step">${f.line2}</div><div class="formula-step">${f.line3}</div>`:`<div class="formula-step" style="margin-top:8px">${help}</div>`}</div>`; }
+    if(sel.kind==="a") { const j=sel.index,zSolved=isHighGuidance()||equalNum(state.work.math[t].z[j],state.network.z[t+1][j]),solved=isHighGuidance()||(!state.activationEnabled&&zSolved)||equalNum(state.work.math[t].a[j],state.network.a[t+1][j]),f=formulaForA(t+1,j); const help=!zSolved?"Calculate and correctly check the corresponding z value first.":state.activationEnabled?"Activation is separate from the dot product. Apply ReLU to the corresponding z value.":"Activation is off, so a is filled automatically from z."; return `<div class="formula-block"><div class="symbolic">${f.symbolic}</div>${solved?`<div class="formula-main" style="margin-top:8px">${f.line1}</div><div class="formula-step">${f.line2}</div>`:`<div class="formula-step" style="margin-top:8px">${help}</div>`}</div>`; }
     return "";
   }
 
@@ -1006,7 +1018,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
   function checkDiagram() {
     const statuses = [], values = [];
     for (let layer = 1; layer <= 3; layer++) {
-      ["z", "a"].forEach(type => {
+      (state.activationEnabled ? ["z", "a"] : ["z"]).forEach(type => {
         state.work.diagram[layer - 1][type].forEach((v, j) => {
           const correct = type === "z" ? state.network.z[layer][j] : state.network.a[layer][j];
           const status = v === "" ? null : equalNum(v, correct) ? "correct" : "incorrect";
@@ -1024,7 +1036,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     const statuses = [], values = [];
     work.a.forEach((v, i) => { chk.a[i] = v === "" ? null : equalNum(v, state.network.a[t][i]) ? "correct" : "incorrect"; statuses.push(chk.a[i]); values.push(v); });
     work.W.forEach((row, i) => row.forEach((v, j) => { chk.W[i][j] = v === "" ? null : equalNum(v, state.network.W[t][i][j]) ? "correct" : "incorrect"; statuses.push(chk.W[i][j]); values.push(v); }));
-    work.b.forEach((v, j) => { const expected = state.biasesEnabled ? state.network.b[t][j] : 0; chk.b[j] = v === "" ? null : equalNum(v, expected) ? "correct" : "incorrect"; statuses.push(chk.b[j]); values.push(v); });
+    if (state.biasesEnabled) work.b.forEach((v, j) => { const expected = state.network.b[t][j]; chk.b[j] = v === "" ? null : equalNum(v, expected) ? "correct" : "incorrect"; statuses.push(chk.b[j]); values.push(v); });
     state.feedback.mapping = summarizeChecks(statuses, values);
     render();
   }
@@ -1033,7 +1045,7 @@ h1 { margin: 0 0 10px; font-size: 27px; line-height: 1.1; letter-spacing: -.025e
     const t = state.transition, work = state.work.math[t], chk = state.checks.math[t];
     const statuses = [], values = [];
     work.z.forEach((v, j) => { chk.z[j] = v === "" ? null : equalNum(v, state.network.z[t + 1][j]) ? "correct" : "incorrect"; statuses.push(chk.z[j]); values.push(v); });
-    work.a.forEach((v, j) => { chk.a[j] = v === "" ? null : equalNum(v, state.network.a[t + 1][j]) ? "correct" : "incorrect"; statuses.push(chk.a[j]); values.push(v); });
+    if (state.activationEnabled) work.a.forEach((v, j) => { chk.a[j] = v === "" ? null : equalNum(v, state.network.a[t + 1][j]) ? "correct" : "incorrect"; statuses.push(chk.a[j]); values.push(v); });
     state.feedback.math = summarizeChecks(statuses, values);
     render();
   }
