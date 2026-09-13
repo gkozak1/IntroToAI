@@ -1,3 +1,5 @@
+Machine Learning Visualization Player v3
+
 Machine Learning Visualization Player — v2
 
 Open index.html in a modern browser. The app is fully local and dependency-free.

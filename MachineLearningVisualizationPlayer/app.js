@@ -959,7 +959,7 @@
 
   dom.speedSlider.addEventListener('input', e => {
     state.speed=Number(e.target.value);
-    dom.speedLabel.textContent=`${state.speed.toFixed(1)}×`;
+    dom.speedLabel.textContent=`${Number(state.speed).toFixed(state.speed % 1 ? 1 : 0)}×`;
   });
 
   dom.exampleButtons.addEventListener('click', e => {
