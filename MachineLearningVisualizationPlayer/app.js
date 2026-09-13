@@ -5,6 +5,10 @@
   const DATA = window.ML_PLAYER_DATA;
 
   const STAGES = {
+    inception: {
+      label: 'Model inception',
+      text: 'all parameters are randomly assigned at the beginning of Pass 1'
+    },
     forward: {
       label: 'Forward propagation',
       text: 'Existing parameters are used to calculate output neuron values'
@@ -36,6 +40,7 @@
   };
 
   const PASS_STAGES = ['forward', 'result', 'corrections', 'gd', 'local', 'backprop'];
+  const INITIAL_PASS_STAGES = ['inception', ...PASS_STAGES];
   const FINAL_STAGES = ['forward', 'result', 'complete'];
 
   const C = {
@@ -76,9 +81,9 @@
   };
 
   const state = {
-    example: '9',
+    example: '4',
     pass: 0,
-    stage: 'forward',
+    stage: 'inception',
     speed: 1,
     running: false,
     paused: false,
@@ -100,7 +105,7 @@
     svg: document.getElementById('viz'),
     statusPass: document.getElementById('statusPass'),
     statusStage: document.getElementById('statusStage'),
-    explanation: document.getElementById('explanationBox'),
+    statusDescription: document.getElementById('statusDescription'),
     speedSlider: document.getElementById('speedSlider'),
     speedLabel: document.getElementById('speedLabel'),
     exampleButtons: document.getElementById('exampleButtons'),
@@ -509,15 +514,14 @@
   function updateGD(progress) {
     const gd = scene.gd;
     const p = clamp01(progress);
-    // Curve, point, tangent, then downhill movement.
-    const curveP = clamp01(p/.24);
-    gd.curve.setAttribute('stroke-dashoffset', gd.len*(1-curveP));
-    const pointOpacity = clamp01((p-.20)/.14);
-    gd.point.setAttribute('opacity', pointOpacity);
-    const tangentOpacity = clamp01((p-.32)/.13);
-    gd.tangent.setAttribute('opacity', tangentOpacity);
-    const moveP = ease(clamp01((p-.44)/.56));
-    const u = lerp(.03,.90,moveP);
+    // Discover the blue curve and its local tangent together. The tangent rides
+    // near the leading edge of the curve so slope and error shape emerge as one idea.
+    const discoverP = ease(p);
+    gd.curve.setAttribute('stroke-dashoffset', gd.len*(1-discoverP));
+    const overlayOpacity = clamp01(p/.10);
+    gd.point.setAttribute('opacity', overlayOpacity);
+    gd.tangent.setAttribute('opacity', overlayOpacity);
+    const u = lerp(.03,.90,discoverP);
     const x = gd.gx + u*gd.gw;
     const yy = (1-u)*(1-u);
     const y = gd.gy + (1-yy)*gd.gh*.92 + gd.gh*.04;
@@ -558,7 +562,7 @@
     const stage = stageOverride || state.stage;
     dom.statusPass.textContent = `Pass ${state.pass+1} of 5`;
     dom.statusStage.textContent = STAGES[stage].label;
-    dom.explanation.textContent = STAGES[stage].text;
+    dom.statusDescription.textContent = STAGES[stage].text;
   }
 
   function updateButtons() {
@@ -568,7 +572,7 @@
 
   function updateControls() {
     const finalPass = state.pass===4;
-    dom.prevBtn.disabled = state.running || (state.pass===0 && state.stage==='forward');
+    dom.prevBtn.disabled = state.running || (state.pass===0 && state.stage==='inception');
     dom.nextBtn.disabled = state.running || state.stage==='complete';
     dom.pauseBtn.disabled = !state.running;
     dom.pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
@@ -713,6 +717,9 @@
     if (token!==state.runToken) return false;
     renderBackpropStatic(nextVals, true);
     state.stage='backprop';
+    await hold(220, token);
+    if (token!==state.runToken) return false;
+    advanceAfterBackprop();
     return true;
   }
 
@@ -751,6 +758,24 @@
     updateStatus('backprop');
   }
 
+  function advanceAfterBackprop() {
+    if (state.pass >= 4) return;
+    state.pass += 1;
+    state.stage = 'forward';
+    state.learnedStyleIndex = state.pass;
+    state.hiddenActivation = 1;
+    state.focus = false;
+    state.focusAmount = 0;
+    state.showArrows = false;
+    state.gdVisible = false;
+    state.gdProgress = 0;
+    state.localProgress = 0;
+    clearPulses();
+    renderStatic();
+    updateStatus('forward');
+    updateControls();
+  }
+
   async function runOperation(fn) {
     cancelRun();
     const token = ++state.runToken;
@@ -763,12 +788,13 @@
     }
   }
 
-  function setPass(pass, stage='forward') {
+  function setPass(pass, stage=null) {
     cancelRun();
     state.pass=pass;
+    stage = stage || (pass===0 ? 'inception' : 'forward');
     state.stage=stage;
     state.learnedStyleIndex=pass;
-    state.hiddenActivation = stage==='forward' ? 0 : 1;
+    state.hiddenActivation = (stage==='forward' || stage==='inception') ? 0 : 1;
     state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.gdProgress=0; state.localProgress=0;
     clearPulses();
     renderStageStatic(stage);
@@ -782,7 +808,7 @@
     state.focusAmount=0;
     state.showArrows=false;
     state.localProgress=0;
-    state.hiddenActivation = stage==='forward' ? 0 : 1;
+    state.hiddenActivation = (stage==='forward' || stage==='inception') ? 0 : 1;
     if (stage==='corrections') state.showArrows=true;
     if (stage==='gd') { state.showArrows=true; state.focus=true; state.focusAmount=1; state.gdVisible=true; state.gdProgress=1; }
     if (stage==='local') { state.showArrows=true; state.focus=true; state.focusAmount=1; state.localProgress=state.pass<4?1:0; }
@@ -798,6 +824,7 @@
   async function nextStep() {
     if (state.running) return;
     const stage=state.stage;
+    if (stage==='inception') return runOperation(async t => { await animateForward(t); });
     if (state.pass===4) {
       if (stage==='forward') return runOperation(async t => { await animateForward(t); });
       if (stage==='result') { state.stage='complete'; renderStageStatic('complete'); return; }
@@ -815,7 +842,7 @@
 
   function previousStep() {
     if (state.running) return;
-    const stages = state.pass===4 ? FINAL_STAGES : PASS_STAGES;
+    const stages = state.pass===4 ? FINAL_STAGES : (state.pass===0 ? INITIAL_PASS_STAGES : PASS_STAGES);
     let idx=stages.indexOf(state.stage);
     if (idx>0) renderStageStatic(stages[idx-1]);
     else if (state.pass>0) setPass(state.pass-1, state.pass-1===4?'complete':'backprop');
@@ -868,29 +895,61 @@
 
   async function completeTraining() {
     return runOperation(async token => {
-      for (let p=0;p<5;p++) {
-        if (token!==state.runToken) return;
-        state.pass=p; state.learnedStyleIndex=p; updateButtons();
-        renderStageStatic('forward');
-        await animateForward(token); if (token!==state.runToken) return;
-        await hold(500,token); if (token!==state.runToken) return;
-        if (p===4) { state.stage='complete'; renderStageStatic('complete'); return; }
-        await animateCorrections(token); if (token!==state.runToken) return;
-        await hold(450,token); if (token!==state.runToken) return;
-        await animateGD(token); if (token!==state.runToken) return;
-        await hold(350,token); if (token!==state.runToken) return;
-        await animateLocal(token); if (token!==state.runToken) return;
-        await hold(450,token); if (token!==state.runToken) return;
-        await animateBackprop(token); if (token!==state.runToken) return;
-        await hold(500,token);
+      while (token===state.runToken) {
+        const stage = state.stage;
+        if (stage==='complete') return;
+
+        if (stage==='inception' || stage==='forward') {
+          await animateForward(token); if (token!==state.runToken) return;
+          await hold(420,token); if (token!==state.runToken) return;
+          continue;
+        }
+
+        if (stage==='result') {
+          if (state.pass===4) {
+            state.stage='complete';
+            renderStageStatic('complete');
+            return;
+          }
+          await animateCorrections(token); if (token!==state.runToken) return;
+          await hold(380,token); if (token!==state.runToken) return;
+          continue;
+        }
+
+        if (stage==='corrections') {
+          await animateGD(token); if (token!==state.runToken) return;
+          await hold(320,token); if (token!==state.runToken) return;
+          continue;
+        }
+
+        if (stage==='gd') {
+          await animateLocal(token); if (token!==state.runToken) return;
+          await hold(360,token); if (token!==state.runToken) return;
+          continue;
+        }
+
+        if (stage==='local') {
+          await animateBackprop(token); if (token!==state.runToken) return;
+          await hold(420,token); if (token!==state.runToken) return;
+          continue;
+        }
+
+        // A static backprop stage can be reached with Previous Step. Treat it as
+        // already complete and continue with the next pass rather than replaying it.
+        if (stage==='backprop') {
+          advanceAfterBackprop();
+          await hold(240,token); if (token!==state.runToken) return;
+          continue;
+        }
       }
     });
   }
 
+
   function switchExample(key) {
     cancelRun();
     state.example=key;
-    state.pass=0; state.stage='forward'; state.learnedStyleIndex=0; state.hiddenActivation=0;
+    state.pass=0; state.stage='inception'; state.learnedStyleIndex=0; state.hiddenActivation=0;
     state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.gdProgress=0; state.localProgress=0;
     buildDigitImage();
     buildGDPanel();
@@ -910,7 +969,8 @@
 
   dom.passButtons.addEventListener('click', e => {
     const b=e.target.closest('button[data-pass]'); if (!b) return;
-    setPass(Number(b.dataset.pass),'forward');
+    const p=Number(b.dataset.pass);
+    setPass(p, p===0 ? 'inception' : 'forward');
   });
 
   dom.prevBtn.addEventListener('click', previousStep);
