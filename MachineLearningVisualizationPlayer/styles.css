@@ -69,7 +69,8 @@ button:disabled{cursor:not-allowed;opacity:.42}
 .seg-btn:last-child{border-right:0}
 .seg-btn:hover{background:#f5f8fb}
 .seg-btn.active{background:var(--accent);color:#fff}
-.example-block .segmented{min-width:150px}
+.example-block .segmented{width:64px;min-width:64px}
+.example-block .seg-btn{flex:1 1 50%;width:50%;padding-left:0;padding-right:0;text-align:center}
 .pass-block .segmented{min-width:156px}
 .speed-block{min-width:136px}
 #speedSlider{width:86px;accent-color:var(--accent)}
@@ -95,6 +96,15 @@ button:disabled{cursor:not-allowed;opacity:.42}
   min-width:0;
 }
 .control-btn:hover:not(:disabled){background:#f4f7fa}
+
+.icon-btn{
+  flex:0 0 38px;
+  min-width:38px;
+  padding-left:0;
+  padding-right:0;
+  font-size:16px;
+  line-height:1;
+}
 .control-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .control-btn.primary:hover:not(:disabled){background:#275f8e}
 .control-btn.secondary{background:#f5f8fb}

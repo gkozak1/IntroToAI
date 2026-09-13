@@ -575,7 +575,9 @@
     dom.prevBtn.disabled = state.running || (state.pass===0 && state.stage==='inception');
     dom.nextBtn.disabled = state.running || state.stage==='complete';
     dom.pauseBtn.disabled = !state.running;
-    dom.pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
+    dom.pauseBtn.textContent = state.paused ? '▶' : '⏸';
+    dom.pauseBtn.title = state.paused ? 'Resume' : 'Pause';
+    dom.pauseBtn.setAttribute('aria-label', state.paused ? 'Resume' : 'Pause');
     dom.learningBtn.disabled = state.running || finalPass;
     dom.backBtn.disabled = state.running || finalPass;
     dom.forwardBtn.disabled = state.running;
