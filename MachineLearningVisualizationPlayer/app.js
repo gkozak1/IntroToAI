@@ -7,19 +7,19 @@
   const STAGES = {
     inception: {
       label: 'Model inception',
-      text: 'all parameters are randomly assigned at the beginning of Pass 1'
+      text: 'Randomly initialized connection weights already exist, but hidden and output activations have not yet been calculated.'
     },
     forward: {
       label: 'Forward propagation',
-      text: 'Existing parameters are used to calculate output neuron values'
+      text: 'Existing parameters are used to calculate hidden activations and output neuron values.'
     },
     result: {
       label: 'Forward result',
-      text: "The highest valued output neuron indicates the model's prediction."
+      text: "The highest-valued output neuron indicates the model's prediction."
     },
     corrections: {
       label: 'Needed corrections',
-      text: 'Error direction and magnitude are calculated for each neuron value'
+      text: 'Error direction and magnitude are calculated for each output neuron.'
     },
     gd: {
       label: 'Gradient Descent',
@@ -27,15 +27,15 @@
     },
     local: {
       label: 'Local adjustment',
-      text: 'Corrections are applied to the connections to move the output neuron towards its desired value'
+      text: "Representative parameter updates are highlighted: the focused output's incoming weights change, and example earlier-layer weights show that learning reaches the whole network."
     },
     backprop: {
       label: 'Backpropagation',
-      text: 'Gradient Descent is calculated for every parameter to determined its correction for the network'
+      text: 'Backpropagation computes gradients throughout the network; connection weights across both layers settle into their updated strengths before the next pass.'
     },
     complete: {
       label: 'Training complete',
-      text: 'The model correctly identifies the number, so no further correction is needed.'
+      text: 'The output pattern has reached the target for this example, so no further correction is needed.'
     }
   };
 
@@ -60,7 +60,7 @@
     outputGreenFill: '#b9f0c6',
     downLarge: '#d9534f',
     downMedium: '#f08a24',
-    downSmall: '#f2c14e',
+    downSmall: '#dbd600',
     upLarge: '#1f9d55',
     upMedium: '#48b96d',
     upSmall: '#86d8a0',
@@ -91,12 +91,14 @@
     outputValues: null,
     learnedStyleIndex: 0,
     hiddenActivation: 0,
+    outputReveal: 0,
     focus: false,
     focusAmount: 0,
     showArrows: false,
     gdVisible: false,
     gdProgress: 0,
     localProgress: 0,
+    localConnectionsRevealed: false,
     backpropProgress: 0,
     backpropPhase: 0,
   };
@@ -108,7 +110,8 @@
     statusDescription: document.getElementById('statusDescription'),
     speedSlider: document.getElementById('speedSlider'),
     speedLabel: document.getElementById('speedLabel'),
-    exampleButtons: document.getElementById('exampleButtons'),
+    digitSelect: document.getElementById('digitSelect'),
+    randomizeBtn: document.getElementById('randomizeBtn'),
     passButtons: document.getElementById('passButtons'),
     prevBtn: document.getElementById('prevBtn'),
     nextBtn: document.getElementById('nextBtn'),
@@ -173,30 +176,160 @@
   }
 
   function inputColor(count) {
-    return count >= 17 ? C.inputGreen : count >= 9 ? C.inputOrange : C.inputRed;
+    // Use the same 0–35 input-count scale as normalizedInputs().
+    return outputColor(clamp01(count/35)*100);
   }
   function inputWidth(count) {
     return count >= 17 ? 3.2 : count >= 9 ? 2.2 : 1.25;
   }
-  function outputColor(v) {
-    return v >= 67 ? C.outputGreen : v >= 34 ? C.outputOrange : C.outputRed;
+  // Five visual strength bands used throughout the trainable parts of the network.
+  // 0–19 red, 20–39 red-orange, 40–59 yellow, 60–79 yellow-green, 80–100 green.
+  // Connection palettes follow the supplied references; widths are configured separately for each layer.
+  const BANDS = [
+    {max:19,  color:'#ff7171', connectionColor:'#ff7171', fill:'#ff7171', width:0.25, muted:'#ffb8b8', mutedFill:'#ffb8b8', mutedWidth:0.2},
+    {max:39,  color:'#e58d2e', connectionColor:'#ffc000', fill:'#f5c99b', width:0.5, muted:'#ffc000', mutedFill:'#eed8c4', mutedWidth:0.4},
+    {max:59,  color:'#dbd600', connectionColor:'#dbd600', fill:'#dbd600', width:0.75, muted:'#f1ef99', mutedFill:'#f1ef99', mutedWidth:0.6},
+    {max:79,  color:'#8dbd3f', connectionColor:'#92d050', fill:'#d6e8a7', width:1.0, muted:'#91cf50', mutedFill:'#dbe5c8', mutedWidth:0.8},
+    {max:100, color:'#35a85d', connectionColor:'#00b050', fill:'#b5e3c3', width:1.25, muted:'#00b150', mutedFill:'#cde1d2', mutedWidth:1.0},
+  ];
+
+  function bandFor(v) {
+    const n=Math.max(0,Math.min(100,Number(v)||0));
+    return BANDS.find(b => n <= b.max) || BANDS[BANDS.length-1];
   }
-  function outputFill(v) {
-    return v >= 67 ? C.outputGreenFill : v >= 34 ? C.outputOrangeFill : C.outputRedFill;
+  function outputColor(v) { return bandFor(v).connectionColor; }
+  function outputFill(v) { return outputColor(v); }
+  function outputWidth(v) { return bandFor(v).width; }
+
+  function strengthColor01(level) { return outputColor(clamp01(level)*100); }
+  function mutedStrengthColor01(level) { return bandFor(clamp01(level)*100).muted; }
+  function mutedStrengthWidth01(level) { return bandFor(clamp01(level)*100).mutedWidth; }
+  function hiddenStrengthFill(level) { return bandFor(clamp01(level)*100).mutedFill; }
+
+  const modelBank = {};
+
+  function randBetween(min, max) { return min + Math.random() * (max - min); }
+  function sigmoid(z) { const q=Math.max(-8,Math.min(8,z)); return 1/(1+Math.exp(-q)); }
+  function cloneMatrix(m) { return m.map(row => row.slice()); }
+
+  function normalizedInputs(exampleKey) {
+    // 35 is the largest dark-pixel sector count in this ten-digit example set.
+    // It keeps the visible hidden activations spread out without pretending these are raw MNIST intensities.
+    return DATA.examples[exampleKey].counts.map(v => clamp01(v/35));
   }
-  function outputWidth(v) {
-    return v >= 67 ? 3.0 : v >= 34 ? 1.9 : 1.05;
+
+  function hiddenFromWeights(exampleKey, wIH, bH) {
+    const x=normalizedInputs(exampleKey);
+    return Array.from({length:10}, (_,h) => {
+      let z=bH[h];
+      for (let i=0;i<8;i++) z += x[i]*wIH[i][h];
+      return sigmoid(z);
+    });
+  }
+
+  function generateModel(exampleKey) {
+    const target=Number(exampleKey);
+    const initialOutputs=Array.from({length:10}, () => Math.floor(Math.random()*101));
+    const passes=Array.from({length:5}, (_,p) => {
+      const t=p/4;
+      return initialOutputs.map((v,k) => Math.round(lerp(v, k===target?100:0, t)));
+    });
+
+    let wIH=Array.from({length:8}, () => Array.from({length:10}, () => randBetween(-1.5,1.5)));
+    let bH=Array.from({length:10}, () => randBetween(-.15,.15));
+    let wHO=Array.from({length:10}, () => Array.from({length:10}, () => randBetween(-1,1)));
+    const x=normalizedInputs(exampleKey);
+    const weightSnapshots=[];
+    const hoWeightSnapshots=[];
+    const hiddenSnapshots=[];
+
+    for (let p=0;p<5;p++) {
+      const h=hiddenFromWeights(exampleKey,wIH,bH);
+      weightSnapshots.push(cloneMatrix(wIH));
+      hoWeightSnapshots.push(cloneMatrix(wHO));
+      hiddenSnapshots.push(h.slice());
+      if (p===4) break;
+
+      const error=passes[p].map((v,k) => (k===target?1:0)-v/100);
+      const deltaH=Array.from({length:10}, (_,hIdx) => {
+        let backSignal=0;
+        for (let k=0;k<10;k++) backSignal += wHO[hIdx][k]*error[k];
+        backSignal /= 3;
+        return h[hIdx]*(1-h[hIdx])*backSignal;
+      });
+
+      // A simplified backprop update: enough to make the hidden representation
+      // causally evolve without claiming this controlled five-pass demo is a full trainer.
+      for (let i=0;i<8;i++) for (let hIdx=0;hIdx<10;hIdx++) wIH[i][hIdx] += 2.5*x[i]*deltaH[hIdx];
+      for (let hIdx=0;hIdx<10;hIdx++) bH[hIdx] += .65*deltaH[hIdx];
+      for (let hIdx=0;hIdx<10;hIdx++) for (let k=0;k<10;k++) wHO[hIdx][k] += .30*h[hIdx]*error[k];
+    }
+
+    return {initialOutputs,passes,weightSnapshots,hoWeightSnapshots,hiddenSnapshots};
+  }
+
+  function ensureModel(exampleKey=state.example) {
+    if (!modelBank[exampleKey]) modelBank[exampleKey]=generateModel(exampleKey);
+    return modelBank[exampleKey];
+  }
+
+  function randomizeModel(exampleKey=state.example) {
+    modelBank[exampleKey]=generateModel(exampleKey);
+    return modelBank[exampleKey];
   }
 
   function lineStyleForLearnedIndex(exampleKey, index) {
-    if (index === 0) return { colors: Array(10).fill('#dce5ee'), widths: Array(10).fill(.7), opacity: .7 };
-    const vals = DATA.examples[exampleKey].passes[index];
-    const order = [...Array(10).keys()].sort((a,b) => vals[b] - vals[a]);
+    const model=ensureModel(exampleKey);
+    const snap=model.weightSnapshots[Math.max(0,Math.min(4,index))];
     return {
-      colors: order.map(i => outputColor(vals[i])),
-      widths: order.map(i => outputWidth(vals[i]) * .75),
-      opacity: .28
+      style(i,h) {
+        const w=snap[i][h];
+        // Visualize pathway strength (magnitude), not sign. This matches the class convention.
+        const strength=clamp01(Math.abs(w)/2.2);
+        return {
+          color: mutedStrengthColor01(strength),
+          width: mutedStrengthWidth01(strength),
+          opacity: .92
+        };
+      }
     };
+  }
+
+
+  function outputBundleStyleForValue(v) {
+    return {
+      color: bandFor(v).connectionColor,
+      width: outputWidth(v),
+      opacity: .90
+    };
+  }
+
+  function outputLineStyleForIndex(exampleKey, index) {
+    // Pedagogical bundle encoding: all ten connections feeding an output neuron use
+    // that neuron's current output-strength band. This deliberately makes the
+    // pathway-strength ↔ output-value relationship visually explicit.
+    const values=ensureModel(exampleKey).passes[Math.max(0,Math.min(4,index))];
+    return {
+      style(h,o) {
+        return outputBundleStyleForValue(values[o]);
+      }
+    };
+  }
+
+  function representativeInputHiddenUpdates(exampleKey, fromIndex, toIndex) {
+    const model=ensureModel(exampleKey);
+    const a=model.weightSnapshots[Math.max(0,Math.min(4,fromIndex))];
+    const b=model.weightSnapshots[Math.max(0,Math.min(4,toIndex))];
+    // Pick the largest visible change feeding each hidden neuron. These are examples,
+    // not the only weights that update; the full layer settles during backpropagation.
+    return Array.from({length:10}, (_,h) => {
+      let bestI=0, bestD=-1;
+      for (let i=0;i<8;i++) {
+        const d=Math.abs(b[i][h]-a[i][h]);
+        if (d>bestD) { bestD=d; bestI=i; }
+      }
+      return {i:bestI,h};
+    });
   }
 
   function positions(count, top = layout.topY, bottom = layout.bottomY) {
@@ -282,7 +415,7 @@
       }, scene.groups.inputMap);
 
       const g = sEl('g', {}, scene.groups.inputMap);
-      const circle = sEl('circle', {cx:layout.inputX, cy:endY, r:layout.radius, fill:outputFill(count>=17?100:count>=9?50:10), stroke:C.ink, 'stroke-width':2}, g);
+      const circle = sEl('circle', {cx:layout.inputX, cy:endY, r:layout.radius, fill:inputColor(count), stroke:C.ink, 'stroke-width':2}, g);
       const t = sEl('text', {x:layout.inputX, y:endY+5, 'text-anchor':'middle', fill:C.ink, 'font-size':14, 'font-weight':900, text:String(i+1)}, g);
       scene.inputNodes[i] = {g,circle,t};
     }
@@ -314,7 +447,7 @@
     }
 
     for (let h=0;h<10;h++) {
-      const circle = sEl('circle', {cx:layout.hiddenX, cy:hiddenY[h], r:layout.radius, fill:'#d9e8f7', stroke:C.ink, 'stroke-width':2}, scene.groups.hiddenNodes);
+      const circle = sEl('circle', {cx:layout.hiddenX, cy:hiddenY[h], r:layout.radius, fill:'#eef2f6', stroke:C.ink, 'stroke-width':2}, scene.groups.hiddenNodes);
       const text = sEl('text', {x:layout.hiddenX, y:hiddenY[h]+5, 'text-anchor':'middle', fill:C.ink, 'font-size':14, 'font-weight':900, text:String(h+1)}, scene.groups.hiddenNodes);
       scene.hiddenNodes.push({circle,text});
     }
@@ -332,8 +465,8 @@
     for (let o=0;o<10;o++) {
       const y = outputY[o];
       const label = sEl('text', {x:layout.outputX-40, y:y+6, 'text-anchor':'end', fill:C.ink, 'font-size':18, 'font-weight':900, text:String(o)}, scene.groups.outputs);
-      const circle = sEl('circle', {cx:layout.outputX, cy:y, r:layout.radius, fill:C.outputRedFill, stroke:C.ink, 'stroke-width':2}, scene.groups.outputs);
-      const value = sEl('text', {x:layout.barX-12, y:y+6, 'text-anchor':'end', fill:C.ink, 'font-size':15, 'font-weight':900, text:'0'}, scene.groups.outputs);
+      const circle = sEl('circle', {cx:layout.outputX, cy:y, r:layout.radius, fill:'#eef2f6', stroke:C.ink, 'stroke-width':2}, scene.groups.outputs);
+      const value = sEl('text', {x:layout.barX-12, y:y+6, 'text-anchor':'end', fill:C.ink, 'font-size':15, 'font-weight':900, text:''}, scene.groups.outputs);
       sEl('rect', {x:layout.barX, y:y-8, width:layout.barW, height:16, rx:1, fill:'#edf2f6'}, scene.groups.outputs);
       const bar = sEl('rect', {x:layout.barX, y:y-8, width:0, height:16, rx:1, fill:C.outputRed}, scene.groups.outputs);
       const arrow = sEl('g', {opacity:0}, scene.groups.arrows);
@@ -347,9 +480,19 @@
     }
   }
 
+  function gdPanelForTarget(target) {
+    const w=250, h=194, x=972;
+    const ty=outputY[target];
+    let y;
+    if (target>=4) y=ty-h-(target>=7?38:20);
+    else y=ty+24;
+    y=Math.max(105,Math.min(layout.bottomY-h-20,y));
+    return {x,y,w,h};
+  }
+
   function buildGDPanel() {
     clear(scene.groups.gd);
-    const p = DATA.examples[state.example].gdPanel;
+    const p = gdPanelForTarget(targetIndex());
     const g = scene.groups.gd;
     g.setAttribute('opacity', 0);
     const panel = sEl('rect', {x:p.x, y:p.y, width:p.w, height:p.h, rx:10, fill:'#fff', 'fill-opacity':.96, stroke:'#d5dee7', 'stroke-width':2}, g);
@@ -363,10 +506,7 @@
 
     let d='';
     for (let i=0;i<=100;i++) {
-      const u=i/100;
-      const x=gx+u*gw;
-      const yy=(1-u)*(1-u);
-      const y=gy+(1-yy)*gh*.92+gh*.04;
+      const u=i/100, x=gx+u*gw, yy=(1-u)*(1-u), y=gy+(1-yy)*gh*.92+gh*.04;
       d += `${i===0?'M':'L'}${x.toFixed(2)},${y.toFixed(2)} `;
     }
     const curve = sEl('path', {d, fill:'none', stroke:'#2f5f97', 'stroke-width':3, 'stroke-linecap':'round'}, g);
@@ -378,20 +518,20 @@
     scene.gd = {g,panel,title,curve,point,tangent,gx,gy,gw,gh,len};
   }
 
-  function hiddenLevelsForExample() {
-    const ex = DATA.examples[state.example];
-    const means = DATA.hiddenPairs.map(([a,b]) => (ex.counts[a]+ex.counts[b])/2);
-    const max = Math.max(...means,1);
-    return means.map(v => v/max);
+  function hiddenLevelsForPass(pass=state.pass) {
+    // Visual summary of incoming connection magnitudes, not a computed activation.
+    const weights=ensureModel(state.example).weightSnapshots[Math.max(0,Math.min(4,pass))];
+    return Array.from({length:10}, (_,h) =>
+      weights.reduce((sum,row) => sum+clamp01(Math.abs(row[h])/2.2),0)/weights.length);
   }
 
-  function hiddenBlue(level) {
-    const light='#e7f0f8', dark='#3f7eb8';
-    return mixColor(light, dark, clamp01(level));
+  function hiddenActivationFill(level, reveal=1) {
+    const neutral='#eef2f6';
+    return mixColor(neutral, hiddenStrengthFill(level), clamp01(reveal));
   }
 
   function currentValues() {
-    return DATA.examples[state.example].passes[state.pass].slice();
+    return ensureModel(state.example).passes[state.pass].slice();
   }
 
   function targetIndex() { return Number(state.example); }
@@ -399,7 +539,7 @@
   function effectiveValues() {
     const vals = currentValues();
     if (state.localProgress > 0 && state.pass < 4) {
-      const next = DATA.examples[state.example].passes[state.pass+1];
+      const next = ensureModel(state.example).passes[state.pass+1];
       const t = targetIndex();
       vals[t] = Math.round(lerp(vals[t], next[t], state.localProgress));
     }
@@ -447,28 +587,28 @@
     const focus = state.focus;
     const focusAmt = state.focusAmount ?? (focus ? 1 : 0);
     const learned = lineStyleForLearnedIndex(state.example, state.learnedStyleIndex);
-    const hLevels = hiddenLevelsForExample();
+    const hLevels = hiddenLevelsForPass();
 
     for (let i=0;i<scene.inputNodes.length;i++) {
       const count = ex.counts[i];
-      const baseFill = outputFill(count>=17?100:count>=9?50:10);
-      const fill = focusAmt>0 ? mixColor(baseFill, '#eef2f6', .72*focusAmt) : baseFill;
-      const stroke = focusAmt>0 ? mixColor(C.ink, C.muted, focusAmt) : C.ink;
+      const baseFill = inputColor(count);
+      const fill = baseFill;
+      const stroke = C.ink;
       setAttrs(scene.inputNodes[i].circle,{fill,stroke});
-      scene.inputNodes[i].t.setAttribute('fill', focusAmt>0 ? mixColor(C.ink,C.muted,focusAmt) : C.ink);
+      scene.inputNodes[i].t.setAttribute('fill', C.ink);
     }
 
     for (const item of scene.inputHiddenLines) {
-      let color = state.learnedStyleIndex === 0 ? '#dce5ee' : learned.colors[item.h];
-      let width = state.learnedStyleIndex === 0 ? .75 : learned.widths[item.h];
-      let opacity = state.learnedStyleIndex === 0 ? .7 : learned.opacity;
+      const ls=learned.style(item.i,item.h);
+      let color=ls.color, width=ls.width, opacity=ls.opacity;
       if (focusAmt>0) { color = mixColor(color, '#f0f3f6', .45*focusAmt); opacity *= (1-.10*focusAmt); }
       setAttrs(item.line, {stroke:color, 'stroke-width':width, 'stroke-opacity':opacity});
     }
 
     for (let h=0;h<10;h++) {
-      const activeLevel = lerp(.08, hLevels[h], state.hiddenActivation);
-      let fill = hiddenBlue(activeLevel);
+      // Hidden activations begin neutral and resolve into the same red/yellow/green
+      // strength language as the pathways when the forward signal reaches them.
+      let fill = hiddenActivationFill(hLevels[h], state.hiddenActivation);
       let stroke = C.ink;
       let text = C.ink;
       if (focusAmt>0) { fill = mixColor(fill, '#f1f4f7', .48*focusAmt); stroke=mixColor(C.ink,C.muted,focusAmt); text=mixColor(C.ink,C.muted,focusAmt); }
@@ -476,18 +616,28 @@
       scene.hiddenNodes[h].text.setAttribute('fill', text);
     }
 
+    const hoStyle = outputLineStyleForIndex(state.example, state.learnedStyleIndex);
     for (const item of scene.hiddenOutputLines) {
-      const v = values[item.o];
-      let color = outputColor(v);
-      let width = outputWidth(v);
-      let opacity = v >= 67 ? .30 : v >= 34 ? .24 : .18;
-      if (focusAmt>0 && item.o !== targetIndex()) { color=mixColor(color,'#dce5ee',focusAmt); width=lerp(width,.9,focusAmt); opacity=lerp(opacity,.72,focusAmt); }
+      const ls=outputBundleStyleForValue(values[item.o]);
+      let color=ls.color, width=ls.width, opacity=ls.opacity;
+      if (focusAmt>0 && item.o !== targetIndex()) { color=mixColor(color,'#eef2f6',focusAmt); width=lerp(width,.9,focusAmt); opacity=lerp(opacity,.72,focusAmt); }
       setAttrs(item.line, {stroke:color, 'stroke-width':width, 'stroke-opacity':opacity});
     }
 
+    const outputsVisible = state.outputReveal > .001 && state.stage !== 'inception';
     for (let o=0;o<10;o++) {
       const v = values[o];
       const selected = o===targetIndex();
+      if (!outputsVisible) {
+        setAttrs(scene.outputNodes[o], {fill:'#eef2f6', stroke:C.ink});
+        scene.outputLabels[o].setAttribute('fill', C.ink);
+        scene.outputValues[o].textContent='';
+        scene.outputValues[o].setAttribute('fill', C.muted);
+        scene.outputBars[o].setAttribute('fill','#dfe6ed');
+        scene.outputBars[o].setAttribute('width',0);
+        scene.arrowGroups[o].g.setAttribute('opacity',0);
+        continue;
+      }
       if (focusAmt>0 && !selected) {
         setAttrs(scene.outputNodes[o], {fill:mixColor(outputFill(v),'#eef2f6',focusAmt), stroke:mixColor(C.ink,C.muted,focusAmt)});
         const grayText=mixColor(C.ink,'#a3adb8',focusAmt);
@@ -501,14 +651,49 @@
         scene.outputBars[o].setAttribute('fill', outputColor(v));
       }
       scene.outputValues[o].textContent = String(v);
-      scene.outputBars[o].setAttribute('width', Math.max(0, layout.barW*v/100));
+      scene.outputBars[o].setAttribute('width', Math.max(0, layout.barW*v/100*state.outputReveal));
       setArrow(o, v, state.showArrows, focusAmt>.5 && !selected);
     }
+
+    if (state.stage==='gd' || state.stage==='local') {
+      for (const item of [...scene.inputHiddenLines,...scene.hiddenOutputLines])
+        setAttrs(item.line,{stroke:'#dce5ee','stroke-opacity':.72});
+      for (const node of scene.hiddenNodes) {
+        setAttrs(node.circle,{fill:'#eef2f6',stroke:C.muted});
+        node.text.setAttribute('fill',C.muted);
+      }
+    }
+    if (state.stage==='local' && state.pass<4 && state.localConnectionsRevealed)
+      applyLocalAdjustmentVisual();
 
     scene.groups.gd.setAttribute('opacity', state.gdVisible ? 1 : 0);
     if (state.gdVisible) updateGD(state.gdProgress);
     updateStatus();
     updateControls();
+  }
+
+
+  function applyLocalAdjustmentVisual() {
+    // Keep the focused bundle matched to the displayed output during its adjustment.
+    const v=effectiveValues()[targetIndex()];
+    for (const item of scene.hiddenOutputLines) {
+      if (item.o!==targetIndex()) continue;
+      const ls=outputBundleStyleForValue(v);
+      setAttrs(item.line,{stroke:ls.color,'stroke-width':ls.width,'stroke-opacity':ls.opacity});
+    }
+  }
+
+  function growConnections(items, reverseSegments, progress) {
+    const k=ease(progress);
+    items.forEach((item,i) => {
+      const s=reverseSegments[i];
+      setAttrs(item.line,{x1:lerp(s.x1,s.x2,k),y1:lerp(s.y1,s.y2,k),x2:s.x1,y2:s.y1});
+    });
+  }
+
+  function restoreConnections() {
+    growConnections(scene.hiddenOutputLines,segments.outputHidden,1);
+    growConnections(scene.inputHiddenLines,segments.hiddenInput,1);
   }
 
   function updateGD(progress) {
@@ -562,11 +747,24 @@
     const stage = stageOverride || state.stage;
     dom.statusPass.textContent = `Pass ${state.pass+1} of 5`;
     dom.statusStage.textContent = STAGES[stage].label;
-    dom.statusDescription.textContent = STAGES[stage].text;
+    let text=STAGES[stage].text;
+    if (stage==='inception') {
+      text='Random connection weights already exist. Only the input activations are known; hidden and output activations will be calculated by the first forward pass.';
+    } else if (stage==='forward' && state.pass>0) {
+      text='Updated connection weights are used again; the next forward pass produces a changed hidden-layer pattern and new output values.';
+    } else if (stage==='result') {
+      const vals=currentValues();
+      let pred=0;
+      for (let i=1;i<10;i++) if (vals[i]>vals[pred]) pred=i;
+      text=`The highest-valued output neuron indicates the model's prediction: ${pred} (${pred===targetIndex()?'correct':'incorrect'}).`;
+    } else if (stage==='backprop') {
+      text='Backpropagation computes gradients throughout the network. The remaining connection weights across both layers now settle into their updated strengths.';
+    }
+    dom.statusDescription.textContent = text;
   }
 
   function updateButtons() {
-    [...dom.exampleButtons.querySelectorAll('button')].forEach(b => b.classList.toggle('active', b.dataset.example===state.example));
+    dom.digitSelect.value=state.example;
     [...dom.passButtons.querySelectorAll('button')].forEach(b => b.classList.toggle('active', Number(b.dataset.pass)===state.pass));
   }
 
@@ -583,6 +781,8 @@
     dom.forwardBtn.disabled = state.running;
     dom.passBtn.disabled = state.running;
     dom.trainingBtn.disabled = state.running;
+    dom.digitSelect.disabled = state.running;
+    dom.randomizeBtn.disabled = state.running;
     updateButtons();
   }
 
@@ -591,6 +791,7 @@
     state.running = false;
     state.paused = false;
     clearPulses();
+    restoreConnections();
     updateControls();
   }
 
@@ -615,32 +816,37 @@
   function hold(baseMs, token) { return animate(baseMs, () => {}, token); }
 
   async function animateForward(token) {
-    state.stage='forward'; state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.localProgress=0; state.hiddenActivation=0;
+    state.stage='forward'; state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.localProgress=0; state.hiddenActivation=0; state.outputReveal=0;
+    restoreConnections();
     renderStatic(); updateStatus('forward');
-    await animate(1350, p => {
-      state.hiddenActivation = clamp01((p-.60)/.40);
-      renderStatic();
+    if (!await animate(1350, p => {
       drawPulses(segments.inputHidden, p, () => C.bluePulse, () => 3.5);
-    }, token);
-    if (token!==state.runToken) return false;
+    }, token)) return false;
     clearPulses();
+    if (!await hold(100,token)) return false;
     state.hiddenActivation=1;
     renderStatic();
-    const vals = currentValues();
-    await animate(1350, p => {
+    if (!await hold(100,token)) return false;
+    const ho=outputLineStyleForIndex(state.example,state.learnedStyleIndex);
+    if (!await animate(1350, p => {
       drawPulses(segments.hiddenOutput, p,
-        i => outputColor(vals[segments.hiddenOutput[i].o]),
-        i => 2.4 + outputWidth(vals[segments.hiddenOutput[i].o])*.45);
-    }, token);
-    if (token!==state.runToken) return false;
+        i => { const seg=segments.hiddenOutput[i]; return ho.style(seg.h,seg.o).color; },
+        i => { const seg=segments.hiddenOutput[i]; return 2.0 + ho.style(seg.h,seg.o).width*.45; });
+    }, token)) return false;
     clearPulses();
+    if (!await hold(100,token)) return false;
+    if (!await animate(1100,p => {
+      state.outputReveal=ease(p);
+      renderStatic();
+    },token)) return false;
+    state.outputReveal=1;
     state.stage='result';
     renderStatic(); updateStatus('result');
     return true;
   }
 
   async function animateCorrections(token) {
-    state.stage='corrections'; state.focus=false; state.showArrows=true; state.gdVisible=false;
+    state.stage='corrections'; state.focus=false; state.showArrows=true; state.gdVisible=false; state.outputReveal=1;
     renderStatic(); updateStatus('corrections');
     // Grow arrows from zero to full size by temporarily scaling their groups.
     await animate(420, p => {
@@ -659,7 +865,7 @@
   }
 
   async function animateGD(token) {
-    state.stage='gd'; state.showArrows=true; state.gdVisible=true; state.gdProgress=0;
+    state.stage='gd'; state.showArrows=true; state.gdVisible=true; state.gdProgress=0; state.outputReveal=1;
     updateStatus('gd');
     await animate(650, p => {
       state.focus=p>0;
@@ -679,49 +885,81 @@
 
   async function animateLocal(token) {
     if (state.pass===4) return true;
-    state.stage='local'; state.focus=true; state.focusAmount=1; state.showArrows=true; state.gdVisible=false; state.localProgress=0;
+    state.localConnectionsRevealed=false;
+    state.stage='local'; state.focus=true; state.focusAmount=1; state.showArrows=true; state.gdVisible=false; state.localProgress=0; state.outputReveal=1;
+    restoreConnections();
     updateStatus('local'); renderStatic();
-    await animate(1100, p => {
+    if (!await animate(1100, p => {
       state.localProgress=ease(p);
       renderStatic();
-    }, token);
-    return token===state.runToken;
+    }, token)) return false;
+    const items=scene.hiddenOutputLines.filter(item=>item.o===targetIndex());
+    const paths=segments.outputHidden.filter(item=>item.o===targetIndex());
+    // Only the growing bundle regains color after the bar has finished.
+    growConnections(items,paths,0);
+    state.localConnectionsRevealed=true;
+    applyLocalAdjustmentVisual();
+    if (!await animate(1450,p => growConnections(items,paths,p),token)) return false;
+    restoreConnections();
+    return true;
   }
 
   async function animateBackprop(token) {
     if (state.pass===4) return true;
-    state.stage='backprop'; state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.localProgress=0;
-    const nextVals = DATA.examples[state.example].passes[state.pass+1];
-    // Display the full post-learning output state before backward pulses.
-    const originalPass = state.pass;
-    const originalValues = DATA.examples[state.example].passes[state.pass];
-    state.outputValues = nextVals;
+    state.stage='backprop'; state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.localProgress=0; state.outputReveal=1;
+    const currentVals=currentValues();
+    const nextVals=ensureModel(state.example).passes[state.pass+1].slice();
+    const startVals=currentVals.slice();
+    startVals[targetIndex()]=nextVals[targetIndex()];
+    restoreConnections();
+    renderStatic();
+    const pendingOutputs=scene.hiddenOutputLines.filter(item=>item.o!==targetIndex());
+    const pendingPaths=segments.outputHidden.filter(item=>item.o!==targetIndex());
+    const grayPendingConnections=() => {
+      for (const item of [...scene.inputHiddenLines,...pendingOutputs])
+        setAttrs(item.line,{stroke:'#dce5ee','stroke-opacity':.72});
+    };
+    renderBackpropStatic(startVals,false);
+    grayPendingConnections();
     updateStatus('backprop');
-    renderBackpropStatic(nextVals, false);
-    await hold(650, token);
-    if (token!==state.runToken) return false;
-    await animate(1350, p => {
-      drawPulses(segments.outputHidden, p,
-        i => outputColor(nextVals[segments.outputHidden[i].o]),
-        i => 2.4 + outputWidth(nextVals[segments.outputHidden[i].o])*.45);
-    }, token);
-    if (token!==state.runToken) return false;
-    clearPulses();
+    // First shrink non-target bars to the next-pass values, using the same easing
+    // and duration as the preceding target-bar growth.
+    if (!await animate(1100,p => {
+      const shown=startVals.map((v,o)=>lerp(v,nextVals[o],ease(p)));
+      renderBackpropStatic(shown,false);
+      grayPendingConnections();
+    },token)) return false;
+    // The core bundle is already complete. Reveal only the remaining bundles.
+    growConnections(pendingOutputs,pendingPaths,0);
+    for (const item of pendingOutputs) {
+      const ls=outputBundleStyleForValue(nextVals[item.o]);
+      setAttrs(item.line,{stroke:ls.color,'stroke-width':ls.width,'stroke-opacity':ls.opacity});
+    }
+    if (!await animate(1450,p => {
+      growConnections(pendingOutputs,pendingPaths,p);
+    },token)) return false;
     state.learnedStyleIndex=state.pass+1;
-    renderBackpropStatic(nextVals, true);
-    await animate(1350, p => {
-      const learned=lineStyleForLearnedIndex(state.example,state.learnedStyleIndex);
-      drawPulses(segments.hiddenInput, p,
-        i => learned.colors[segments.hiddenInput[i].h],
-        i => 2.1 + learned.widths[segments.hiddenInput[i].h]*.55);
-    }, token);
-    clearPulses();
-    if (token!==state.runToken) return false;
-    renderBackpropStatic(nextVals, true);
+    const levels=hiddenLevelsForPass(state.learnedStyleIndex);
+    for (let h=0;h<10;h++) {
+      setAttrs(scene.hiddenNodes[h].circle,{fill:hiddenActivationFill(levels[h]),stroke:C.ink});
+      scene.hiddenNodes[h].text.setAttribute('fill',C.ink);
+    }
+    if (!await hold(100,token)) return false;
+    growConnections(scene.inputHiddenLines,segments.hiddenInput,0);
+    const learned=lineStyleForLearnedIndex(state.example,state.learnedStyleIndex);
+    for (const item of scene.inputHiddenLines) {
+      const ls=learned.style(item.i,item.h);
+      setAttrs(item.line,{stroke:ls.color,'stroke-width':ls.width,'stroke-opacity':ls.opacity});
+    }
+    if (!await animate(1450,p => {
+      growConnections(scene.inputHiddenLines,segments.hiddenInput,p);
+    },token)) return false;
+    restoreConnections();
+    renderBackpropStatic(nextVals,true);
+    if (!await hold(260,token)) return false;
+    // Leave the completed learning state visible until the next explicit step.
     state.stage='backprop';
-    await hold(220, token);
-    if (token!==state.runToken) return false;
-    advanceAfterBackprop();
+    updateStatus('backprop');
     return true;
   }
 
@@ -731,26 +969,29 @@
     const oldFocus=state.focus;
     const oldFocusAmount=state.focusAmount;
     const oldArrows=state.showArrows;
-    state.localProgress=0; state.focus=false; state.focusAmount=0; state.showArrows=false; state.hiddenActivation=1;
+    state.localProgress=0; state.focus=false; state.focusAmount=0; state.showArrows=false; state.hiddenActivation=1; state.outputReveal=1;
 
     const learned = lineStyleForLearnedIndex(state.example, learnedApplied?state.learnedStyleIndex:Math.max(0,state.learnedStyleIndex));
     for (const item of scene.inputHiddenLines) {
-      let color = learnedApplied ? learned.colors[item.h] : (state.learnedStyleIndex===0?'#dce5ee':learned.colors[item.h]);
-      let width = learnedApplied ? learned.widths[item.h] : (state.learnedStyleIndex===0?.75:learned.widths[item.h]);
-      let opacity = state.learnedStyleIndex===0 && !learnedApplied ? .7 : learned.opacity;
-      setAttrs(item.line, {stroke:color,'stroke-width':width,'stroke-opacity':opacity});
+      const ls=learned.style(item.i,item.h);
+      setAttrs(item.line, {stroke:ls.color,'stroke-width':ls.width,'stroke-opacity':ls.opacity});
     }
-    const hLevels=hiddenLevelsForExample();
-    for (let h=0;h<10;h++) setAttrs(scene.hiddenNodes[h].circle,{fill:hiddenBlue(hLevels[h]),stroke:C.ink});
+    // Hidden colors summarize the incoming weight strengths for the displayed pass.
+    const hLevels=hiddenLevelsForPass(learnedApplied?state.learnedStyleIndex:state.pass);
+    for (let h=0;h<10;h++) {
+      setAttrs(scene.hiddenNodes[h].circle,{fill:learnedApplied?hiddenActivationFill(hLevels[h],1):'#eef2f6',stroke:learnedApplied?C.ink:C.muted});
+      scene.hiddenNodes[h].text.setAttribute('fill',learnedApplied?C.ink:C.muted);
+    }
     for (const item of scene.hiddenOutputLines) {
-      const v=values[item.o]; setAttrs(item.line,{stroke:outputColor(v),'stroke-width':outputWidth(v),'stroke-opacity':v>=67?.30:v>=34?.24:.18});
+      const ls=outputBundleStyleForValue(values[item.o]);
+      setAttrs(item.line,{stroke:ls.color,'stroke-width':ls.width,'stroke-opacity':ls.opacity});
     }
     for (let o=0;o<10;o++) {
       const v=values[o];
       setAttrs(scene.outputNodes[o],{fill:outputFill(v),stroke:C.ink});
       scene.outputLabels[o].setAttribute('fill',C.ink);
       scene.outputValues[o].setAttribute('fill',C.ink);
-      scene.outputValues[o].textContent=String(v);
+      scene.outputValues[o].textContent=String(Math.round(v));
       scene.outputBars[o].setAttribute('fill',outputColor(v));
       scene.outputBars[o].setAttribute('width',layout.barW*v/100);
       scene.arrowGroups[o].g.setAttribute('opacity',0);
@@ -765,7 +1006,8 @@
     state.pass += 1;
     state.stage = 'forward';
     state.learnedStyleIndex = state.pass;
-    state.hiddenActivation = 1;
+    state.hiddenActivation = 0;
+    state.outputReveal = 0;
     state.focus = false;
     state.focusAmount = 0;
     state.showArrows = false;
@@ -797,6 +1039,7 @@
     state.stage=stage;
     state.learnedStyleIndex=pass;
     state.hiddenActivation = (stage==='forward' || stage==='inception') ? 0 : 1;
+    state.outputReveal = (stage==='forward' || stage==='inception') ? 0 : 1;
     state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.gdProgress=0; state.localProgress=0;
     clearPulses();
     renderStageStatic(stage);
@@ -805,21 +1048,25 @@
 
   function renderStageStatic(stage) {
     state.stage=stage;
+    state.localConnectionsRevealed=stage==='local';
+    restoreConnections();
+    state.learnedStyleIndex=state.pass;
     state.gdVisible=false;
     state.focus=false;
     state.focusAmount=0;
     state.showArrows=false;
     state.localProgress=0;
     state.hiddenActivation = (stage==='forward' || stage==='inception') ? 0 : 1;
+    state.outputReveal = (stage==='forward' || stage==='inception') ? 0 : 1;
     if (stage==='corrections') state.showArrows=true;
     if (stage==='gd') { state.showArrows=true; state.focus=true; state.focusAmount=1; state.gdVisible=true; state.gdProgress=1; }
-    if (stage==='local') { state.showArrows=true; state.focus=true; state.focusAmount=1; state.localProgress=state.pass<4?1:0; }
+    if (stage==='local') { state.showArrows=true; state.focus=true; state.focusAmount=1; state.outputReveal=1; state.localProgress=state.pass<4?1:0; }
     if (stage==='backprop' && state.pass<4) {
       state.learnedStyleIndex=state.pass+1;
-      renderBackpropStatic(DATA.examples[state.example].passes[state.pass+1],true);
+      renderBackpropStatic(ensureModel(state.example).passes[state.pass+1],true);
       updateStatus(stage); updateControls(); return;
     }
-    if (stage==='complete') { state.hiddenActivation=1; }
+    if (stage==='complete') { state.hiddenActivation=1; state.outputReveal=1; }
     renderStatic(); updateStatus(stage); updateControls();
   }
 
@@ -950,8 +1197,9 @@
 
   function switchExample(key) {
     cancelRun();
-    state.example=key;
-    state.pass=0; state.stage='inception'; state.learnedStyleIndex=0; state.hiddenActivation=0;
+    state.example=String(key);
+    ensureModel(state.example);
+    state.pass=0; state.stage='inception'; state.learnedStyleIndex=0; state.hiddenActivation=0; state.outputReveal=0;
     state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.gdProgress=0; state.localProgress=0;
     buildDigitImage();
     buildGDPanel();
@@ -959,15 +1207,23 @@
     renderStatic(); updateButtons();
   }
 
+  function rerandomizeCurrentModel() {
+    cancelRun();
+    randomizeModel(state.example);
+    state.pass=0; state.stage='inception'; state.learnedStyleIndex=0; state.hiddenActivation=0; state.outputReveal=0;
+    state.focus=false; state.focusAmount=0; state.showArrows=false; state.gdVisible=false; state.gdProgress=0; state.localProgress=0;
+    buildGDPanel();
+    renderStageStatic('inception');
+    updateButtons();
+  }
+
   dom.speedSlider.addEventListener('input', e => {
     state.speed=Number(e.target.value);
     dom.speedLabel.textContent=`${Number(state.speed).toFixed(state.speed % 1 ? 1 : 0)}×`;
   });
 
-  dom.exampleButtons.addEventListener('click', e => {
-    const b=e.target.closest('button[data-example]'); if (!b) return;
-    switchExample(b.dataset.example);
-  });
+  dom.digitSelect.addEventListener('change', e => switchExample(e.target.value));
+  dom.randomizeBtn.addEventListener('click', rerandomizeCurrentModel);
 
   dom.passButtons.addEventListener('click', e => {
     const b=e.target.closest('button[data-pass]'); if (!b) return;
@@ -985,12 +1241,15 @@
   dom.trainingBtn.addEventListener('click', completeTraining);
 
   document.addEventListener('keydown', e => {
+    const tag=(e.target && e.target.tagName || '').toLowerCase();
+    if (tag==='select' || tag==='input' || tag==='button') return;
     if (e.key==='ArrowRight') nextStep();
     else if (e.key==='ArrowLeft') previousStep();
     else if (e.code==='Space' && state.running) { e.preventDefault(); state.paused=!state.paused; updateControls(); }
   });
 
   // Initialize
+  ensureModel(state.example);
   buildScene();
   rebuildSegments();
   updateStatus();

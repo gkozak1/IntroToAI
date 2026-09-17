@@ -1,36 +1,18 @@
-Machine Learning Visualization Player v3
+Machine Learning Visualization Player — Final Build
 
-Machine Learning Visualization Player — v2
+Open index.html in a modern browser. No installation or server is required.
 
-Open index.html in a modern browser. The app is fully local and dependency-free.
+Final teaching refinements:
+- Digit dropdown includes all 0–9 examples and defaults to 4.
+- Model inception shows input activations plus randomized connection weights, while hidden and output activations remain blank until forward propagation calculates them.
+- Trainable visual elements use five strength bands: 0–19, 20–39, 40–59, 60–79, and 80–100.
+- Input→hidden connectors use clearly distinguishable red / red-orange / yellow / yellow-green / green bands, but are slightly quieter and thinner than hidden→output connections.
+- Hidden neuron activations use the same five-band strength language after they are calculated.
+- Hidden→output connector bundles always match the current output neuron's strength band. This relationship is visible even before the first output values are revealed, reinforcing the connection between pathway strength and output value.
+- After Gradient Descent, connections fade to light gray so parameter updates can be isolated visually.
+- The focused output bundle changes first; the rest of the output-side bundles then settle to the next-pass strengths during backpropagation.
+- Representative earlier-layer updates are highlighted, followed by the entire input→hidden layer settling to its updated weight strengths.
+- After backpropagation, the pass number advances; the next forward pass reveals how the changed parameters alter hidden activations and outputs.
+- Pass 5 is the final trained-state forward pass; no unnecessary learning/backpropagation follows.
 
-Default example: Recognize 4
-Examples: Recognize 4 and Recognize 9
-Passes: 1 through 5
-Pass 5 is the final trained state; learning/backprop controls are disabled there.
-
-The app draws the visualization directly in SVG for crisp lines and smooth playback rather than playing pre-rendered GIFs.
-
-Top-row controls:
-- Recognize 4 / Recognize 9
-- Pass 1–5
-- Speed slider (0.4x–2.0x)
-- Previous Step / Next Step
-- Pause / Resume during animation
-- Complete Forward
-- Complete Learning
-- Complete Backward
-- Full Pass
-- Full Training
-
-Behavior notes:
-- Selecting either number returns to Pass 1 and shows Model inception.
-- The stage name and explanation appear directly above the visualization.
-- Completing backpropagation automatically advances the pass number.
-- Full Training continues from the current stage/current pass through Pass 5; it does not restart at Pass 1.
-- During Gradient Descent, the tangent is drawn/moved concurrently with the blue error curve.
-
-Keyboard:
-- Right Arrow: next step
-- Left Arrow: previous step
-- Space: pause/resume while an animation is running
+The visualization is deliberately conceptual. Controlled output interpolation guarantees a clear five-pass learning story, while synthetic parameter updates provide a believable visual account of changing internal pathways without claiming to be a full numerical trainer.

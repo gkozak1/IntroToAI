@@ -9,11 +9,14 @@
 <body>
   <main class="app-shell">
     <section class="control-strip" aria-label="Visualization and playback controls">
-      <div class="control-block example-block">
-        <div class="segmented" id="exampleButtons" aria-label="Choose number example">
-          <button class="seg-btn active" data-example="4">4</button>
-          <button class="seg-btn" data-example="9">9</button>
-        </div>
+      <div class="control-block digit-block">
+        <label class="control-label" for="digitSelect">Digit</label>
+        <select id="digitSelect" class="digit-select" aria-label="Choose digit example">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+          <option value="3">3</option><option value="4" selected>4</option><option value="5">5</option>
+          <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option>
+        </select>
+        <button id="randomizeBtn" class="mini-btn" title="Randomize starting model" aria-label="Randomize starting model">↻</button>
       </div>
 
       <div class="control-block pass-block">
@@ -55,7 +58,7 @@
       <span class="status-dot">•</span>
       <strong class="status-stage" id="statusStage">Model inception</strong>
       <span class="status-separator">—</span>
-      <span class="status-description" id="statusDescription">all parameters are randomly assigned at the beginning of Pass 1</span>
+      <span class="status-description" id="statusDescription">randomly initialized weights produce the starting hidden activations and output strengths for Pass 1</span>
     </section>
 
     <section class="visual-wrap">
