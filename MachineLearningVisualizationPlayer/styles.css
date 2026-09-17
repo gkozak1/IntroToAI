@@ -96,7 +96,7 @@ button:disabled{cursor:not-allowed;opacity:.42}
 }
 .mini-btn:hover:not(:disabled){background:#f4f7fa}
 
-.pass-block .segmented{min-width:156px}
+.pass-block .segmented{min-width:0}
 .speed-block{min-width:136px}
 #speedSlider{width:86px;accent-color:var(--accent)}
 #speedLabel{color:var(--ink);margin-left:2px}

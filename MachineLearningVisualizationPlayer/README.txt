@@ -16,3 +16,9 @@ Final teaching refinements:
 - Pass 5 is the final trained-state forward pass; no unnecessary learning/backpropagation follows.
 
 The visualization is deliberately conceptual. Controlled output interpolation guarantees a clear five-pass learning story, while synthetic parameter updates provide a believable visual account of changing internal pathways without claiming to be a full numerical trainer.
+
+Startup URL parameters (optional):
+- ?pass=5 opens Pass 5, ready for forward propagation. Values 1–5 are supported.
+- ?autoNext=1 triggers Next Step once after startup (also accepts true).
+- ?pass=5&autoNext=1 combines both: opens Pass 5 and runs its forward propagation.
+- Missing or invalid pass values default to Pass 1. Without autoNext, playback waits for you.

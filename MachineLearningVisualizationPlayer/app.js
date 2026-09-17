@@ -820,7 +820,8 @@
     restoreConnections();
     renderStatic(); updateStatus('forward');
     if (!await animate(1350, p => {
-      drawPulses(segments.inputHidden, p, () => C.bluePulse, () => 3.5);
+      drawPulses(segments.inputHidden, p,
+        i => scene.inputHiddenLines[i].line.getAttribute('stroke'), () => 3.5);
     }, token)) return false;
     clearPulses();
     if (!await hold(100,token)) return false;
@@ -830,7 +831,7 @@
     const ho=outputLineStyleForIndex(state.example,state.learnedStyleIndex);
     if (!await animate(1350, p => {
       drawPulses(segments.hiddenOutput, p,
-        i => { const seg=segments.hiddenOutput[i]; return ho.style(seg.h,seg.o).color; },
+        i => scene.hiddenOutputLines[i].line.getAttribute('stroke'),
         i => { const seg=segments.hiddenOutput[i]; return 2.0 + ho.style(seg.h,seg.o).width*.45; });
     }, token)) return false;
     clearPulses();
@@ -1248,10 +1249,18 @@
     else if (e.code==='Space' && state.running) { e.preventDefault(); state.paused=!state.paused; updateControls(); }
   });
 
+  // Optional startup URL parameters: ?pass=5&autoNext=1
+  // autoNext triggers one Next Step, not continuous playback.
+  const startupParams = new URLSearchParams(window.location.search);
+  const requestedPass = Number(startupParams.get('pass'));
+  const startupPass = Number.isInteger(requestedPass) && requestedPass >= 1 && requestedPass <= 5
+    ? requestedPass - 1 : 0;
+  const autoNext = ['1', 'true'].includes((startupParams.get('autoNext') || '').toLowerCase());
+
   // Initialize
   ensureModel(state.example);
   buildScene();
   rebuildSegments();
-  updateStatus();
-  updateControls();
+  setPass(startupPass);
+  if (autoNext) nextStep();
 })();
