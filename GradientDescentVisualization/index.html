@@ -159,14 +159,86 @@
     #gd-lab summary { cursor: pointer; padding: 12px 14px; font-weight: 650; }
     #gd-lab details > div { padding: 0 14px 14px; }
     #gd-lab .gd-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
-    #gd-lab table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
-    #gd-lab th, #gd-lab td { padding: 8px 9px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+    #gd-lab table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:#000; }
+    #gd-lab th, #gd-lab td { padding: 8px 9px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; color:#000; }
     #gd-lab th:first-child, #gd-lab td:first-child { text-align: left; }
-    #gd-lab th { background: #214d1d; color: #ffffff; font-weight: 650; }
+    #gd-lab th { background: #dfeadf; color: #000; font-weight: 650; }
     #gd-lab tr:last-child td { border-bottom: 0; }
-    #gd-lab .gd-summary-table th { background: #18212f; }
+    #gd-lab .gd-summary-table th { background: #e5e7eb; color:#000; }
     #gd-lab .gd-summary-table td:nth-child(1), #gd-lab .gd-summary-table td:nth-child(2) { text-align: left; white-space: normal; }
     #gd-lab .gd-summary-table td:nth-child(3) { text-align: right; }
+
+    /* Worksheet-style calculation area: mirrors the class handout while keeping live app values. */
+    #gd-lab .gd-worksheet { display:grid; gap:14px; }
+    #gd-lab .gd-worksheet table,
+    #gd-lab .gd-worksheet th,
+    #gd-lab .gd-worksheet td {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:#000 !important;
+    }
+
+    #gd-lab .gd-worksheet-values { font-size:.9rem; line-height:1.5; }
+    #gd-lab .gd-calculation-options { display:flex; justify-content:flex-end; align-items:center; margin:-2px 0 2px; }
+    #gd-lab .gd-toggle { display:inline-flex; align-items:center; gap:9px; cursor:pointer; user-select:none; font-size:.86rem; font-weight:600; color:#000; }
+    #gd-lab .gd-toggle input { position:absolute; opacity:0; pointer-events:none; }
+    #gd-lab .gd-toggle-track { position:relative; width:40px; height:22px; border-radius:999px; background:#c8cdd4; border:1px solid #9aa1aa; transition:.18s ease; flex:0 0 auto; }
+    #gd-lab .gd-toggle-track::after { content:""; position:absolute; width:16px; height:16px; left:2px; top:2px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.28); transition:.18s ease; }
+    #gd-lab .gd-toggle input:checked + .gd-toggle-track { background:var(--accent); border-color:var(--accent); }
+    #gd-lab .gd-toggle input:checked + .gd-toggle-track::after { transform:translateX(18px); }
+    #gd-lab .gd-toggle input:focus-visible + .gd-toggle-track { outline:3px solid rgba(40,95,143,.24); outline-offset:2px; }
+    #gd-lab .gd-worksheet-step-title { margin:2px 0 -2px; color:#0f4d6a; font-size:1rem; font-weight:650; }
+    #gd-lab .gd-worksheet-table { width:100%; min-width:0; table-layout:fixed; border-collapse:collapse; background:#fff; }
+    #gd-lab .gd-worksheet-table th, #gd-lab .gd-worksheet-table td { border:1px solid #111; padding:6px 7px; text-align:center; }
+    #gd-lab .gd-worksheet-table th:first-child, #gd-lab .gd-worksheet-table td:first-child { text-align:center; }
+    #gd-lab .gd-worksheet-table .gd-formula-row th { background:#fff; color:#000; font-size:.78rem; font-weight:500; white-space:normal; padding:2px 3px; vertical-align:middle; overflow:hidden; }
+    #gd-lab .gd-formula-box { display:flex; align-items:center; justify-content:center; width:100%; min-width:0; padding:0; }
+    #gd-lab .gd-formula-main { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:1px; width:100%; min-width:0; font-size:.78rem; line-height:1.05; white-space:normal; overflow-wrap:anywhere; }
+    #gd-lab .gd-formula-main .gd-fade { color:#c8c8c8; }
+    #gd-lab .gd-formula-main .gd-highlight { color:#000; font-weight:700; }
+    #gd-lab .gd-fraction { display:inline-grid; grid-template-rows:auto auto; text-align:center; line-height:.84; vertical-align:middle; margin-right:0; flex:0 0 auto; }
+    #gd-lab .gd-fraction .gd-num { border-bottom:1.2px solid currentColor; padding:0 2px 2px; }
+    #gd-lab .gd-fraction .gd-den { padding:2px 2px 0; }
+    #gd-lab .gd-sum-operator { position:relative; display:inline-block; width:1.8em; height:2.55em; vertical-align:middle; flex:0 0 1.8em; }
+    #gd-lab .gd-sum-symbol { position:absolute; left:50%; top:50%; transform:translate(-50%,-51%); font-size:2.05em; line-height:1; font-weight:400; }
+    #gd-lab .gd-sum-upper, #gd-lab .gd-sum-lower { position:absolute; left:50%; transform:translateX(-50%); font-size:.56em; line-height:1; white-space:nowrap; }
+    #gd-lab .gd-sum-upper { top:0; }
+    #gd-lab .gd-sum-lower { bottom:0; }
+    #gd-lab .gd-worksheet-table .gd-column-head th { background:#000; color:#fff !important; font-size:.84rem; font-weight:550; white-space:normal; }
+    #gd-lab .gd-worksheet-table th:nth-child(1), #gd-lab .gd-worksheet-table td:nth-child(1) { width:9%; }
+    #gd-lab .gd-worksheet-table th:nth-child(2), #gd-lab .gd-worksheet-table td:nth-child(2) { width:9%; }
+    #gd-lab .gd-worksheet-table th:nth-child(3), #gd-lab .gd-worksheet-table td:nth-child(3) { width:11%; }
+    #gd-lab .gd-worksheet-table th:nth-child(4), #gd-lab .gd-worksheet-table td:nth-child(4) { width:14%; }
+    #gd-lab .gd-worksheet-table th:nth-child(5), #gd-lab .gd-worksheet-table td:nth-child(5) { width:13%; }
+    #gd-lab .gd-worksheet-table th:nth-child(6), #gd-lab .gd-worksheet-table td:nth-child(6) { width:13%; }
+    #gd-lab .gd-worksheet-table th:nth-child(7), #gd-lab .gd-worksheet-table td:nth-child(7) { width:17%; }
+    #gd-lab .gd-worksheet-table th:nth-child(8), #gd-lab .gd-worksheet-table td:nth-child(8) { width:14%; }
+    #gd-lab .gd-column-head .gd-head-main { display:block; font-size:.80rem; line-height:1.12; }
+    #gd-lab .gd-column-head .gd-head-formula { display:block; margin-top:4px; font-size:.72rem; line-height:1.10; color:#fff; font-weight:500; white-space:normal; }
+    #gd-lab .gd-column-head .gd-head-formula .gd-head-lite { color:#fff; }
+    #gd-lab .gd-worksheet-table tbody td { color:#000; }
+    #gd-lab .gd-worksheet-table .gd-total-label { background:#000; color:#fff !important; text-align:right !important; font-weight:500; }
+    #gd-lab .gd-worksheet-table .gd-average-label { background:#000; color:#fff !important; text-align:right !important; font-weight:500; white-space:normal; }
+    #gd-lab .gd-worksheet-table .gd-term-label { background:#000; color:#fff !important; text-align:right !important; font-weight:500; }
+    #gd-lab .gd-worksheet-table .gd-term-row td { background:#000; color:#fff !important; }
+    #gd-lab .gd-worksheet-table .gd-term-cell { color:#fff !important; font-weight:550; }
+    #gd-lab .gd-calc-answer { color:#000 !important; }
+    #gd-lab .gd-step2-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid #111; border-radius:8px; overflow:hidden; }
+    #gd-lab .gd-step2-wrap { overflow-x:auto; }
+    #gd-lab .gd-step2-table { min-width:500px; border-collapse:collapse; }
+    #gd-lab .gd-step2-table th, #gd-lab .gd-step2-table td { border:1px solid #111; padding:7px 8px; text-align:center; white-space:normal; vertical-align:middle; }
+    #gd-lab .gd-step2-table th:first-child, #gd-lab .gd-step2-table td:first-child { text-align:center; }
+    #gd-lab .gd-step2-table .gd-param-head { font-size:1rem; font-weight:700; }
+    #gd-lab .gd-step2-table.gd-weight-table .gd-param-head { background:#083f11; color:#dff0d4 !important; }
+    #gd-lab .gd-step2-table.gd-bias-table .gd-param-head { background:#173e67; color:#dbeaf6 !important; }
+    #gd-lab .gd-step2-table.gd-weight-table .gd-subhead th { background:#dff0d4; color:#083f11 !important; }
+    #gd-lab .gd-step2-table.gd-bias-table .gd-subhead th { background:#dbeaf6; color:#173e67 !important; }
+    #gd-lab .gd-step2-table .gd-formula-cell { font-family:inherit; font-size:.9rem; }
+    #gd-lab .gd-step2-table .gd-words-cell { line-height:1.35; }
+    #gd-lab .gd-step3-table { min-width:760px; border-collapse:collapse; }
+    #gd-lab .gd-step3-table td { border:1px solid #111; padding:9px 10px; text-align:center; white-space:normal; }
+    #gd-lab .gd-step3-table td:first-child { text-align:center; }
+    #gd-lab .gd-step3-table .gd-step3-answer { font-weight:700; }
+    @media (max-width:850px) { #gd-lab .gd-step2-grid { grid-template-columns:1fr; } }
     #gd-lab .gd-mini-badge { display: inline-block; border-radius: 999px; padding: 3px 8px; background: var(--accent-bg); color: var(--text); font-size: 0.76rem; }
     #gd-lab .gd-hidden { display: none !important; }
     #gd-lab .gd-warning { color: #9a3412; font-weight: 600; }
@@ -341,22 +413,71 @@
 
     <details open>
       <summary>Calculations for the current iteration</summary>
-      <div class="gd-section">
+      <div class="gd-worksheet">
         <div class="gd-subtle" id="calculationCaption"></div>
+        <div class="gd-calculation-options">
+          <label class="gd-toggle" for="useFiveItems">
+            <input id="useFiveItems" type="checkbox">
+            <span class="gd-toggle-track" aria-hidden="true"></span>
+            <span>Use 5 items only</span>
+          </label>
+        </div>
+        <div id="worksheetValues" class="gd-worksheet-values"></div>
+
+        <div class="gd-worksheet-step-title">Step 1: Work out each data point, then total and average the calculated columns.</div>
         <div class="gd-scroll">
-          <table>
+          <table class="gd-worksheet-table" aria-label="Step 1 gradient descent calculations">
             <thead>
-              <tr>
-                <th>Index (i)</th><th>Input</th><th>Correct Output (y)</th><th>Predicted Output (ŷ)</th><th>Error</th><th>Error × 2 × Input</th><th>Error × 2</th><th>Error Squared</th>
+              <tr class="gd-formula-row">
+                <th><div class="gd-formula-box"><div class="gd-formula-main"><span class="gd-fraction gd-fade"><span class="gd-num">1</span><span class="gd-den">M</span></span><span class="gd-sum-operator gd-fade"><span class="gd-sum-upper">M</span><span class="gd-sum-symbol">∑</span><span class="gd-sum-lower gd-highlight">i=1</span></span><span class="gd-fade">[(ŷ<sub>i</sub> − y<sub>i</sub>) × 2x<sub>i</sub>]</span></div></div></th>
+                <th><div class="gd-formula-box"><div class="gd-formula-main"><span class="gd-fraction gd-fade"><span class="gd-num">1</span><span class="gd-den">M</span></span><span class="gd-sum-operator gd-fade"><span class="gd-sum-upper">M</span><span class="gd-sum-symbol">∑</span><span class="gd-sum-lower">i=1</span></span><span class="gd-fade">[(ŷ<sub>i</sub> − y<sub>i</sub>) × 2</span><span class="gd-highlight">x<sub>i</sub></span><span class="gd-fade">]</span></div></div></th>
+                <th><div class="gd-formula-box"><div class="gd-formula-main"><span class="gd-fraction gd-fade"><span class="gd-num">1</span><span class="gd-den">M</span></span><span class="gd-sum-operator gd-fade"><span class="gd-sum-upper">M</span><span class="gd-sum-symbol">∑</span><span class="gd-sum-lower">i=1</span></span><span class="gd-fade">[(ŷ<sub>i</sub> − </span><span class="gd-highlight">y<sub>i</sub></span><span class="gd-fade">) × 2x<sub>i</sub>]</span></div></div></th>
+                <th><div class="gd-formula-box"><div class="gd-formula-main"><span class="gd-fraction gd-fade"><span class="gd-num">1</span><span class="gd-den">M</span></span><span class="gd-sum-operator gd-fade"><span class="gd-sum-upper">M</span><span class="gd-sum-symbol">∑</span><span class="gd-sum-lower">i=1</span></span><span class="gd-fade">[(</span><span class="gd-highlight">ŷ<sub>i</sub></span><span class="gd-fade"> − y<sub>i</sub>) × 2x<sub>i</sub>]</span></div></div></th>
+                <th><div class="gd-formula-box"><div class="gd-formula-main"><span class="gd-fraction gd-fade"><span class="gd-num">1</span><span class="gd-den">M</span></span><span class="gd-sum-operator gd-fade"><span class="gd-sum-upper">M</span><span class="gd-sum-symbol">∑</span><span class="gd-sum-lower">i=1</span></span><span class="gd-fade">[</span><span class="gd-highlight">(ŷ<sub>i</sub> − y<sub>i</sub>)</span><span class="gd-fade"> × 2x<sub>i</sub>]</span></div></div></th>
+                <th><div class="gd-formula-box"><div class="gd-formula-main"><span class="gd-highlight">(ŷ<sub>i</sub> − y<sub>i</sub>)<sup>2</sup></span></div></div></th>
+                <th><div class="gd-formula-box"><div class="gd-formula-main"><span class="gd-fraction gd-fade"><span class="gd-num">1</span><span class="gd-den">M</span></span><span class="gd-sum-operator gd-fade"><span class="gd-sum-upper">M</span><span class="gd-sum-symbol">∑</span><span class="gd-sum-lower">i=1</span></span><span class="gd-fade">[</span><span class="gd-highlight">(ŷ<sub>i</sub> − y<sub>i</sub>) × 2x<sub>i</sub></span><span class="gd-fade">]</span></div></div></th>
+                <th><div class="gd-formula-box"><div class="gd-formula-main"><span class="gd-fraction gd-fade"><span class="gd-num">1</span><span class="gd-den">M</span></span><span class="gd-sum-operator gd-fade"><span class="gd-sum-upper">M</span><span class="gd-sum-symbol">∑</span><span class="gd-sum-lower">i=1</span></span><span class="gd-fade">[</span><span class="gd-highlight">(ŷ<sub>i</sub> − y<sub>i</sub>) × 2</span><span class="gd-fade">]</span></div></div></th>
+              </tr>
+              <tr class="gd-column-head">
+                <th><span class="gd-head-main">Index</span><span class="gd-head-formula"><i>i</i></span></th>
+                <th><span class="gd-head-main">Input</span><span class="gd-head-formula">x<sub>i</sub></span></th>
+                <th><span class="gd-head-main">Correct<br>Output</span><span class="gd-head-formula">y<sub>i</sub></span></th>
+                <th><span class="gd-head-main">Predicted<br>Output</span><span class="gd-head-formula">ŷ<sub>i</sub> = wx<sub>i</sub> + b</span></th>
+                <th><span class="gd-head-main">Error</span><span class="gd-head-formula">ŷ<sub>i</sub> − y<sub>i</sub></span></th>
+                <th><span class="gd-head-main">Error Squared</span><span class="gd-head-formula">(ŷ<sub>i</sub> − y<sub>i</sub>)<sup>2</sup></span></th>
+                <th><span class="gd-head-main">Error * 2 * Input</span><span class="gd-head-formula">(ŷ<sub>i</sub> − y<sub>i</sub>) * 2x<sub>i</sub></span></th>
+                <th><span class="gd-head-main">Error * 2</span><span class="gd-head-formula">(ŷ<sub>i</sub> − y<sub>i</sub>) * 2</span></th>
               </tr>
             </thead>
             <tbody id="sampleBody"></tbody>
+            <tfoot id="sampleFoot"></tfoot>
           </table>
         </div>
+
+        <div class="gd-worksheet-step-title">Step 2: Use the gradients to nudge the weight and the bias.</div>
+        <div class="gd-step2-wrap">
+          <div class="gd-step2-grid">
+            <table class="gd-step2-table gd-weight-table" aria-label="Weight update calculations">
+              <thead>
+                <tr><th class="gd-param-head" colspan="3">Weight (w)</th></tr>
+                <tr class="gd-subhead"><th>Step as formula</th><th>Step in words</th><th>Answer</th></tr>
+              </thead>
+              <tbody id="weightStepBody"></tbody>
+            </table>
+            <table class="gd-step2-table gd-bias-table" aria-label="Bias update calculations">
+              <thead>
+                <tr><th class="gd-param-head" colspan="3" id="biasStepHeading">Bias (b)</th></tr>
+                <tr class="gd-subhead"><th>Step as formula</th><th>Step in words</th><th>Answer</th></tr>
+              </thead>
+              <tbody id="biasStepBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="gd-worksheet-step-title">Step 3: Continue or Stop</div>
         <div class="gd-scroll">
-          <table class="gd-summary-table">
-            <thead><tr><th>Step in Words</th><th>Step as Formula</th><th>Answer</th></tr></thead>
-            <tbody id="summaryBody"></tbody>
+          <table class="gd-step3-table" aria-label="Gradient descent stopping check">
+            <tbody id="stopStepBody"></tbody>
           </table>
         </div>
       </div>
@@ -375,6 +496,7 @@
       const state = {
         stage: 1,
         epsilon: 0.50,
+        useFiveItems: false,
         playing: false,
         timer: null,
         remaining: null,
@@ -394,8 +516,22 @@
         return Number.isFinite(value) ? value : fallback;
       };
 
+      function activeData() {
+        return state.useFiveItems ? data.slice(0,5) : data;
+      }
+
+      function getActiveOptimum() {
+        const rows=activeData();
+        const xBar=mean(rows.map(d=>d.x));
+        const yBar=mean(rows.map(d=>d.y));
+        const numerator=rows.reduce((sum,d)=>sum+(d.x-xBar)*(d.y-yBar),0);
+        const denominator=rows.reduce((sum,d)=>sum+(d.x-xBar)*(d.x-xBar),0);
+        const w=denominator===0?0:numerator/denominator;
+        return {w,b:yBar-w*xBar};
+      }
+
       function calculate(w,b) {
-        const rows = data.map(d => {
+        const rows = activeData().map(d => {
           const predicted = w*d.x + b;
           const difference = predicted - d.y;
           return {
@@ -465,7 +601,8 @@
         const x0=0,x1=11;
         svg.appendChild(svgNode('line',{x1:X(x0),y1:Y(w*x0+b),x2:X(x1),y2:Y(w*x1+b),class:'gd-current-line'}));
         if (state.manual.revealed) {
-          svg.appendChild(svgNode('line',{x1:X(x0),y1:Y(optimum.w*x0+optimum.b),x2:X(x1),y2:Y(optimum.w*x1+optimum.b),class:'gd-opt-line'}));
+          const activeOptimum=getActiveOptimum();
+          svg.appendChild(svgNode('line',{x1:X(x0),y1:Y(activeOptimum.w*x0+activeOptimum.b),x2:X(x1),y2:Y(activeOptimum.w*x1+activeOptimum.b),class:'gd-opt-line'}));
         }
         data.forEach(d => {
           const c=svgNode('circle',{cx:X(d.x),cy:Y(d.y),r:6,class:'gd-point'});
@@ -544,38 +681,116 @@
 
       function renderCalculationTables() {
         const ctx=getTableContext();
-        $('sampleBody').innerHTML=ctx.calc.rows.map(r=>`
-          <tr><td>${r.i}</td><td>${num(r.x,1)}</td><td>${num(r.y)}</td><td>${num(r.predicted)}</td><td>${num(r.difference)}</td><td>${num(r.diff2x)}</td><td>${num(r.diff2)}</td><td>${num(r.squared)}</td></tr>`).join('');
-        if (state.stage===1) {
-          $('calculationCaption').textContent='The table uses the current preview line. This stage records human attempts but does not apply a gradient update.';
-        } else if (ctx.weightStep===null) {
-          $('calculationCaption').textContent='These are the calculations that would be used for the next iteration.';
-        } else {
-          $('calculationCaption').textContent=`Completed iteration ${ctx.iteration}: calculations use the old parameter values, multiply each gradient by the learning rate, and subtract that result to produce the new values.`;
-        }
+        const sumSquared=ctx.calc.rows.reduce((a,r)=>a+r.squared,0);
         const sumW=ctx.calc.rows.reduce((a,r)=>a+r.diff2x,0);
         const sumB=ctx.calc.rows.reduce((a,r)=>a+r.diff2,0);
-        const lrText=ctx.lr===null?'Not used in manual mode':num(ctx.lr,4);
-        const weightStep=ctx.weightStep===null?'—':signed(ctx.weightStep,6);
+
+        $('sampleBody').innerHTML=ctx.calc.rows.map(r=>`
+          <tr>
+            <td>${r.i}</td>
+            <td>${num(r.x,3)}</td>
+            <td>${num(r.y)}</td>
+            <td class="gd-calc-answer">${num(r.predicted)}</td>
+            <td class="gd-calc-answer">${num(r.difference)}</td>
+            <td class="gd-calc-answer">${num(r.squared)}</td>
+            <td class="gd-calc-answer">${num(r.diff2x)}</td>
+            <td class="gd-calc-answer">${num(r.diff2)}</td>
+          </tr>`).join('');
+
+        $('sampleFoot').innerHTML=`
+          <tr>
+            <td class="gd-total-label" colspan="5">Σ Column total</td>
+            <td class="gd-calc-answer">${num(sumSquared,3)}</td>
+            <td class="gd-calc-answer">${num(sumW,3)}</td>
+            <td class="gd-calc-answer">${num(sumB,3)}</td>
+          </tr>
+          <tr>
+            <td class="gd-average-label" colspan="5">Average (Σ Column total ÷ M, where M = ${ctx.calc.rows.length} items)</td>
+            <td class="gd-calc-answer">${num(ctx.calc.mse,3)}</td>
+            <td class="gd-calc-answer">${num(ctx.calc.gw,3)}</td>
+            <td class="gd-calc-answer">${num(ctx.calc.gb,3)}</td>
+          </tr>
+          <tr class="gd-term-row">
+            <td class="gd-term-label" colspan="5">Term for the average of each sum</td>
+            <td class="gd-term-cell">MSE</td>
+            <td class="gd-term-cell">Weight Gradient</td>
+            <td class="gd-term-cell">Bias Gradient</td>
+          </tr>`;
+
+        if (state.stage===1) {
+          $('calculationCaption').textContent='The worksheet below uses the current preview line. This stage lets you inspect the same mathematics, but it does not automatically apply a gradient-descent update.';
+        } else if (ctx.weightStep===null) {
+          $('calculationCaption').textContent='The worksheet below shows the calculations that would be used for the next iteration.';
+        } else {
+          $('calculationCaption').textContent=`Completed iteration ${ctx.iteration}: the worksheet uses the parameter values from the start of that iteration, then shows the update that produced the new values.`;
+        }
+
         const bLocked=state.stage===2;
-        const lockedBias=state.stage===2?state.guided.b:ctx.bOld;
-        const biasStep=ctx.biasStep===null?'—':signed(ctx.biasStep,6);
-        const criterion=state.stage===2?Math.abs(ctx.calc.gw):ctx.calc.gradMag;
-        const rows=[
-          ['Prior Weight [w(old)]', 'w(old)', num(ctx.wOld,6)],
-          ['Prior Bias [b(old)]', 'b(old)', num(ctx.bOld,6)],
-          ['Sum of (differences × 2 × input)', 'Σ[2x(ŷ − y)]', num(sumW,4)],
-          ['Weight Gradient', '(1/n)Σ[2x(ŷ − y)]', num(ctx.calc.gw,4)],
-          ['Learning Rate × Weight Gradient', 'α × Weight Gradient', ctx.lr===null?'Not used in manual mode':weightStep],
-          ['New Weight', 'w(new) = w(old) − (Learning Rate × Weight Gradient)', ctx.wNew===null?'Not yet applied':num(ctx.wNew,6)],
-          ['Sum of (differences × 2)', 'Σ[2(ŷ − y)]', num(sumB,4)],
-          ['Bias Gradient', '(1/n)Σ[2(ŷ − y)]', num(ctx.calc.gb,4)],
-          ['Learning Rate × Bias Gradient', bLocked?'Not applied because the bias is fixed':'α × Bias Gradient', bLocked?'0.000000':(ctx.lr===null?'Not used in manual mode':biasStep)],
-          ['New Bias', bLocked?'b(new) = b(old)':'b(new) = b(old) − (Learning Rate × Bias Gradient)', bLocked?num(lockedBias,6):(ctx.bNew===null?'Not yet applied':num(ctx.bNew,6))],
-          ['Stopping check', state.stage===2?'|weight gradient| < ε':'gradient magnitude < ε', `${num(criterion,4)} < ${num(state.epsilon,3)} ? ${criterion<state.epsilon?'Yes':'No'}`],
-          ['Learning rate used', 'α', lrText]
-        ];
-        $('summaryBody').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+        const lrDisplay=ctx.lr===null?'Not used in manual mode':num(ctx.lr,3);
+        const stopText=state.stage===1
+          ? 'No automatic stopping rule in Fit by eye mode'
+          : state.stage===2
+            ? `Stop when |Weight Gradient| < ε (${num(state.epsilon,3)})`
+            : `Stop when Gradient Magnitude < ε (${num(state.epsilon,3)})`;
+        $('worksheetValues').innerHTML=`<strong>Here are values used for this ${ctx.weightStep===null?'calculation':'iteration'}:</strong><br>
+          • Weight = <span class="gd-calc-answer">${num(ctx.wOld,3)}</span> &nbsp; | &nbsp;
+          Bias = <span class="gd-calc-answer">${num(ctx.bOld,3)}</span> &nbsp; | &nbsp;
+          Learning rate (α) = <span class="gd-calc-answer">${lrDisplay}</span> &nbsp; | &nbsp; ${stopText}`;
+
+        const prospectiveWeightStep=ctx.lr===null?null:ctx.lr*ctx.calc.gw;
+        const prospectiveBiasStep=ctx.lr===null?null:ctx.lr*ctx.calc.gb;
+        const displayWeightStep=ctx.weightStep===null?prospectiveWeightStep:ctx.weightStep;
+        const displayBiasStep=ctx.biasStep===null?prospectiveBiasStep:ctx.biasStep;
+        const displayWNew=ctx.wNew===null && displayWeightStep!==null ? ctx.wOld-displayWeightStep : ctx.wNew;
+        const displayBNew=bLocked
+          ? ctx.bOld
+          : (ctx.bNew===null && displayBiasStep!==null ? ctx.bOld-displayBiasStep : ctx.bNew);
+
+        const weightNudgeAnswer=ctx.lr===null?'Not used in manual mode':num(displayWeightStep,3);
+        const weightNewAnswer=ctx.lr===null?'Not applied in manual mode':num(displayWNew,3);
+        const biasNudgeAnswer=ctx.lr===null
+          ? 'Not used in manual mode'
+          : bLocked ? '0.000 (bias locked)' : num(displayBiasStep,3);
+        const biasNewAnswer=ctx.lr===null
+          ? 'Not applied in manual mode'
+          : num(displayBNew,3);
+
+        $('weightStepBody').innerHTML=[
+          ['w<sup>old</sup>','Old Weight',num(ctx.wOld,3)],
+          ['(1/M) Σ[(ŷ<sub>i</sub> − y<sub>i</sub>) × 2x<sub>i</sub>]','Weight Gradient',num(ctx.calc.gw,3)],
+          ['α × Weight Gradient','Nudge = learning rate × weight gradient',weightNudgeAnswer],
+          ['w<sup>new</sup> = w<sup>old</sup> − α × Weight Gradient','New weight = old − nudge',weightNewAnswer]
+        ].map(r=>`<tr><td class="gd-formula-cell">${r[0]}</td><td class="gd-words-cell">${r[1]}</td><td class="gd-calc-answer">${r[2]}</td></tr>`).join('');
+
+        $('biasStepHeading').textContent=bLocked?'Bias (b) — fixed':'Bias (b)';
+        $('biasStepBody').innerHTML=[
+          ['b<sup>old</sup>','Old Bias',num(ctx.bOld,3)],
+          ['(1/M) Σ[(ŷ<sub>i</sub> − y<sub>i</sub>) × 2]','Bias Gradient',num(ctx.calc.gb,3)],
+          [bLocked?'Not applied because bias is fixed':'α × Bias Gradient',bLocked?'Nudge = 0 because the bias is locked':'Nudge = learning rate × bias gradient',biasNudgeAnswer],
+          [bLocked?'b<sup>new</sup> = b<sup>old</sup>':'b<sup>new</sup> = b<sup>old</sup> − α × Bias Gradient',bLocked?'Bias remains fixed':'New bias = old − nudge',biasNewAnswer]
+        ].map(r=>`<tr><td class="gd-formula-cell">${r[0]}</td><td class="gd-words-cell">${r[1]}</td><td class="gd-calc-answer">${r[2]}</td></tr>`).join('');
+
+        let stopWords, stopFormula, stopAnswer;
+        if (state.stage===1) {
+          stopWords='Should another automatic gradient-descent run be conducted?';
+          stopFormula='Manual fit mode does not run gradient descent';
+          stopAnswer='N/A';
+        } else if (state.stage===2) {
+          const continueRun=Math.abs(ctx.calc.gw)>=state.epsilon;
+          stopWords='Should another run be conducted? (Yes, while the absolute weight gradient is not yet within tolerance.)';
+          stopFormula=`|Weight Gradient| ≥ ε ? &nbsp; ${num(Math.abs(ctx.calc.gw),3)} ≥ ${num(state.epsilon,3)}`;
+          stopAnswer=continueRun?'TRUE':'FALSE';
+        } else {
+          const continueRun=ctx.calc.gradMag>=state.epsilon;
+          stopWords='Should another run be conducted? (Yes, while the gradient magnitude is not yet within tolerance.)';
+          stopFormula=`Gradient Magnitude ≥ ε ? &nbsp; ${num(ctx.calc.gradMag,3)} ≥ ${num(state.epsilon,3)}`;
+          stopAnswer=continueRun?'TRUE':'FALSE';
+        }
+        $('stopStepBody').innerHTML=`<tr>
+          <td>${stopWords}</td>
+          <td class="gd-formula-cell">${stopFormula}</td>
+          <td class="gd-calc-answer gd-step3-answer">${stopAnswer}</td>
+        </tr>`;
       }
 
       function convergenceValue(calc) { return state.stage===2 ? Math.abs(calc.gw) : calc.gradMag; }
@@ -589,6 +804,7 @@
         $('gradientControls').classList.toggle('gd-hidden',state.stage===1);
         $('biasLossCard').classList.toggle('gd-disabled-loss',state.stage===2);
         $('epsilon').value=state.epsilon.toFixed(2);
+        $('useFiveItems').checked=state.useFiveItems;
         if (state.stage===1) syncManualInputs(); else syncGradientInputs();
         syncSharedInputs();
         const biasLocked=state.stage===2;
@@ -611,7 +827,7 @@
           $('nextAction').querySelector('span').textContent=state.manual.attempts===0?'Move the Weight and Bias controls in the blue workspace to fit the line to the points, then press Check current line.':'Continue adjusting weight and bias, then press Check current line to evaluate your fit.';
         } else if (state.stage===2) {
           $('stageBadge').textContent='Core lesson';
-          $('stageMessage').innerHTML='<strong>Bias revealed and locked:</strong> b = 1.487. Gradient descent changes only the weight, while the inactive bias controls and loss slice remain visible for continuity.';
+          $('stageMessage').innerHTML=`<strong>Bias revealed and locked:</strong> b = ${getActiveOptimum().b.toFixed(3)}. Gradient descent changes only the weight, while the inactive bias controls and loss slice remain visible for continuity.`;
           $('lossDescription').textContent='The bias is held constant, so the weight slice is now the complete one-dimensional loss curve.';
           $('metricLabel1').textContent='Attempts'; $('metric1').textContent=state.guided.attempts;
           $('metricLabel3').textContent='Gradient magnitude';
@@ -651,7 +867,8 @@
         $('biasGradientText').textContent=`slope = ${signed(calc.gb,3)}`;
         const lr=state.stage===1?null:(state.stage===2?state.guided.lr:state.advanced.lr);
         if (lr!==null) {
-          const biasNote=state.stage===2 && Math.abs(state.guided.b-optimum.b)>0.0005?' <span class="gd-warning">The fixed bias differs from 1.487, so the best weight will shift.</span>':'';
+          const activeOptimum=getActiveOptimum();
+          const biasNote=state.stage===2 && Math.abs(state.guided.b-activeOptimum.b)>0.0005?` <span class="gd-warning">The fixed bias differs from ${activeOptimum.b.toFixed(3)}, so the best weight will shift.</span>`:'';
           $('rateWarning').innerHTML=(lr>=0.025?'<span class="gd-warning">This learning rate is near or above the stable range and may overshoot.</span>':'Smaller learning rates move more cautiously; larger ones move faster but can overshoot.')+biasNote;
         }
         $('playPause').textContent=state.playing?'Pause':'Play';
@@ -672,7 +889,7 @@
       function setStage(stage) {
         stopPlaying();
         if (stage===2 && state.stage!==2) {
-          state.guided={w:0,b:optimum.b,startW:0,iteration:0,attempts:0,lr:state.guided.lr,lastStep:null};
+          state.guided={w:0,b:getActiveOptimum().b,startW:0,iteration:0,attempts:0,lr:state.guided.lr,lastStep:null};
         }
         if (stage===3 && state.stage!==3) {
           state.advanced={w:0,b:0,startW:0,startB:0,iteration:0,lr:state.advanced.lr,lastStep:null};
@@ -755,7 +972,7 @@
       function resetGradient() {
         stopPlaying();
         if (state.stage===2) {
-          state.guided={w:0,b:optimum.b,startW:0,iteration:0,attempts:0,lr:parseNumber($('learningRate'),0.005),lastStep:null};
+          state.guided={w:0,b:getActiveOptimum().b,startW:0,iteration:0,attempts:0,lr:parseNumber($('learningRate'),0.005),lastStep:null};
         } else {
           state.advanced={w:0,b:0,startW:0,startB:0,iteration:0,lr:parseNumber($('learningRate'),0.005),lastStep:null};
         }
@@ -801,6 +1018,15 @@
       $('runMany').addEventListener('click',()=>advanceMany(clamp(Math.round(parseNumber($('runCount'),5)),1,100)));
       $('playPause').addEventListener('click',()=>{state.playing?stopPlaying():scheduleSteps(null);render();});
       $('gdReset').addEventListener('click',resetGradient);
+      $('useFiveItems').addEventListener('change',e=>{
+        stopPlaying();
+        state.useFiveItems=e.target.checked;
+        state.manual.lastSubmitted=null;
+        state.guided.lastStep=null;
+        state.advanced.lastStep=null;
+        if (state.stage===2) state.guided.b=getActiveOptimum().b;
+        render();
+      });
       $('epsilon').addEventListener('change',e=>{state.epsilon=clamp(parseNumber(e.target,state.epsilon),0.001,20);render();});
       $('howItWorks').addEventListener('click',openTour);
       $('tourRoot').addEventListener('click',e=>{
