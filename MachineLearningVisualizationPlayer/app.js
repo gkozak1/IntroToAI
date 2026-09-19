@@ -496,8 +496,7 @@
     const g = scene.groups.gd;
     g.setAttribute('opacity', 0);
     const panel = sEl('rect', {x:p.x, y:p.y, width:p.w, height:p.h, rx:10, fill:'#fff', 'fill-opacity':.96, stroke:'#d5dee7', 'stroke-width':2}, g);
-    const title = sEl('text', {x:p.x+p.w/2, y:p.y+25, 'text-anchor':'middle', fill:C.ink, 'font-size':20, 'font-weight':900, text:'Gradient descent'}, g);
-    const gx = p.x+28, gy=p.y+42, gw=p.w-48, gh=p.h-60;
+    const gx = p.x+28, gy=p.y+18, gw=p.w-48, gh=p.h-36;
     const grid = sEl('g', {}, g);
     for (let i=0;i<6;i++) sEl('line', {x1:gx+i*gw/5, y1:gy, x2:gx+i*gw/5, y2:gy+gh, stroke:'#e4eaf0', 'stroke-width':1}, grid);
     for (let i=0;i<5;i++) sEl('line', {x1:gx, y1:gy+i*gh/4, x2:gx+gw, y2:gy+i*gh/4, stroke:'#e4eaf0', 'stroke-width':1}, grid);
@@ -515,7 +514,7 @@
     const len = curve.getTotalLength ? curve.getTotalLength() : 400;
     curve.setAttribute('stroke-dasharray', len);
     curve.setAttribute('stroke-dashoffset', len);
-    scene.gd = {g,panel,title,curve,point,tangent,gx,gy,gw,gh,len};
+    scene.gd = {g,panel,curve,point,tangent,gx,gy,gw,gh,len};
   }
 
   function hiddenLevelsForPass(pass=state.pass) {
