@@ -11,7 +11,7 @@
     },
     forward: {
       label: 'Forward propagation',
-      text: 'Existing parameters are used to calculate hidden activations and output neuron values.'
+      text: 'Forward propagation uses the current weights and biases to calculate neuron values from input to output. This animation illustrates that process.'
     },
     result: {
       label: 'Forward result',
@@ -19,23 +19,23 @@
     },
     corrections: {
       label: 'Needed corrections',
-      text: 'Error direction and magnitude are calculated for each output neuron.'
+      text: 'Each output is compared with its target. The arrows show how far each output is from its target and whether it needs to increase or decrease.'
     },
     gd: {
       label: 'Gradient Descent',
-      text: 'The error curve is used to determine the desired correction.'
+      text: 'The curve illustrates moving toward lower error. Backpropagation calculates gradients, which describe how each parameter affects error. Gradient descent uses those gradients and the learning rate to adjust the parameters.'
     },
     local: {
       label: 'Local adjustment',
-      text: "Representative parameter updates are highlighted: the focused output's incoming weights change, and example earlier-layer weights show that learning reaches the whole network."
+      text: "The changing connections illustrate weight updates made by gradient descent using gradients from backpropagation. The output bar previews the effect; new outputs are calculated during the next forward pass."
     },
     backprop: {
       label: 'Backpropagation',
-      text: 'Backpropagation computes gradients throughout the network; connection weights across both layers settle into their updated strengths before the next pass.'
+      text: 'Backpropagation works backward to calculate how each parameter affects the overall error. Gradient descent then updates the parameters. This animation combines these two steps and previews their effect on neuron values.'
     },
     complete: {
       label: 'Training complete',
-      text: 'The output pattern has reached the target for this example, so no further correction is needed.'
+      text: 'This demonstration reaches the target after five passes. Real training usually takes many more updates and must be checked on examples the model has not trained on.'
     }
   };
 
@@ -750,14 +750,14 @@
     if (stage==='inception') {
       text='Random connection weights already exist. Only the input activations are known; hidden and output activations will be calculated by the first forward pass.';
     } else if (stage==='forward' && state.pass>0) {
-      text='Updated connection weights are used again; the next forward pass produces a changed hidden-layer pattern and new output values.';
+      text='The next forward pass uses the updated weights and biases to calculate new neuron values. This demonstration illustrates how learning can improve the prediction.';
     } else if (stage==='result') {
       const vals=currentValues();
       let pred=0;
       for (let i=1;i<10;i++) if (vals[i]>vals[pred]) pred=i;
       text=`The highest-valued output neuron indicates the model's prediction: ${pred} (${pred===targetIndex()?'correct':'incorrect'}).`;
     } else if (stage==='backprop') {
-      text='Backpropagation computes gradients throughout the network. The remaining connection weights across both layers now settle into their updated strengths.';
+      text='Backpropagation works backward to calculate how each parameter affects the overall error. Gradient descent then updates the parameters. This animation combines these two steps and previews their effect on neuron values.';
     }
     dom.statusDescription.textContent = text;
   }
