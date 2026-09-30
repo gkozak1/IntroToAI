@@ -204,6 +204,9 @@
     #gd-lab .gd-sum-upper { top:0; }
     #gd-lab .gd-sum-lower { bottom:0; }
     #gd-lab .gd-worksheet-table .gd-column-head th { background:#000; color:#fff !important; font-size:.84rem; font-weight:550; white-space:normal; }
+    #gd-lab .gd-worksheet-table .gd-column-head th:nth-child(-n+4) { background:#275317; }
+    #gd-lab .gd-worksheet-table .gd-column-head th:nth-child(5),
+    #gd-lab .gd-worksheet-table .gd-column-head th:nth-child(6) { background:#153d63; }
     #gd-lab .gd-worksheet-table th:nth-child(1), #gd-lab .gd-worksheet-table td:nth-child(1) { width:9%; }
     #gd-lab .gd-worksheet-table th:nth-child(2), #gd-lab .gd-worksheet-table td:nth-child(2) { width:9%; }
     #gd-lab .gd-worksheet-table th:nth-child(3), #gd-lab .gd-worksheet-table td:nth-child(3) { width:11%; }
@@ -228,10 +231,13 @@
     #gd-lab .gd-step2-table th, #gd-lab .gd-step2-table td { border:1px solid #111; padding:7px 8px; text-align:center; white-space:normal; vertical-align:middle; }
     #gd-lab .gd-step2-table th:first-child, #gd-lab .gd-step2-table td:first-child { text-align:center; }
     #gd-lab .gd-step2-table .gd-param-head { font-size:1rem; font-weight:700; }
-    #gd-lab .gd-step2-table.gd-weight-table .gd-param-head { background:#083f11; color:#dff0d4 !important; }
-    #gd-lab .gd-step2-table.gd-bias-table .gd-param-head { background:#173e67; color:#dbeaf6 !important; }
-    #gd-lab .gd-step2-table.gd-weight-table .gd-subhead th { background:#dff0d4; color:#083f11 !important; }
-    #gd-lab .gd-step2-table.gd-bias-table .gd-subhead th { background:#dbeaf6; color:#173e67 !important; }
+    #gd-lab .gd-step2-table.gd-weight-table .gd-param-head { background:#808080; color:#fff !important; }
+    #gd-lab .gd-step2-table.gd-bias-table .gd-param-head { background:#808080; color:#fff !important; }
+    #gd-lab .gd-step2-table.gd-weight-table .gd-subhead th { background:#d9d9d9; color:#275317 !important; }
+    #gd-lab .gd-step2-table.gd-bias-table .gd-subhead th { background:#d9d9d9; color:#153d63 !important; }
+    #gd-lab .gd-step2-table tbody tr:nth-child(2) td:nth-child(-n+2) { background:#000; color:#fff !important; }
+    #gd-lab .gd-step2-table tbody tr:nth-child(3) td:nth-child(-n+2),
+    #gd-lab .gd-step2-table tbody tr:nth-child(4) td:nth-child(-n+2) { background:#501549; color:#fff !important; }
     #gd-lab .gd-step2-table .gd-formula-cell { font-family:inherit; font-size:.9rem; }
     #gd-lab .gd-step2-table .gd-words-cell { line-height:1.35; }
     #gd-lab .gd-step3-table { min-width:760px; border-collapse:collapse; }
@@ -421,6 +427,12 @@
             <span class="gd-toggle-track" aria-hidden="true"></span>
             <span>Use 5 items only</span>
           </label>
+        </div>
+        <div aria-label="Calculation color legend" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;border:1px solid #111;margin:0 0 2px;font-size:.82rem;text-align:center;overflow:hidden;">
+          <div style="background:#275317;color:#fff;padding:7px 8px;">Forward Propagation</div>
+          <div style="background:#153d63;color:#fff;padding:7px 8px;">Error</div>
+          <div style="background:#000;color:#fff;padding:7px 8px;">Backward Propagation</div>
+          <div style="background:#501549;color:#fff;padding:7px 8px;">Gradient Descent</div>
         </div>
         <div id="worksheetValues" class="gd-worksheet-values"></div>
 
