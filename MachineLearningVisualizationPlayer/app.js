@@ -22,16 +22,16 @@
       text: 'Each output is compared with its target. The arrows show how far each output is from its target and whether it needs to increase or decrease.'
     },
     gd: {
-      label: 'Gradient Descent',
-      text: 'The curve illustrates moving toward lower error. Backpropagation calculates gradients, which describe how each parameter affects error. Gradient descent uses those gradients and the learning rate to adjust the parameters.'
+      label: 'Back Propagation',
+      text: 'The curve illustrates moving toward lower error. Backpropagation calculates gradients, which describe how each parameter affects error.'
     },
     local: {
-      label: 'Local adjustment',
-      text: "The changing connections illustrate weight updates made by gradient descent using gradients from backpropagation. The output bar previews the effect; new outputs are calculated during the next forward pass."
+      label: 'Local adjustment by Gradient Descent',
+      text: "Here we imagine the weights associated with the desired output being modified. But in reality, all parameters get adjusted."
     },
     backprop: {
-      label: 'Backpropagation',
-      text: 'Backpropagation works backward to calculate how each parameter affects the overall error. Gradient descent then updates the parameters. This animation combines these two steps and previews their effect on neuron values.'
+      label: 'Gradient Descent',
+      text: 'Gradient descent updates all the parameters across the model.'
     },
     complete: {
       label: 'Training complete',
