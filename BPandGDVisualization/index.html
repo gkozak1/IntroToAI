@@ -36,7 +36,7 @@ select{padding-right:26px}.small-num{width:74px}.iter-num{width:64px}
 .hint{display:flex;align-items:center;gap:8px;min-width:190px;justify-content:center}.hint-item{display:inline-flex;align-items:center;gap:5px;border:1px solid #d7e0e9;border-radius:8px;background:#f7f9fb;padding:3px 8px;font-weight:850;color:#49596b}.hint-arrow{font-size:28px;line-height:1;font-weight:950;color:#2f6fa5}.hint-optimal{font-weight:900;color:#176a39}
 .guess-mse{min-width:132px;text-align:center;font-size:12px;font-weight:900;font-variant-numeric:tabular-nums;padding:6px 9px;border:1px solid #d7e0e9;border-radius:8px;background:#f7f9fb;color:#33455a}.guess-mse.hidden-value{visibility:hidden}
 .math{margin-top:10px;background:#fff;border:1px solid #dfe6ed;border-radius:14px;padding:12px;box-shadow:var(--shadow)}
-.process-legend{display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden;border-radius:8px;margin-bottom:10px;border:1px solid #cfd9e3}.process-legend div{color:#fff;text-align:center;font-size:12px;font-weight:900;padding:7px}.process-legend .fp{background:var(--fp)}.process-legend .err{background:var(--err)}.process-legend .bp{background:var(--bp)}.process-legend .gd{background:var(--gd)}
+.process-legend{display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden;border-radius:8px;margin:12px 0 10px;border:1px solid #cfd9e3}.process-legend div{color:#fff;text-align:center;font-size:12px;font-weight:900;padding:7px}.process-legend .fp{background:var(--fp)}.process-legend .err{background:var(--err)}.process-legend .bp{background:var(--bp)}.process-legend .gd{background:var(--gd)}
 .curves{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}.curve-card{border:1px solid #d7e0e9;border-radius:10px;padding:7px;min-width:0}.curve-title{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:13px;font-weight:900;margin:2px 5px 3px}.curve-title span{font-size:12px;color:#5f6d7d;font-variant-numeric:tabular-nums}.curve-svg{display:block;width:100%;height:auto;aspect-ratio:1.9/1}
 .table-wrap{overflow-x:auto;border:1px solid #111;border-radius:8px;margin-top:12px}table{border-collapse:collapse;width:100%;min-width:1120px;font-size:12px;font-variant-numeric:tabular-nums;color:#000}th,td{border:1px solid #111;padding:6px 7px;text-align:center;white-space:nowrap}thead th{color:#fff;font-weight:850}.neutral-head{background:#253244}.fp-head{background:var(--fp)}.err-head{background:var(--err)}.bp-head{background:var(--bp)}.gd-head{background:var(--gd)}.subformula{display:block;font-size:10px;font-weight:600;margin-top:2px;opacity:.95;white-space:normal}.avg-label{text-align:right!important;font-weight:850;background:#eef1f4}.avg-name{font-weight:900}
 .step-title{font-size:14px;font-weight:900;margin:14px 0 5px}.step2{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #111;border-radius:8px;overflow:hidden}.step2 table{min-width:0;border:0}.step2 table+table{border-left:2px solid #111}.step2 th,.step2 td{white-space:normal}.param-head{background:#253244;color:#fff!important;font-size:14px}.subhead th{background:#e9edf1;color:#111!important}.formula{font-family:inherit}.bp-step td:nth-child(-n+2){background:var(--bp);color:#fff}.gd-step td:nth-child(-n+2){background:var(--gd);color:#fff}.bp-step td:last-child,.gd-step td:last-child{background:#fff;color:#000}
@@ -101,7 +101,6 @@ select{padding-right:26px}.small-num{width:74px}.iter-num{width:64px}
   </section>
 
   <section id="mathSection" class="math hidden">
-    <div class="process-legend"><div class="fp">Forward Propagation</div><div class="err">Error</div><div class="bp">Back Propagation</div><div class="gd">Gradient Descent</div></div>
     <div class="train-controls">
       <div class="control-group"><label class="label" for="startWeight">Starting Weight</label><input id="startWeight" class="small-num" type="number" step="0.05" value="0.35"></div>
       <div class="control-group"><label class="label" for="startBias">Starting Bias</label><input id="startBias" class="small-num" type="number" step="0.05" value="0.15"></div>
@@ -144,6 +143,7 @@ select{padding-right:26px}.small-num{width:74px}.iter-num{width:64px}
     </div>
 
 
+    <div class="process-legend"><div class="fp">Forward Propagation</div><div class="err">Error</div><div class="bp">Back Propagation</div><div class="gd">Gradient Descent</div></div>
     <div class="step-title">Step 1</div>
     <div class="table-wrap">
       <table id="calcTable">
