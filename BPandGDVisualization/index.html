@@ -7,7 +7,7 @@
 <style>
 :root{
   --ink:#223142;--muted:#6d7c8e;--line:#d7e0e9;--panel:#fff;--soft:#f6f8fb;--accent:#2f6fa5;
-  --state-color:#A5643A;--gradient-color:#2C7A7B;
+  --state-color:#A5643A;--gradient-color:#2C7A7B;--weight-gradient:#2C7A7B;--bias-gradient:#1D5253;
   --shadow:0 10px 28px rgba(35,49,66,.09);
   --fp:#4e79a7;--err:#7b61a8;--bp:#4b5563;--gd:#c04a8a;
 }
@@ -67,6 +67,29 @@ select{padding-right:26px}.small-num{width:74px}.iter-num{width:64px}
 .training-status.stopped{background:#e2f3e5;border-color:#519363;color:#205d32}
 @media(max-width:1100px){.curves{grid-template-columns:repeat(2,minmax(0,1fr))}.surface-card{grid-column:1/-1}}
 @media(max-width:600px){.curves{grid-template-columns:1fr}.surface-card{grid-column:auto}.curve-svg{height:260px}}
+/* Keep each gradient color consistent from the calculations to all three charts. */
+#calcFoot .weight-gradient-summary,#weightSteps .bp-step td:nth-child(-n+2){background:var(--weight-gradient);color:#fff}
+#calcFoot .bias-gradient-summary,#biasSteps .bp-step td:nth-child(-n+2){background:var(--bias-gradient);color:#fff}
+/* Metrics occupy the space above the two history charts; the surface spans both rows. */
+.curves{align-items:stretch;grid-template-rows:auto auto}
+.curves>.metric-strip{grid-column:1/3;grid-row:1;margin-top:0;grid-template-columns:repeat(5,minmax(0,1fr))}
+.weight-card{grid-column:1;grid-row:2}
+.bias-card{grid-column:2;grid-row:2}
+.surface-card{grid-column:3;grid-row:1/3;display:flex;flex-direction:column;min-height:0}
+.surface-card .curve-title,.surface-controls{flex-shrink:0}
+.surface-card .curve-svg{flex:1 1 0;min-height:0;height:0}
+@media(max-width:1100px){.surface-card{grid-column:1/-1;grid-row:3}.surface-card .curve-svg{flex:none;height:280px}}
+@media(max-width:600px){.curves>.metric-strip{grid-column:1;grid-template-columns:repeat(2,minmax(0,1fr))}.weight-card{grid-column:1;grid-row:2}.bias-card{grid-column:1;grid-row:3}.surface-card{grid-column:1;grid-row:4}.surface-card .curve-svg{height:260px}}
+/* Keep the iteration status beside the training controls on desktop. */
+.train-controls{gap:6px}
+.train-controls .control-group{gap:5px}
+.train-controls .small-num{width:66px}
+.train-controls .iter-num{width:54px}
+.train-controls .btn{padding:7px 8px;font-size:11px}
+.train-controls .training-status{white-space:nowrap;flex:0 0 auto;font-size:11px;min-width:158px;padding:6px 7px}
+.train-controls .spacer{min-width:0}
+@media(min-width:1200px){.train-controls{flex-wrap:nowrap}}
+@media(min-width:1200px) and (max-width:1340px){.train-controls{gap:4px}.train-controls .label{font-size:10px}.train-controls .control-group{gap:4px}.train-controls .small-num{width:58px;font-size:13px;padding:0 5px}.train-controls .iter-num{width:48px;font-size:13px;padding:0 5px}.train-controls .btn{font-size:10.5px;padding:7px 6px}.train-controls .training-status{font-size:10.5px;min-width:140px}}
 </style>
 </head>
 <body>
@@ -113,6 +136,7 @@ select{padding-right:26px}.small-num{width:74px}.iter-num{width:64px}
       <div id="iterationStatus" class="training-status">Iteration 0</div>
     </div>
 
+    <div class="curves">
     <div class="metric-strip" id="metricStrip" aria-label="Current training values">
       <div class="metric"><span>Weight</span><strong id="metricWeight"></strong></div>
       <div class="metric"><span>Bias</span><strong id="metricBias"></strong></div>
@@ -121,9 +145,8 @@ select{padding-right:26px}.small-num{width:74px}.iter-num{width:64px}
       <div class="metric"><span>Bias Gradient</span><strong id="metricGb"></strong></div>
     </div>
 
-    <div class="curves">
-      <div class="curve-card"><div class="curve-title"><strong>Weight Training History</strong><span id="weightSlope"></span></div><svg id="weightCurve" class="curve-svg" viewBox="0 0 560 295"></svg></div>
-      <div class="curve-card"><div class="curve-title"><strong>Bias Training History</strong><span id="biasSlope"></span></div><svg id="biasCurve" class="curve-svg" viewBox="0 0 560 295"></svg></div>
+      <div class="curve-card weight-card"><div class="curve-title"><strong>Weight Training History</strong><span id="weightSlope"></span></div><svg id="weightCurve" class="curve-svg" viewBox="0 0 560 295"></svg></div>
+      <div class="curve-card bias-card"><div class="curve-title"><strong>Bias Training History</strong><span id="biasSlope"></span></div><svg id="biasCurve" class="curve-svg" viewBox="0 0 560 295"></svg></div>
       <div class="curve-card surface-card">
         <div class="curve-title"><strong>Combined Error Surface</strong><span id="surfaceViewLabel">Weight · Bias · MSE</span></div>
         <svg id="surfaceSvg" class="curve-svg" viewBox="0 0 560 280" role="img" aria-label="Rotatable weight, bias and MSE error surface" tabindex="0"></svg>
@@ -138,13 +161,12 @@ select{padding-right:26px}.small-num{width:74px}.iter-num{width:64px}
           <button id="surfaceZoomIn" class="btn" aria-label="Zoom surface in">+</button>
           <button id="surfaceReset" class="btn">Reset View</button>
         </div>
-        <p class="surface-hint" id="surfaceHint">Drag or use arrow keys to rotate. Use + / − to zoom.</p>
       </div>
     </div>
 
 
     <div class="process-legend"><div class="fp">Forward Propagation</div><div class="err">Error</div><div class="bp">Back Propagation</div><div class="gd">Gradient Descent</div></div>
-    <div class="step-title">Step 1</div>
+    <div class="step-title">Step 1: Calculate Forward Propagation, Error, and Back Propagation</div>
     <div class="table-wrap">
       <table id="calcTable">
         <thead><tr>
@@ -164,13 +186,13 @@ select{padding-right:26px}.small-num{width:74px}.iter-num{width:64px}
       </table>
     </div>
 
-    <div class="step-title">Step 2: Use the gradients to nudge the weight and bias</div>
+    <div class="step-title">Step 2: Calculate Gradient Descent for the two parameters: weight and bias</div>
     <div class="step2">
       <table><thead><tr><th class="param-head" colspan="3">Weight (w)</th></tr><tr class="subhead"><th>Step as formula</th><th>Step in words</th><th>Answer</th></tr></thead><tbody id="weightSteps"></tbody></table>
       <table><thead><tr><th class="param-head" colspan="3">Bias (b)</th></tr><tr class="subhead"><th>Step as formula</th><th>Step in words</th><th>Answer</th></tr></thead><tbody id="biasSteps"></tbody></table>
     </div>
 
-    <div class="step-title">Step 3: Continue or Stop</div>
+    <div class="step-title">Step 3: Calculate Stop Condition</div>
     <div class="table-wrap"><table class="step3"><tbody id="stopRow"></tbody></table></div>
   </section>
 </main>
@@ -305,7 +327,7 @@ function renderCurve(svgEl,param,currentOnly=false){
   // A zero gradient has no uphill direction, so keep a short horizontal segment.
   if(!recent && g===0){a=-half/2;b=half/2;}
   const line=sElCurve(marks,'line',{class:'history-tangent','data-iteration':h.iteration,'data-age':age,
-   x1:x+a*ux,y1:y+a*uy,x2:x+b*ux,y2:y+b*uy,stroke:'var(--gradient-color)',
+   x1:x+a*ux,y1:y+a*uy,x2:x+b*ux,y2:y+b*uy,stroke:param==='w'?'var(--weight-gradient)':'var(--bias-gradient)',
    'stroke-width':current?4:recent?2:1,'stroke-opacity':current?1:recent?.9:.75,'stroke-linecap':'round'});
   sElCurve(line,'title',{text:`Iteration ${h.iteration}: ${param==='w'?'weight':'bias'} gradient ${fmt(g,4)}${!recent&&g!==0?' (uphill half)':''}`});
  });
@@ -320,7 +342,7 @@ function renderCurve(svgEl,param,currentOnly=false){
  sElCurve(svgEl,'text',{x:(m.l+W-m.r)/2,y:H-10,text:param==='w'?'Weight':'Bias','text-anchor':'middle',fill:C.ink,'font-size':12,'font-weight':800});
  sElCurve(svgEl,'text',{x:14,y:(m.t+H-m.b)/2,text:'MSE','text-anchor':'middle',fill:C.ink,'font-size':12,'font-weight':800,transform:`rotate(-90 14 ${(m.t+H-m.b)/2})`});
 }
-const surfaceCamera={mode:'3d',yaw:-.65,pitch:.48,zoom:1,show:true,drag:null};
+const surfaceCamera={mode:'3d',yaw:-.65,pitch:.48,zoom:1.2,show:true,drag:null};
 function setSurfaceView(mode){
  surfaceCamera.mode=mode;
  if(mode==='3d'){surfaceCamera.yaw=-.65;surfaceCamera.pitch=.48;}
@@ -334,7 +356,6 @@ function renderSurface(){
  clear(el);const {W,H}=chartSize(el);el.setAttribute('data-zoom',cam.zoom);el.setAttribute('data-yaw',cam.yaw);el.setAttribute('data-pitch',cam.pitch);el.setAttribute('viewBox',`0 0 ${W} ${H}`);
  el.setAttribute('aria-label','Weight, bias and MSE surface. Drag or use arrow keys to rotate; plus or minus to zoom.');
  $('surfaceViewLabel').textContent=cam.mode==='w'?'Weight view · looking along bias':cam.mode==='b'?'Bias view · looking along weight':'Weight · Bias · MSE';
- $('surfaceHint').textContent='Drag or use arrow keys to rotate. Use + / − to zoom.';
  const wr=historyRange('w'),br=historyRange('b'),zMax=wr.yMax;
  const scale=Math.min((W-100)/1.42,(H-66)/1.45)*cam.zoom;
  const cy=Math.cos(cam.yaw),sy=Math.sin(cam.yaw),cp=Math.cos(cam.pitch),sp=Math.sin(cam.pitch);
@@ -388,7 +409,7 @@ function renderSurface(){
    if(grad!==0){const a=-cur.mse/grad,b=(zMax-cur.mse)/grad;lo=Math.max(lo,Math.min(a,b));hi=Math.min(hi,Math.max(a,b));}
    const point=t=>project({[param]:cur[param]+t,[other]:cur[other],z:cur.mse+grad*t});
    const a=point(lo),b=point(hi);
-   scene.push({d:(a.d+b.d)/2+.0001,draw:()=>line(a,b,{class:'surface-tangent','data-param':param,stroke:'#2C7A7B','stroke-width':3.2,'stroke-linecap':'round',...(param==='b'?{'stroke-dasharray':'5 3'}:{})})});
+   scene.push({d:(a.d+b.d)/2+.0001,draw:()=>line(a,b,{class:'surface-tangent','data-param':param,stroke:param==='w'?'var(--weight-gradient)':'var(--bias-gradient)','stroke-width':3.2,'stroke-linecap':'round',...(param==='b'?{'stroke-dasharray':'5 3'}:{})})});
   }
  }
  for(let i=0;i<state.history.length;i++){
@@ -413,15 +434,15 @@ function renderSurface(){
   }
  }
  // Direct key remains legible when the two tangents overlap in projection.
- line({x:10,y:13},{x:28,y:13},{stroke:'#2C7A7B','stroke-width':3});label({x:33,y:16},'Weight gradient',{'text-anchor':'start','font-size':10,fill:'#2C7A7B'});
- line({x:10,y:28},{x:28,y:28},{stroke:'#2C7A7B','stroke-width':3,'stroke-dasharray':'5 3'});label({x:33,y:31},'Bias gradient',{'text-anchor':'start','font-size':10,fill:'#2C7A7B'});
+ line({x:10,y:13},{x:28,y:13},{stroke:'var(--weight-gradient)','stroke-width':3});label({x:33,y:16},'Weight gradient',{'text-anchor':'start','font-size':10,fill:'var(--weight-gradient)'});
+ line({x:10,y:28},{x:28,y:28},{stroke:'var(--bias-gradient)','stroke-width':3,'stroke-dasharray':'5 3'});label({x:33,y:31},'Bias gradient',{'text-anchor':'start','font-size':10,fill:'var(--bias-gradient)'});
 }
 function setupSurface(){
  const el=$('surfaceSvg'),cam=surfaceCamera;
  $('surface3dBtn').addEventListener('click',()=>setSurfaceView('3d'));
  $('surfaceWeightBtn').addEventListener('click',()=>setSurfaceView('w'));
  $('surfaceBiasBtn').addEventListener('click',()=>setSurfaceView('b'));
- $('surfaceReset').addEventListener('click',()=>{cam.zoom=1;setSurfaceView('3d');});
+ $('surfaceReset').addEventListener('click',()=>{cam.zoom=1.2;setSurfaceView('3d');});
  $('showSurface').addEventListener('change',e=>{cam.show=e.target.checked;renderSurface();});
  const zoom=delta=>{cam.zoom=clamp(cam.zoom+delta,.6,4.4);renderSurface();};
  $('surfaceZoomOut').addEventListener('click',()=>zoom(-.15));
@@ -450,7 +471,7 @@ function setupSurface(){
 
 function sElCurve(parent,nameAttrs,attrsMaybe){let name,attrs;if(typeof nameAttrs==='string'){name=nameAttrs;attrs=attrsMaybe||{};}else{name='g';attrs=nameAttrs||{};}const el=document.createElementNS(NS,name);for(const[k,v]of Object.entries(attrs)){if(k==='text')el.textContent=v;else el.setAttribute(k,String(v));}parent.appendChild(el);return el;}
 function renderCurvesOnly(){const c=calc(state.trainW,state.trainB);$('weightSlope').textContent='Tangent slope = '+fmt(c.gw,4);$('biasSlope').textContent='Tangent slope = '+fmt(c.gb,4);renderCurve($('weightCurve'),'w');renderCurve($('biasCurve'),'b');renderSurface();}
-function renderMath(){const c=calc(state.trainW,state.trainB),lr=clamp(parseFloat($('learningRate').value)||.1,.01,.9),wn=lr*c.gw,bn=lr*c.gb,wNew=state.trainW-wn,bNew=state.trainB-bn;$('metricWeight').textContent=fmt(state.trainW);$('metricBias').textContent=fmt(state.trainB);$('metricMse').textContent=fmt(c.mse,4);$('metricGw').textContent=fmt(c.gw,4);$('metricGb').textContent=fmt(c.gb,4);const stopped=!shouldContinue();$('metricStrip').classList.toggle('stopped',stopped);$('metricStrip').setAttribute('aria-label',stopped?'Current training values: stop condition met':'Current training values');$('iterationStatus').classList.toggle('stopped',stopped);$('iterationStatus').textContent='Iteration '+state.iteration+(stopped?' • STOP':' • Continue');renderCurvesOnly();$('calcBody').innerHTML=c.rows.map(r=>`<tr><td><strong>${r.digit}</strong><span class="subformula">Target ${fmt(r.target,2)}</span></td><td>${fmt(r.h)}</td><td>${fmt(state.trainW)}</td><td>${fmt(OTHER)}</td><td>${fmt(state.trainB)}</td><td>${fmt(r.pred)}</td><td>${fmt(r.error)}</td><td>${fmt(r.sq)}</td><td>${fmt(r.bpw)}</td><td>${fmt(r.bpb)}</td></tr>`).join('');$('calcFoot').innerHTML=`<tr><td class="avg-label" colspan="7">Average</td><td class="avg-name mse-summary">${fmt(c.mse)}<span class="subformula">MSE</span></td><td class="avg-name gradient-summary">${fmt(c.gw)}<span class="subformula">Weight Gradient</span></td><td class="avg-name gradient-summary">${fmt(c.gb)}<span class="subformula">Bias Gradient</span></td></tr>`;
+function renderMath(){const c=calc(state.trainW,state.trainB),lr=clamp(parseFloat($('learningRate').value)||.1,.01,.9),wn=lr*c.gw,bn=lr*c.gb,wNew=state.trainW-wn,bNew=state.trainB-bn;$('metricWeight').textContent=fmt(state.trainW);$('metricBias').textContent=fmt(state.trainB);$('metricMse').textContent=fmt(c.mse,4);$('metricGw').textContent=fmt(c.gw,4);$('metricGb').textContent=fmt(c.gb,4);const stopped=!shouldContinue();$('metricStrip').classList.toggle('stopped',stopped);$('metricStrip').setAttribute('aria-label',stopped?'Current training values: stop condition met':'Current training values');$('iterationStatus').classList.toggle('stopped',stopped);$('iterationStatus').textContent='Iteration '+state.iteration+(stopped?' • STOP':' • Continue');renderCurvesOnly();$('calcBody').innerHTML=c.rows.map(r=>`<tr><td><strong>${r.digit}</strong><span class="subformula">Target ${fmt(r.target,2)}</span></td><td>${fmt(r.h)}</td><td>${fmt(state.trainW)}</td><td>${fmt(OTHER)}</td><td>${fmt(state.trainB)}</td><td>${fmt(r.pred)}</td><td>${fmt(r.error)}</td><td>${fmt(r.sq)}</td><td>${fmt(r.bpw)}</td><td>${fmt(r.bpb)}</td></tr>`).join('');$('calcFoot').innerHTML=`<tr><td class="avg-label" colspan="7">Average</td><td class="avg-name mse-summary">${fmt(c.mse)}<span class="subformula">MSE</span></td><td class="avg-name gradient-summary weight-gradient-summary">${fmt(c.gw)}<span class="subformula">Weight Gradient</span></td><td class="avg-name gradient-summary bias-gradient-summary">${fmt(c.gb)}<span class="subformula">Bias Gradient</span></td></tr>`;
  $('weightSteps').innerHTML=[['w<sup>old</sup>','Old Weight',fmt(state.trainW),''],['(1/M) Σ[(ŷᵢ − yᵢ) × 2hᵢ]','Weight Gradient',fmt(c.gw),'bp'],['α × Weight Gradient','Nudge = learning rate × weight gradient',fmt(wn),'gd'],['w<sup>new</sup> = w<sup>old</sup> − nudge','New Weight',fmt(wNew),'gd']].map(r=>`<tr class="${r[3]==='bp'?'bp-step':r[3]==='gd'?'gd-step':''}"><td class="formula">${r[0]}</td><td>${r[1]}</td><td><b>${r[2]}</b></td></tr>`).join('');
  $('biasSteps').innerHTML=[['b<sup>old</sup>','Old Bias',fmt(state.trainB),''],['(1/M) Σ[(ŷᵢ − yᵢ) × 2]','Bias Gradient',fmt(c.gb),'bp'],['α × Bias Gradient','Nudge = learning rate × bias gradient',fmt(bn),'gd'],['b<sup>new</sup> = b<sup>old</sup> − nudge','New Bias',fmt(bNew),'gd']].map(r=>`<tr class="${r[3]==='bp'?'bp-step':r[3]==='gd'?'gd-step':''}"><td class="formula">${r[0]}</td><td>${r[1]}</td><td><b>${r[2]}</b></td></tr>`).join('');const cont=Math.abs(wn)>=STOP||Math.abs(bn)>=STOP;$('stopRow').innerHTML=`<tr><td>Continue if |Weight Nudge| ≥ ${STOP.toFixed(3)} OR |Bias Nudge| ≥ ${STOP.toFixed(3)}</td><td>|${fmt(wn)}| ≥ .001 OR |${fmt(bn)}| ≥ .001</td><td class="${cont?'stop-yes':'stop-no'}">${cont?'TRUE — CONTINUE':'FALSE — STOP'}</td></tr>`;}
 
