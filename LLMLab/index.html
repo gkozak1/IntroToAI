@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLMLab</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="topline"><h1>LLMLab</h1><span id="liveChip" class="livechip" hidden></span><button id="numBtn" class="btn small" aria-pressed="false" hidden>Show the numbers</button><button id="projBtn" class="btn small" aria-pressed="false" title="Larger text for the projector">Projector size</button></div>
+      <section class="sentcard">
+        <div class="sentrow">
+          <textarea id="sentence" rows="1" spellcheck="false" aria-label="Sentence"></textarea>
+          <select id="starter" aria-label="Starter sentences"></select>
+        </div>
+        <div class="ctlrow">
+          <label class="ctl">Temperature <input type="range" id="tSlider" min="0" max="17" step="1" /><span class="v" id="tVal"></span></label>
+          <label class="ctl">Top-K <input type="range" id="kSlider" min="1" max="51" step="1" /><span class="v" id="kVal"></span></label>
+        </div>
+      </section>
+    </header>
+
+    <nav class="strip" id="strip" aria-label="Pipeline"></nav>
+
+    <main id="main">
+      <div class="toolbar" id="toolbar"></div>
+      <div class="stage" id="stage"></div>
+      <div id="numbersHost"></div>
+      <div class="statusbar"><span class="status" id="status"></span></div>
+    </main>
+  </div>
+  <script src="./data/embed-data.js"></script>
+  <script src="./data/lab-data.js"></script>
+  <script src="./js/core.js"></script>
+  <script src="./js/live.js"></script>
+  <script src="./js/stations-a.js"></script>
+  <script src="./js/stations-b.js"></script>
+  <script src="./js/meaning.js"></script>
+  <script src="./js/dims.js"></script>
+  <script src="./js/main.js"></script>
+  <script src="./js/numbers.js"></script>
+</body>
+</html>
