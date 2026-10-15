@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM Lab</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="topline ctlrow"><h1>LLM Lab</h1>
+        <select id="starter" aria-label="Example sentences"></select>
+        <label class="ctl">Temperature <input type="range" id="tSlider" min="0" max="17" step="1" /><span class="v" id="tVal"></span></label>
+        <label class="ctl">Top-K <input type="range" id="kSlider" min="1" max="51" step="1" /><span class="v" id="kVal"></span></label>
+        <span class="topgap"></span><span id="liveChip" class="livechip" hidden></span><button id="numBtn" class="btn numtoggle" aria-pressed="false" title="Show the live numbers behind this view (N)"><span class="sw"></span><span class="nt-l">Show the numbers</span></button></div>
+      <section class="sentcard">
+        <div class="sentwrap" id="sentWrap">
+          <div class="sentback" id="sentBack" aria-hidden="true"></div>
+          <textarea id="sentence" rows="1" spellcheck="false" aria-label="Sentence (type to edit)"></textarea>
+        </div>
+      </section>
+    </header>
+
+    <nav class="tabs6" id="strip" aria-label="Lesson"></nav>
+
+    <main id="main">
+      <div class="subtabs" id="subtabs"></div>
+      <div class="wholine" id="whoLine" hidden></div>
+      <div class="todo" id="todo"><span class="todotools" id="todoTools"></span></div>
+      <div class="toolbar" id="toolbar"></div>
+      <div class="stage" id="stage"></div>
+      <div id="numbersHost"></div>
+      <div class="statusbar"><span class="status" id="status"></span></div>
+    </main>
+  </div>
+  <script src="./data/embed-data.js"></script>
+  <script src="./data/lab-data.js"></script>
+  <script src="./js/core.js"></script>
+  <script src="./js/viz.js"></script>
+  <script src="./js/live.js"></script>
+  <script src="./js/stations-a.js"></script>
+  <script src="./js/repeat.js"></script>
+  <script src="./js/experience.js"></script>
+  <script src="./js/language.js"></script>
+  <script src="./js/story.js"></script>
+  <script src="./js/pickscene.js"></script>
+  <script src="./js/flow.js"></script>
+  <script src="./js/numflow.js"></script>
+  <script src="./js/transformer.js"></script>
+  <script src="./js/meaning.js"></script>
+  <script src="./js/dims.js"></script>
+  <script src="./data/learn-data.js"></script>
+  <script src="./js/pretrain.js"></script>
+  <script src="./js/pretrain2.js"></script>
+  <script src="./js/main.js"></script>
+  <script src="./js/numbers.js"></script>
+</body>
+</html>
