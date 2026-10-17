@@ -65,7 +65,7 @@
       for (let r = 0; r < 12; r++) for (let q = 0; q < 3; q++) h += `<canvas class="fx pt2-hd" data-x="${bx}" id="${P}h${b}_${r}_${q}" style="left:${bx}px;top:${ryOf(r) + q * 7.3}px;width:28px;height:6px"></canvas>`;
       h += `<canvas class="fx pt2-fc" data-x="${bx + 30}" id="${P}f${b}" style="left:${bx + 30}px;top:${GY}px;width:9px;height:${12 * RH - 3}px"></canvas>`;
     }
-    h += `<div class="pt2-col hd" id="${P}lA" style="left:${GX}px;top:${COY - 24}px;width:232px"><i></i> Interviewer (attention head)</div><div class="pt2-col fc" id="${P}lF" style="left:654px;top:${COY - 24}px;width:244px"><i></i> Fact checker (feed-forward MLP)</div>`;
+    h += `<div class="pt2-col hd" id="${P}lA" style="left:${GX}px;top:${COY - 24}px;width:232px"><i></i> Detective (attention head)</div><div class="pt2-col fc" id="${P}lF" style="left:654px;top:${COY - 24}px;width:244px"><i></i> Forensics (MLP)</div>`;
     h += `<div class="pt2-co hd" id="${P}coA" style="left:${GX}px;top:${COY}px;width:232px">${['Query', 'Key', 'Value'].map((n) => `<div class="cr"><span>${n}</span><canvas class="fx" data-x="460" id="${P}q${n}" style="width:96px;height:14px"></canvas><b>768 × 64</b></div>`).join('')}</div>`;
     h += `<div class="pt2-co fc" id="${P}coF" style="left:654px;top:${COY}px;width:244px"><div class="cf"><div><canvas class="fx" data-x="690" id="${P}m1" style="width:120px;height:30px"></canvas><b>768 × 3,072</b></div><div><canvas class="fx" data-x="820" id="${P}m2" style="width:30px;height:54px"></canvas><b>3,072 × 768</b></div></div></div>`;
     return h;
@@ -150,14 +150,14 @@
     { ch: 1, t: 'Cut the sentence into tokens.', d: 'Ten tokens (the comma is a token too), just as in the Input tab.' },
     { ch: 1, t: 'Look up each token’s embedding vector.', d: 'The embedding matrix holds a 768-number row for each of the 50,257 tokens: 38,597,376 parameters.' },
     { ch: 1, t: 'Add each token’s position vector.', d: 'The position matrix holds a 768-number row for each of 1,024 places: 786,432 more parameters.' },
-    { ch: 2, t: 'The transformer’s parameters: 12 blocks, each with 12 interviewers and a fact checker.', d: 'Each interviewer owns Query, Key and Value matrices; each fact checker owns two matrices. All random on day one.', wait: 4600 },
+    { ch: 2, t: 'Transformer parameters: 12 blocks, each with 12 Detectives and an MLP.', d: 'Each Detective has Q, K and V matrices; each MLP has two matrices. Pre-training learns their patterns.', wait: 4600 },
     { ch: 3, t: 'Forward propagation: the guess.', d: 'The input flows left to right through every parameter. Day-one GPT-2 is random: “worst” gets almost nothing.' },
-    { ch: 4, t: 'Error: compare each output with its target.', d: 'The target is “worst” = 100% and every other token = 0%. Each arrow shows which way, and how far, it must move.' },
-    { ch: 5, t: 'Back propagation: how does each parameter affect the error?', d: 'Working backward, GPT-2 finds a gradient for all 124,439,808 parameters: the tangent’s slope says which way is downhill.', wait: 4000 },
-    { ch: 6, t: 'Gradient descent: nudge every parameter downhill.', d: 'Every parameter takes a small step against its gradient, from the output back to the embedding vectors.', wait: 4000 },
+    { ch: 4, t: 'Error: compare each output with its target.', d: 'The text supplies the target, “worst”. Lower probability for that token means greater loss.' },
+    { ch: 5, t: 'Back propagation: how does each parameter affect the error?', d: 'Working backward, GPT-2 calculates gradients: how parameter changes affect loss.', wait: 4000 },
+    { ch: 6, t: 'Gradient descent: nudge every parameter downhill.', d: 'Gradients set the update direction; the learning rate scales the step size.', wait: 4000 },
   ];
-  for (let j = 1; j <= 5; j++) PBEATS.push({ ch: 7, k: j, wait: 9800, t: j < 5 ? `Repeat ${j} of 5: forward, error, back propagation, gradient descent.` : 'Repeat 5 of 5: “worst” = 100%, every other token = 0%.', d: j < 5 ? `With the nudged parameters, “worst” now gets ${j * 20}%. The arrows shrink.` : 'GPT-2 has learned this example. (Smooth and idealized, as in the ML Visualization Player.)' });
-  PBEATS.push({ ch: 8, wait: 26000, t: 'Real pre-training works in batches: a third of the shelf at a time.', d: 'Each batch runs forward, error, back propagation and gradient descent, three times. The parameters improve, but never perfectly.' });
+  for (let j = 1; j <= 5; j++) PBEATS.push({ ch: 7, k: j, wait: 9800, t: j < 5 ? `Repeat ${j} of 5: forward, error, back propagation, gradient descent.` : 'Repeat 5 of 5: “worst” = 100%, every other token = 0%.', d: j < 5 ? `With the nudged parameters, “worst” now gets ${j * 20}%. The arrows shrink.` : 'An idealized illustration: real training does not guarantee 100% confidence.' });
+  PBEATS.push({ ch: 8, wait: 26000, t: 'Pre-training uses batches: here, a third of the shelf at a time.', d: 'Varied batches help generalization across contexts, beyond memorizing one passage.' });
   const PB = PBEATS.length - 1; // the batch beat
   const passOf = (b) => (b < 7 ? null : b <= 10 ? 0 : PBEATS[b].k);
   const levelOf = (b) => (b < 10 ? 0 : b === 10 ? 1 : Math.min(5, (PBEATS[b].k || 5) + 1));
@@ -265,15 +265,15 @@
   const stamp = (g, small) => `<div class="pt2-stamp ${small ? 'sm' : ''}" style="--g:${GRADES[g][0]}"><b>${g}</b></div>${small ? '' : '<div class="pt2-sig">RLHF</div>'}`;
   const QCH = [['📄', 'Response'], ['🧠', 'Transformer'], ['➡', 'Forward Prop'], ['🅵', 'Grade'], ['⬅', 'Back Prop'], ['⬇', 'Grad Desc'], ['🔁', 'Repeat'], ['📦', 'Batches']];
   const QBEATS = [
-    { ch: 0, t: 'Post-training turns the sentence completer into a helpful response generator.', d: 'Post-Training takes responses GPT wrote and improves their quality in areas such as accuracy, helpfulness, safety, and following instructions.' },
-    { ch: 1, t: 'The same transformer, with the parameters pre-training tuned.', d: 'Every interviewer’s Query, Key and Value matrices and every fact checker’s two matrices.', wait: 4600 },
-    { ch: 2, t: 'Forward propagation: the whole response goes through every parameter.', d: 'GPT-2 reads its response left to right through all 12 blocks.' },
-    { ch: 3, t: 'Human feedback: the whole response gets one grade, F.', d: 'People (or a reward model trained on their ratings) grade it. The arrow shows how far it is from 100%.' },
-    { ch: 4, t: 'Back propagation: how does each parameter affect the grade?', d: 'The same gradients as in pre-training, but aimed at a better grade instead of one right token.', wait: 4000 },
-    { ch: 5, t: 'Gradient descent: nudge every parameter toward a better grade.', d: 'Every parameter takes a small step, from the output back to the start.', wait: 4000 },
+    { ch: 0, t: 'Post-training turns the sentence completer into a helpful response generator.', d: 'Feedback on complete responses can improve helpfulness, safety and instruction following.' },
+    { ch: 1, t: 'The same transformer, with the parameters pre-training tuned.', d: 'Every detective’s Query, Key and Value matrices and every forensics expert’s two matrices.', wait: 4600 },
+    { ch: 2, t: 'Forward propagation: process the complete response.', d: 'This simplified model processes a response through all 12 blocks.' },
+    { ch: 3, t: 'Human feedback: the whole response gets one grade, F.', d: 'Human feedback trains a reward model. Its scores help define the training objective.' },
+    { ch: 4, t: 'Backpropagation: calculate gradients from the training objective.', d: 'The objective supplies the learning signal; backpropagation determines how parameters affect it.', wait: 4000 },
+    { ch: 5, t: 'Gradient descent: nudge every parameter toward a better grade.', d: 'Gradients and the learning rate determine the parameter updates.', wait: 4000 },
   ];
-  ['C', 'B', 'A'].forEach((g, j) => QBEATS.push({ ch: 6, g, wait: 9800, t: g === 'A' ? 'Pass 4: the response earns an A.' : `Pass ${j + 2}: forward, grade, back propagation, gradient descent.`, d: g === 'A' ? 'Human feedback has reshaped how GPT-2 continues sentences.' : `With the nudged parameters, the response now earns a ${g}. The arrow shrinks.` }));
-  QBEATS.push({ ch: 7, wait: 15000, t: 'Real RLHF works in batches of responses.', d: 'Each batch gets mixed grades (F, C, A), and every pass nudges all the parameters toward better grades.' });
+  ['C', 'B', 'A'].forEach((g, j) => QBEATS.push({ ch: 6, g, wait: 9800, t: g === 'A' ? 'Pass 4: the response earns an A.' : `Pass ${j + 2}: forward, grade, back propagation, gradient descent.`, d: g === 'A' ? 'F → C → B → A is illustrative; real updates do not guarantee improvement.' : `With the nudged parameters, the response now earns a ${g}. The arrow shrinks.` }));
+  QBEATS.push({ ch: 7, wait: 15000, t: 'Real RLHF works in batches of responses.', d: 'Many responses contribute to training; updates aim to improve behavior across examples.' });
   const QB = QBEATS.length - 1;
   const BATCH_G = [['F', 'C', 'A', 'F', 'C', 'C'], ['C', 'A', 'F', 'C', 'A', 'C'], ['A', 'C', 'A', 'F', 'A', 'C']];
 

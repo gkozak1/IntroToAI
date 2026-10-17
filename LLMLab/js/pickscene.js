@@ -33,16 +33,16 @@
 
   // ---------- the steps ----------
   const BEATS = [
-    [1, 'start', 'Where the Transformer left off.', 'After block 12, the last token’s Information Card ranks the tokens that could come next. Everything on this tab happens to that one card.'],
-    [1, 'focus', 'Only the last token’s Information Card is used to pick the next token.', 'The other tokens’ cards have done their job: “{last}” interviewed them in every block, so its card already holds what they offered.'],
-    [1, 'out', 'The last Information Card becomes the output vector.', 'GPT-2 rescales it one last time (a final layer norm). Its 768 numbers describe the token that should come next.'],
+    [1, 'start', 'Where the Transformer left off.', 'After block 12, the last token’s Case File supplies the next-token scores.'],
+    [1, 'focus', 'Only the last token’s Case File is used to pick the next token.', '“{last}” gathered context from its permitted witnesses in every block; its Case File holds the result.'],
+    [1, 'out', 'The last Case File becomes the output vector.', 'Its 768 numbers carry context used to score the possible next tokens.'],
     [2, 'one', 'Score every token: compare the output vector with each token’s embedding row.', 'Multiply the two vectors number by number and add up the 768 products (a dot product). The total is the token’s score, called a logit: “{t1}” scores {s1}.'],
     [2, 'five', 'Tokens whose embedding rows match the output vector get high scores.', 'Each line is one score. Its color shows the rank, from dark green (best) to red. GPT-2 works with token IDs, not words.'],
     [2, 'all', 'All 50,257 tokens are scored at once.', 'That’s 50,257 dot products of 768 numbers each, one for every embedding row of the token vocab matrix.'],
     [2, 'rank', 'Line the scores up from best to worst.', 'The logits here are large negative numbers, but that doesn’t matter: only the gaps between them count, as the next steps show.'],
     [3, 'topk', 'Top-K decides which tokens are allowed.', 'Only the K highest scores stay in the running; every other token is out. Move the Top-K slider at the top, or try a preset.{auto}'],
     [3, 'temp', 'Temperature reshapes the gaps between the scores.', 'Every allowed logit is divided by the Temperature. Below 1, the gaps stretch and the leader pulls ahead; above 1, they shrink and the scores bunch together.'],
-    [4, 'soft', 'Scores into probabilities: each allowed token gets a slice of the spinner.', 'SoftMax turns the adjusted scores (Logit ÷ T) into probabilities that add up to 100%. Each slice is as big as its probability; one point behind #1 makes a slice about 2.7 times smaller.'],
+    [4, 'soft', 'Scores into probabilities: each allowed token gets a slice of the spinner.', 'Softmax gives probabilities totaling 100%. Each slice shows selection probability, not factual correctness.'],
     [5, 'pick', 'Pick with r: spin the wheel.', 'A random number r between 0 and 1 turns the needle. Whichever slice it stops in is the next token. Press 🎲 Spin.'],
   ];
   const B = Object.fromEntries(BEATS.map((b, i) => [b[1], i]));
@@ -94,7 +94,7 @@
     G = geom();
     const { T, ROW, TOP, H } = G, hy = TOP - 30;
     let h = `<div class="fl-scene pk-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="fl-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>`;
-    h += `<div class="fl-h" style="left:18px;top:${hy}px;width:80px">Token</div><div class="fl-h pk-fade" id="${P}hc" style="left:108px;top:${hy}px;width:160px">🪪 Information Card <small>after block 12</small></div>`;
+    h += `<div class="fl-h" style="left:18px;top:${hy}px;width:80px">Token</div><div class="fl-h pk-fade" id="${P}hc" style="left:108px;top:${hy}px;width:160px">🪪 Case File <small>after block 12</small></div>`;
     for (let i = 0; i < T; i++) {
       h += `<div class="tr-c tr-tok ${i === T - 1 ? 'tr-me' : ''}" style="left:18px;top:${G.rowY(i)}px;--c:${i === T - 1 ? '#c2185b' : '#9aa3b2'};width:84px;height:${ROW - 6}px">${esc(C.W[i])}</div>`;
       h += `<canvas class="fl-strip pk-fade" id="${P}c${i}" style="left:108px;top:${G.rowY(i) + 4}px;width:140px;height:${Math.max(8, ROW - 14)}px"></canvas>`;
@@ -125,7 +125,7 @@
     labeled().forEach((id, k) => { const r = C.rank(id), sc = C.score(id); E('lb' + k).innerHTML = `<b>${id}</b> (${sh(id)})<br><small>score ${sc != null ? sc.toFixed(1) : '—'} · rank ${r ? '#' + int(r) : '—'}</small>`; });
     // the "If GPT-2 stopped" box: after block 12 is GPT-2's actual answer
     const pr = NT.probs(C.d, 1, NT.ALL);
-    E('box').innerHTML = `<div class="rk-tt">After block 12, this Information Card for “${esc(C.last)}”…</div>${VZ.vecHTML(P + 'bv', 'rk-vec')}<div class="rk-tt">…ranks these tokens next: <span class="tr-real">real GPT-2</span></div>${VZ.rankTable(pr, NT.ALL, { n: 5, prob: false, more: false })}`;
+    E('box').innerHTML = `<div class="rk-tt">After block 12, this Case File for “${esc(C.last)}”…</div>${VZ.vecHTML(P + 'bv', 'rk-vec')}<div class="rk-tt">…ranks these tokens next: <span class="tr-real">real GPT-2</span></div>${VZ.rankTable(pr, NT.ALL, { n: 5, prob: false, more: false })}`;
     VZ.vec(E('bv'), C.cards ? C.cards(C.T - 1) : C.ex && C.ex.final);
     // the dot-product panel (for the stories: the real output vector and embedding row)
     const id = labeled()[0], ex = C.ex, ti = ex && ex.topRows ? ex.topRows.ids.indexOf(id) : -1;
@@ -244,7 +244,7 @@
       pause(); presetBar();
       st().innerHTML = `<section class="panel tr-panel"><div class="tr-head"><div class="fl-ctl"><button class="btn" id="pkRew" title="Start over">⏮</button><button class="btn" id="pkBack">◀ Back</button><button class="btn primary" id="pkNext">Next ▶</button><button class="btn" id="pkPlay">▶ Play</button></div></div>
         <div class="fl-cap fixed" id="pkCap"></div><div class="fl-box" id="pkBox"></div>
-        <div class="tr-legend">All numbers are real GPT-2: the Information Cards, the output vector, every score, probability and pick. The token vocab matrix is drawn as a pale stand-in: its 50,257 rows are far too many to show.</div></section>`;
+        <div class="tr-legend">All numbers are real GPT-2: the Case Files, the output vector, every score, probability and pick. The token vocab matrix is drawn as a pale stand-in: its 50,257 rows are far too many to show.</div></section>`;
       NT.guideRow(st().querySelector('.tr-panel'));
       $('#pkRew').onclick = () => { pause(); go(0); };
       $('#pkBack').onclick = () => { pause(); if (pk.beat > 0) go(pk.beat - 1); };
