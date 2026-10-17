@@ -1609,3 +1609,4 @@ body[data-st="mlbook"] .subtabs, body[data-st="rlhf"] .subtabs { flex-wrap: nowr
 .rw-dkey { font-size: .72rem; color: #8a94a6; margin-left: 8px; align-self: center; }
 .rw-pc { border: 1px solid #e3e8f0; border-left: 4px solid var(--pc, #cfd5df); }
 .rw-ring2 { outline: 2px solid #5b38d1; outline-offset: 1px; } .rw-h small { display: block; }
+#rw_bal { white-space: nowrap; text-align: center; }

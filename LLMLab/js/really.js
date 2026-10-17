@@ -17,10 +17,10 @@
   const rowY = (i) => TOP + i * ROW, barY = (i) => rowY(i) + 4, midY = TOP + (T * ROW) / 2;
   const N = 14;
   const NAMES = ['Input vectors', 'Query', 'Key', 'Value', 'Q · K · V', 'Q × Kᵀ', 'Softmax', 'Weighted sum', 'Every token', '12 heads', 'W_O and add', 'MLP up', 'MLP down', '12 blocks'];
-  // which screens belong to each detective step (the story's beat keys)
-  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [3], s: [5, 6, 7], v: [4, 8], n: [8, 9], nx: [9], sup1: [10], sup2: [10], sup3: [11], sup4: [11], f1: [12], f2: [13], f3: [14], known: [14] };
+  // which screens belong to each detective step (the story's beat keys); the first one listed is where the panel opens
+  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [3], s: [6, 7, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], sup3: [11], sup4: [11], f1: [12], f2: [13], f3: [14], known: [14] };
   // sizes: 768 numbers = 288 px, 64 = 24 px (screens 1–11); 768 = 96 px, 3,072 = 384 px (screens 12–14)
-  const L768 = 288, L64 = 24, ZOOM = 5, Z64 = L64 * ZOOM, S768 = 96, S3072 = 384;
+  const L768 = 288, L64 = 24, Z64 = L64, L3072 = 4 * L768; // every vector to one scale: 768 numbers = 288 px, 64 = 24 px, 3,072 = 1,152 px
 
   // ---------- data ----------
   let R = null, RP = null; const WP = {};
@@ -96,7 +96,7 @@
   // ---------- geometry ----------
   const X = { in: 110, mx: 448, q: 520, k: 580, v: 640 };          // screens 1–4
   const NX = { q: 120, k: 180, v: 240 };                            // screens 5–8: Q K V moved over
-  const QA = 296, SL0 = 452, SLW = 62, KT0 = TOP, TL = 300;          // the work area
+  const QA = 296, SL0 = 452, SLW = 62, KT0 = TOP + 130, TL = 300;          // the work area
   const slot = (i) => SL0 + SLW / 2 + i * SLW;
   const TY = { raw: KT0 + Z64 + 14, sc: KT0 + Z64 + 48, pc: KT0 + Z64 + 82 };
   const WY = { x: KT0 + Z64 + 4, pc: KT0 + Z64 + 22, w: KT0 + Z64 + 64 };  // screen 8: ×, the percentages, the weighted Values
@@ -144,19 +144,19 @@
     h += hd('hao', '<b class="rw-cv">Attention output</b> <small>1 × 768 (Lead Detective’s result)</small>', 288) + hd('hin2', 'Input Vector <small>1 × 768 (Case File)</small>', 288) + hd('hup', 'Updated vector <small>1 × 768 (updated Case File)</small>', 288);
     for (let i = 0; i < T; i++) h += cv('ao' + i, L768) + cv('in2_' + i, L768) + cv('up' + i, L768);
     h += sym('pl1', '+', 22) + sym('eq1', '=', 22);
-    // screens 12–13: the MLP (drawn at a third of the scale)
-    h += hd('hup2', 'Updated vector <small>1 × 768</small>', 110) + hd('hhid', '<b class="rw-ca">Hidden layer</b> <small>1 × 3,072 · then GELU</small>', 384) + hd('hf', '<b class="rw-ca">MLP output</b> <small>1 × 768</small>', 100) + hd('hbo', `Block ${st.room} output <small>1 × 768 (final Case File)</small>`, 140);
-    h += matBox('m1', 'a', 'W<sub>1</sub> <small>768 × 3,072</small>', S3072, S768) + matBox('m2', 'a', 'W<sub>2</sub> <small>3,072 × 768</small>', S768, S3072) + one('x3', '×') + one('e3', '=') + one('x4', '×') + one('e4', '=') + dv('gelu', 'rw-gelu', 'GELU', 52, T * ROW - 6);
-    for (let i = 0; i < T; i++) h += cv('u' + i, S768) + cv('hp' + i, S3072) + cv('ha' + i, S3072) + cv('f' + i, S768) + cv('bo' + i, S768);
-    h += sym('pl2', '+', 22) + sym('eq2', '=', 22) + dv('scale', 'rw-note', 'MLP screens are drawn at ⅓ scale so the 3,072 numbers fit.', 360);
-    // screen 14: twelve blocks, then the ranking box
-    blocks14().forEach(([b], c) => { h += hd('bh' + c, b == null ? '' : `After Block ${b}`, 100); if (b != null) for (let i = 0; i < T; i++) h += cv(`bc${c}_${i}`, S768); else h += sym('bd' + c, '…', 24); });
-    for (let c = 0; c < 5; c++) h += sym('ba' + c, '→', 26);
-    h += `<div class="rw-box2" id="${P}rk"><div class="rk-tt">After Block 12, this output vector for “the”…</div><canvas class="vz-vec rk-vec" id="${P}rkv"></canvas><div class="rk-tt">…ranks these tokens next (logits): <span class="tr-real">real GPT-2</span></div><div id="${P}rkt"></div><div class="tr-hint">The Output tab turns these scores into probabilities and picks one. <button class="btn small" id="${P}goOut">Output ›</button></div></div>`;
-    h += cv('fly', S768);
+    // screens 12–13: the MLP, vectors to scale (the 3,072-number hidden layer is 4× as long); W1 and W2 drawn at ¼ scale
+    h += hd('hup2', 'Updated vector <small>1 × 768 (updated Case File)</small>', 288) + hd('hhid', '<b class="rw-ca">Hidden layer</b> <small>1 × 3,072: four times as long (Forensics Expert)</small>', 560) + hd('hf', '<b class="rw-ca">MLP output</b> <small>1 × 768 (Forensics Expert’s result)</small>', 288) + hd('hu3', 'Updated vector <small>1 × 768</small>', 288) + hd('hbo', `Block ${st.room} output <small>1 × 768 (final Case File)</small>`, 288);
+    h += matBox('m1', 'a', 'W<sub>1</sub> <small>768 × 3,072 (¼ scale)</small>', L768, L768 / 4) + matBox('m2', 'a', 'W<sub>2</sub> <small>3,072 × 768 (¼ scale)</small>', L768 / 4, L768) + one('x3', '×') + one('e3', '=') + one('x4', '×') + dv('gelu', 'rw-gelu', 'GELU', 40, T * ROW - 6);
+    for (let i = 0; i < T; i++) h += cv('u' + i, L768) + cv('hp' + i, L768) + cv('ha' + i, L3072) + cv('f' + i, L768) + cv('bo' + i, L768);
+    h += sym('pl2', '+', 22) + sym('eq2', '=', 22);
+    // screen 14: this block's output, the later blocks one after another, then the ranking box
+    h += hd('bhl', '', 288) + hd('bhr', '', 288) + sym('ba0', '→', 40) + dv('bal', 'rw-note', 'each block: + attention update + MLP update', 250);
+    for (let bb = 1; bb <= 12; bb++) for (let i = 0; i < T; i++) h += cv(`bc${bb}_${i}`, L768);
+    h += `<div class="rw-box2" id="${P}rk"><div class="rk-tt">After Block 12, this output vector for “the”…</div><canvas class="rw-v" id="${P}rkv" style="width:${L768}px;height:${BH}px"></canvas><div class="rk-tt">…ranks these tokens next (logits): <span class="tr-real">real GPT-2</span></div><div id="${P}rkt"></div><div class="tr-hint">The Output tab turns these scores into probabilities and picks one. <button class="btn small" id="${P}goOut">Output ›</button></div></div>`;
+    h += cv('fly', L768);
     return h;
   }
-  function blocks14() { const r = st.room, mid = r >= 3 && r <= 11 ? r : 3; return mid > 3 ? [[1], [2], [null], [mid], [null], [12]] : [[1], [2], [3], [null], [12]]; }
+  const leftBlock = () => (st.room < 12 ? st.room : 11);
   function paint() {
     const b = blk(), j = st.q, Wt = window.REALLY_W && window.REALLY_W[st.room], all = (k, hh = 0) => Array.from({ length: T }, (_, i) => hv(k, hh, i));
     const IN = Array.from({ length: T }, (_, i) => vecIn(st.room - 1, i)), Q = all('q'), K = all('k'), V = all('v');
@@ -173,7 +173,7 @@
     const HP = Array.from({ length: T }, (_, i) => row(b.u, i)), HA = HP.map((u) => u.map(gelu)), F = Array.from({ length: T }, (_, i) => row(b.f, i)), BO = Array.from({ length: T }, (_, i) => vecIn(st.room, i));
     const mh = share(HP), ma = share(HA), mf = share(F), mb = share(BO);
     for (let i = 0; i < T; i++) { role(E('ao' + i), O[i], 'v', mo); multi(E('up' + i), U[i], mu); multi(E('u' + i), U[i], mu); role(E('hp' + i), HP[i], 'a', mh); role(E('ha' + i), HA[i], 'a', ma); role(E('f' + i), F[i], 'a', mf); multi(E('bo' + i), BO[i], mb); }
-    blocks14().forEach(([bb], c) => { if (bb == null) return; const vs = Array.from({ length: T }, (_, i) => vecIn(bb, i)), m = share(vs); for (let i = 0; i < T; i++) { multi(E(`bc${c}_${i}`), vs[i], m); E(`bc${c}_${i}`).classList.toggle('rw-ring2', bb === st.room); } });
+    for (let bb = leftBlock(); bb <= 12; bb++) { const vs = Array.from({ length: T }, (_, i) => vecIn(bb, i)), m = share(vs); for (let i = 0; i < T; i++) multi(E(`bc${bb}_${i}`), vs[i], m); }
     multi(E('fly'), vecIn(12, T - 1)); multi(E('rkv'), vecIn(12, T - 1));
     if (Wt) { matImg(E('wqc'), Wt.q, 'q'); matImg(E('wkc'), Wt.k, 'k'); matImg(E('wvc'), Wt.v, 'v'); matImg(E('woc'), Wt.o, 'v'); matImg(E('m1c'), Wt.m1, 'a'); matImg(E('m2c'), Wt.m2, 'a'); }
     const tp = R.top, pr = { ids: tp.ids, logits: tp.logits, p: tp.p, K: tp.ids.length };
@@ -212,8 +212,8 @@
       for (let i = 0; i < T; i++) { E('t' + i).classList.toggle('tr-me', i === j); mv(A, 'q' + i, { o: i === j ? 1 : 0.22 }, 500); mv(A, 'k' + i, { o: i <= j ? 1 : 0.22 }, 500); mv(A, 'v' + i, { o: 0.25 }, 500); }
       put('band', { x: 12, y: rowY(j) - 1 }); mv(A, 'band', { o: 1 }, 500);
       put('div', { x: QA - 22, y: 14 }); mv(A, 'div', { o: 1 }, 400);
-      const kth = E('kth'); if (kth) kth.innerHTML = `<b class="rw-ck">Kᵀ</b>: each Key turned into a 64 × 1 column <small>(shown ${ZOOM}× larger)</small>`;
-      put('kth', { x: SL0, y: 18 }); mv(A, 'kth', { o: 1 }, 400, 300);
+      const kth = E('kth'); if (kth) kth.innerHTML = `<b class="rw-ck">Kᵀ</b>: each Key turned into a 64 × 1 column`;
+      put('kth', { x: SL0, y: KT0 - 44 }); mv(A, 'kth', { o: 1 }, 400, 300);
       for (let i = 0; i < T; i++) {
         put('lb' + i, { x: slot(i) - 28, y: KT0 - 18 }); mv(A, 'lb' + i, { o: i <= j ? 1 : 0.35 }, 400, 300);
         if (i > j) { put('fs' + i, { x: slot(i) - 9, y: KT0 }); mv(A, 'fs' + i, { o: 1 }, 400, 300); continue; }
@@ -245,7 +245,7 @@
     if (s === 8) { // each Value × its percentage (outlined in the percentage's color), then all added: head 1's output for the token
       fade(A, ['qa', 'qal', 'tx', 'lraw', 'lsc', 'lpc', 'tot', 'mask', 'rest'], 0, 500);
       for (let i = 0; i < T; i++) { fade(A, ['kt' + i, 'raw' + i, 'sc' + i], 0, 500); if (i > j) fade(A, ['pc' + i, 'fs' + i, 'lb' + i], 0.0, 500); mv(A, 'k' + i, { o: 0.22 }, 500); mv(A, 'v' + i, { o: i <= j ? 1 : 0.22 }, 500); }
-      at(500, () => { const k = E('kth'); if (k) k.innerHTML = `<b class="rw-cv">Values</b> of the witnesses <small>(shown ${ZOOM}× larger)</small> × their percentages = <b class="rw-cv">weighted Values</b>`; });
+      at(500, () => { const k = E('kth'); if (k) k.innerHTML = `<b class="rw-cv">Values</b> of the witnesses × their percentages = <b class="rw-cv">weighted Values</b>`; });
       for (let i = 0; i <= j; i++) {
         put('vt' + i, { x: NX.v, y: barY(i), w: L64, r: 0 }); if (A) later(500, () => put('vt' + i, { o: 1 }));
         mv(A, 'vt' + i, Object.assign(col(slot(i), KT0, Z64), { o: 1 }), 1100, 600 + i * 90);
@@ -323,60 +323,61 @@
       for (let i = 0; i < T; i++) { put('up' + i, { x: AX.upd - (A ? 20 : 0), y: barY(i), w: L768 }); mv(A, 'up' + i, { x: AX.upd, o: 1 }, 600, t3 + i * 50); }
       return;
     }
-    if (s === 12) { // the MLP expands: updated vector × W1 = 3,072 numbers; GELU (drawn at ⅓ scale)
-      const gone = ['hao', 'hin2', 'hup', 'pl1', 'eq1']; for (let i = 0; i < T; i++) gone.push('ao' + i, 'in2_' + i); fade(A, gone, 0, 500);
-      for (let i = 0; i < T; i++) { put('u' + i, { x: AX.upd, y: barY(i), w: L768 }); if (A) put('u' + i, { o: 1 }); mv(A, 'up' + i, { o: 0 }, 1, 500); mv(A, 'u' + i, { x: MX.upd, w: S768, o: 1 }, 1100, 500 + i * 25); }
-      put('hup2', { x: MX.upd, y: 14 }); mv(A, 'hup2', { o: 1 }, 400, 1500);
-      put('scale', { x: MX.m1, y: H - 30 }); mv(A, 'scale', { o: 1 }, 400, 1500);
-      put('m1', { x: MX.m1, y: matY(S768) }); mv(A, 'm1', { o: 1 }, 600, 1700);
-      put('x3', { x: MX.upd + S768 + 6, y: midY - 14 }); put('e3', { x: MX.m1 + S3072 + 14, y: midY - 14 }); fade(A, ['x3', 'e3'], 1, 400, 1800);
-      at(1900, () => svg(linesTo(MX.upd + S768, MX.m1, S3072, MX.hid, 'a'), A));
-      put('hhid', { x: MX.hid, y: 14 }); mv(A, 'hhid', { o: 1 }, 400, 2200);
-      for (let i = 0; i < T; i++) { put('hp' + i, { x: MX.hid - (A ? 20 : 0), y: barY(i), w: S3072 }); mv(A, 'hp' + i, { x: MX.hid, o: 1 }, 600, 2200 + i * 50); }
-      const t1 = 2200 + T * 50 + 900; // GELU sweeps across and the values change in place
-      put('gelu', { x: MX.hid - 60, y: rowY(0) }); mv(A, 'gelu', { o: 1 }, 300, t1); mv(A, 'gelu', { x: MX.hid + S3072 + 6 }, 1300, t1 + 300);
-      for (let i = 0; i < T; i++) { put('ha' + i, { x: MX.hid, y: barY(i), w: S3072 }); mv(A, 'ha' + i, { o: 1 }, 700, t1 + 700); }
+    if (s === 12) { // the MLP expands each updated vector to 3,072 numbers (4× as long), then GELU
+      svg('', false); const gone = ['hao', 'hin2', 'hup', 'pl1', 'eq1']; for (let i = 0; i < T; i++) gone.push('ao' + i, 'in2_' + i); fade(A, gone, 0, 500);
+      for (let i = 0; i < T; i++) { put('u' + i, { x: AX.upd, y: barY(i), w: L768 }); if (A) put('u' + i, { o: 1 }); mv(A, 'up' + i, { o: 0 }, 1, 400); mv(A, 'u' + i, { x: 110, o: 1 }, 1100, 500 + i * 25); }
+      put('hup2', { x: 110, y: 14 }); mv(A, 'hup2', { o: 1 }, 400, 1300);
+      put('m1', { x: 450, y: midY - L768 / 8 - 6 }); mv(A, 'm1', { o: 1 }, 600, 1600);
+      put('x3', { x: 412, y: midY - 14 }); fade(A, ['x3'], 1, 400, 1700);
+      const t1 = 2900; // the hidden layer grows out of each vector: 768 → 3,072 numbers
+      fade(A, ['m1', 'x3', 'hup2'], 0, 500, t1);
+      for (let i = 0; i < T; i++) { put('hp' + i, { x: 110, y: barY(i), w: L768 }); mv(A, 'hp' + i, { o: 1 }, 400, t1); mv(A, 'u' + i, { o: 0 }, 400, t1); mv(A, 'hp' + i, { w: L3072 }, 1400, t1 + 400 + i * 30); }
+      put('hhid', { x: 110, y: 14 }); mv(A, 'hhid', { o: 1 }, 400, t1 + 600);
+      const t2 = t1 + 2400; // GELU sweeps across and changes the values in place
+      put('gelu', { x: 70, y: rowY(0) }); mv(A, 'gelu', { o: 1 }, 300, t2); mv(A, 'gelu', { x: 110 + L3072 + 4 }, 1500, t2 + 300); mv(A, 'gelu', { o: 0 }, 400, t2 + 2000);
+      for (let i = 0; i < T; i++) { put('ha' + i, { x: 110, y: barY(i), w: L3072 }); mv(A, 'ha' + i, { o: 1 }, 900, t2 + 400); mv(A, 'hp' + i, { o: 0 }, 900, t2 + 900); }
       return;
     }
-    if (s === 13) { // ... × W2 = the MLP output (768); + the updated vector = this block's output
-      svg('', false); fade(A, ['m1', 'x3', 'e3', 'gelu', 'hhid'], 0, 500);
-      for (let i = 0; i < T; i++) { mv(A, 'hp' + i, { o: 0 }, 400); mv(A, 'u' + i, { x: MX.upd2 }, 1000, 300 + i * 20); }
-      mv(A, 'hup2', { x: MX.upd2 }, 1000, 300);
-      for (let i = 0; i < T; i++) mv(A, 'ha' + i, { x: MX.act }, 1000, 1200 + i * 20);
-      put('m2', { x: MX.m2, y: matY(S3072) }); mv(A, 'm2', { o: 1 }, 600, 2300);
-      put('x4', { x: MX.act + S3072 + 8, y: midY - 14 }); put('e4', { x: MX.m2 + S768 + 12, y: midY - 14 }); fade(A, ['x4', 'e4'], 1, 400, 2400);
-      at(2500, () => svg(linesTo(MX.act + S3072, MX.m2, S768, MX.f, 'a'), A));
-      put('hf', { x: MX.f, y: 14 }); mv(A, 'hf', { o: 1 }, 400, 2800);
-      for (let i = 0; i < T; i++) { put('f' + i, { x: MX.f - (A ? 20 : 0), y: barY(i), w: S768 }); mv(A, 'f' + i, { x: MX.f, o: 1 }, 600, 2800 + i * 50); }
-      const t1 = 2800 + T * 50 + 700;
-      put('pl2', { x: MX.plus, y: rowY(0) }); mv(A, 'pl2', { o: 1 }, 400, t1);
-      put('eq2', { x: MX.eq, y: rowY(0) }); mv(A, 'eq2', { o: 1 }, 400, t1 + 500);
-      put('hbo', { x: MX.bo, y: 14 }); mv(A, 'hbo', { o: 1 }, 400, t1 + 500);
-      for (let i = 0; i < T; i++) { put('bo' + i, { x: MX.bo - (A ? 20 : 0), y: barY(i), w: S768 }); mv(A, 'bo' + i, { x: MX.bo, o: 1 }, 600, t1 + 600 + i * 50); }
+    if (s === 13) { // × W2: each 3,072-number vector shrinks back to 768 (the MLP output); + the updated vector = this block's output
+      put('m2', { x: 600, y: midY - L768 / 2 }); mv(A, 'm2', { o: 1 }, 600, 200);
+      put('x4', { x: 572, y: midY - 14 }); fade(A, ['x4'], 1, 400, 300);
+      const t1 = 1500;
+      fade(A, ['m2', 'x4', 'hhid'], 0, 500, t1);
+      for (let i = 0; i < T; i++) { mv(A, 'ha' + i, { w: L768 }, 1300, t1 + i * 30); put('f' + i, { x: 110, y: barY(i), w: L768 }); mv(A, 'f' + i, { o: 1 }, 600, t1 + 1000 + i * 30); mv(A, 'ha' + i, { o: 0 }, 500, t1 + 1300 + i * 30); }
+      put('hf', { x: 110, y: 14 }); mv(A, 'hf', { o: 1 }, 400, t1 + 1200);
+      const t2 = t1 + 2200;
+      put('pl2', { x: 404, y: rowY(0) }); mv(A, 'pl2', { o: 1 }, 400, t2);
+      put('hu3', { x: 432, y: 14 }); mv(A, 'hu3', { o: 1 }, 400, t2);
+      for (let i = 0; i < T; i++) { mv(A, 'u' + i, { x: 432, y: barY(i) + (A ? 16 : 0), o: 0 }, 1); mv(A, 'u' + i, { y: barY(i), o: 1 }, 500, t2 + 50 + i * 40); }
+      const t3 = t2 + 1000;
+      put('eq2', { x: 726, y: rowY(0) }); mv(A, 'eq2', { o: 1 }, 400, t3);
+      put('hbo', { x: 752, y: 14 }); mv(A, 'hbo', { o: 1 }, 400, t3);
+      for (let i = 0; i < T; i++) { put('bo' + i, { x: 752 - (A ? 20 : 0), y: barY(i), w: L768 }); mv(A, 'bo' + i, { x: 752, o: 1 }, 600, t3 + 100 + i * 50); }
       return;
     }
-    if (s === 14) { // everything but the tokens and this block's output fades; it moves left; the other blocks fly in from the right
-      svg('', false); const gone = ['m2', 'x4', 'e4', 'hf', 'pl2', 'eq2', 'hup2', 'hbo', 'scale']; for (let i = 0; i < T; i++) gone.push('ha' + i, 'f' + i, 'u' + i); fade(A, gone, 0, 500);
-      const C = blocks14(); let x = 110; const xs = [], ax = [];
-      C.forEach(([b], c) => { xs.push(x); x += b == null ? 24 : S768; if (c < C.length - 1) { ax.push(x + 2); x += 28; } });
-      const mine = C.findIndex(([b]) => b === st.room);
-      if (mine >= 0) for (let i = 0; i < T; i++) { mv(A, 'bo' + i, { x: xs[mine] }, 1000, 600); later && mv(A, 'bo' + i, { o: 0 }, 1, 1700); put(`bc${mine}_${i}`, { x: xs[mine], y: barY(i), w: S768 }); mv(A, `bc${mine}_${i}`, { o: 1 }, 1, 1650); }
-      else for (let i = 0; i < T; i++) mv(A, 'bo' + i, { o: 0 }, 500);
-      let dl = 1700;
-      C.forEach(([b], c) => {
-        put('bh' + c, { x: xs[c], y: 30 }); mv(A, 'bh' + c, { o: b == null ? 0 : 1 }, 400, c === mine ? 1100 : dl);
-        if (c === mine) return;
-        if (b == null) { put('bd' + c, { x: xs[c], y: rowY(0) }); mv(A, 'bd' + c, { o: 1 }, 400, dl); dl += 250; return; }
-        for (let i = 0; i < T; i++) { put(`bc${c}_${i}`, { x: SW + 20, y: barY(i), w: S768 }); mv(A, `bc${c}_${i}`, { x: xs[c], o: 1 }, 800, dl + i * 15); }
-        dl += 500;
-      });
-      ax.forEach((a, k) => { put('ba' + k, { x: a, y: rowY(0) }); mv(A, 'ba' + k, { o: 1 }, 300, 1700 + k * 300); });
+    if (s === 14) { // everything but the tokens and this block's output fades; it moves left; the later blocks' outputs fly in, one after another
+      const gone = ['hf', 'hu3', 'pl2', 'eq2', 'hbo']; for (let i = 0; i < T; i++) gone.push('f' + i, 'u' + i); fade(A, gone, 0, 500);
+      const L = leftBlock(), RX = 460, BX = 790; const bhl = E('bhl'), bhr = E('bhr');
+      if (bhl) bhl.innerHTML = `After Block ${L} <small>1 × 768</small>`;
+      if (st.room < 12) for (let i = 0; i < T; i++) { mv(A, 'bo' + i, { x: 110 }, 1000, 600); put(`bc${L}_${i}`, { x: 110, y: barY(i), w: L768 }); mv(A, `bc${L}_${i}`, { o: 1 }, 1, 1650); mv(A, 'bo' + i, { o: 0 }, 1, 1700); }
+      else for (let i = 0; i < T; i++) { mv(A, 'bo' + i, { x: RX }, 1000, 600); put(`bc11_${i}`, { x: 110, y: barY(i), w: L768 }); mv(A, `bc11_${i}`, { o: 1 }, 600, 1400); mv(A, 'bo' + i, { o: 0 }, 1, 1700); put(`bc12_${i}`, { x: RX, y: barY(i), w: L768 }); mv(A, `bc12_${i}`, { o: 1 }, 1, 1650); }
+      put('bhl', { x: 110, y: 22 }); mv(A, 'bhl', { o: 1 }, 400, 1000);
+      put('ba0', { x: 410, y: rowY(0) }); mv(A, 'ba0', { o: 1 }, 400, 1700); put('bal', { x: 318, y: TOP + T * ROW + 6 }); mv(A, 'bal', { o: 1 }, 400, 1700);
+      put('bhr', { x: RX, y: 22 }); mv(A, 'bhr', { o: 1 }, 400, 1900);
+      let dl = 1900;
+      for (let bb = L + 1; bb <= 12; bb++) { // each later block's output flies in from the right and replaces the one before
+        if (st.room === 12) break;
+        const prev = bb - 1, here = bb;
+        at(dl, () => { if (bhr) bhr.innerHTML = `After Block ${here} <small>1 × 768</small>`; });
+        for (let i = 0; i < T; i++) { put(`bc${here}_${i}`, { x: SW + 20, y: barY(i), w: L768 }); mv(A, `bc${here}_${i}`, { x: RX, o: 1 }, 700, dl + i * 12); if (prev > L) mv(A, `bc${prev}_${i}`, { o: 0 }, 300, dl + 500); }
+        dl += A ? 750 : 0;
+      }
+      if (st.room === 12 && bhr) bhr.innerHTML = 'After Block 12 <small>1 × 768</small>';
       for (let i = 0; i < T; i++) E('t' + i).classList.toggle('tr-me', i === T - 1);
-      const last = xs[C.length - 1], bx = last + S768 + 40;
-      put('rk', { x: bx, y: TOP + 20 }); mv(A, 'rk', { o: 1 }, 500, dl + 500);
-      put('fly', { x: last, y: barY(T - 1), w: S768 }); if (A) later(dl + 900, () => put('fly', { o: 1 }));
-      mv(A, 'fly', { x: bx + 14, y: TOP + 52, w: SW - bx - 60, o: 1 }, 1100, dl + 1000); mv(A, 'fly', { o: 0 }, 300, dl + 2200);
-      const rk = E('rk'); if (rk) rk.style.width = SW - bx - 30 + 'px';
+      put('rk', { x: BX, y: TOP + 20 }); mv(A, 'rk', { o: 1 }, 500, dl + 400);
+      const rk = E('rk'); if (rk) rk.style.width = SW - BX - 20 + 'px';
+      put('fly', { x: RX, y: barY(T - 1), w: L768 }); if (A) later(dl + 900, () => put('fly', { o: 1 }));
+      mv(A, 'fly', { x: BX + 15, y: TOP + 20 + 37, o: 1 }, 1100, dl + 1000); mv(A, 'fly', { o: 0 }, 300, dl + 2300);
       const go = E('goOut'); if (go) go.onclick = () => NT.goTab('pick');
     }
   }
@@ -396,9 +397,9 @@
       ['Every token does the same, using only itself and earlier tokens.', 'Each grid row is one token’s attention percentages (totaling 100%); each gives one 1 × 64 head output.'],
       ['All 12 heads’ outputs are concatenated (‖) into one vector per token.', '12 heads × 64 numbers = 768. Concatenated means joined end to end, not added.'],
       ['The output projection W_O (the Lead Detective), then an addition.', 'W_O, a learned 768 × 768 matrix, mixes the 12 heads’ outputs; the result is added to the Input Vector.'],
-      ['The MLP (the Forensics Expert) expands each vector to 3,072 numbers.', 'A learned 768 × 3,072 matrix, then GELU, which keeps positive values and mostly silences negative ones.'],
-      ['…then condenses them back to 768 and adds the result.', `A learned 3,072 × 768 matrix gives a 1 × 768 MLP output, added to the updated vector: Block ${r}’s output.`],
-      ['Twelve blocks in sequence: each block’s output is the next block’s input.', 'After Block 12, the last token’s vector is scored against every token; the highest logits are the likeliest next tokens.'],
+      ['The MLP (the Forensics Expert) stretches each vector to 3,072 numbers.', '× a learned 768 × 3,072 matrix W1: four times as long. Then GELU keeps positive values and mostly silences negative ones.'],
+      ['…then shrinks them back to 768 and adds the result.', `× a learned 3,072 × 768 matrix W2 gives the 1 × 768 MLP output, added to the updated vector: Block ${r}’s output.`],
+      ['Twelve blocks in sequence: each block’s output is the next block’s input.', 'Every block adds its own attention and MLP updates. After Block 12, the last token’s vector scores every token.'],
     ][s - 1];
   }
 
