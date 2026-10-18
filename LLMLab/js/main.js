@@ -35,6 +35,14 @@
     { id: 'post', label: 'Post-Training', subs: [
       { id: 'rlhf', label: 'RLHF', st: 'rlhf', notodo: true, who: 'This simplified <b>RLHF</b> example illustrates later conversational assistants, not GPT-2’s original training. Human feedback on complete responses trains a <b>reward model</b>. A training objective supplies the learning signal; backpropagation calculates gradients and gradient descent applies updates. Ratings do not identify which parameters to change. Grades and percentages are illustrative; real training uses many responses and need not improve at every update.' },
     ] },
+    { id: 'assist', label: 'Assistant', subs: [
+      { id: 'before', label: 'Before & After', cap: 'what post-training changes', st: 'asbefore', notodo: true, who: 'On this page: two versions of the same small model (SmolLM2-135M) get the same chat. Version 1 was only pre-trained; Version 2 also had <b>post-training</b>. Everything else is the same. All outputs are real recordings.' },
+      { id: 'conv', label: 'Inside a Conversation', cap: 'the Case Log', st: 'asconv', notodo: true, who: 'On this page: what a chat really is to the model: one long text with role labels, the <b>Case Log</b>. History, saved memories and trimming change that text, never the model. Real recordings from Qwen3-0.6B, a different small model. <b>Show the tokens</b> (top right) splits each message into its real tokens.' },
+    ] },
+    { id: 'think', label: 'Think &amp; Act', subs: [
+      { id: 'tools', label: 'Think & Use Tools', cap: 'reasoning and tools', st: 'astools', notodo: true, who: 'On this page: one arithmetic problem answered four real ways by Qwen3-0.6B (right away, with written steps, with <b>thinking tokens</b>, with a calculator <b>tool</b>), then a short tool loop that repeats. Work the problem yourself first.' },
+      { id: 'trust', label: 'Which Answer?', cap: 'evidence and trust', st: 'astrust', notodo: true, who: 'On this page: three real answers to one question. Rank them, check their claims against the evidence sheet, re-rank, and only then see how each answer was made.' },
+    ] },
   ];
   NT.TABS = TABS;
   // old links (LLMLab/#tokens and so on) still open the right place
@@ -166,6 +174,8 @@
     if (S.station !== 'mlbook' && S.bookSaved != null) { const t0 = S.bookSaved; S.bookSaved = null; S.quietText = true; NT.setText(t0, 'edit'); S.quietText = false; } // leaving Learn one example: the sentence comes back
     $('#toolbar').innerHTML = ''; $('#stage').innerHTML = '';
     document.body.dataset.top = S.top; document.body.dataset.st = S.station; fillStarter(); autosize();
+    { const as = (NT.ASSIST_STATIONS || []).includes(S.station); document.body.classList.toggle('asst', as); const nl = document.querySelector('#numBtn .nt-l'); if (nl) nl.textContent = as ? 'Show the tokens' : 'Show the numbers';
+      if (!as && NT.resumeHeavy) NT.resumeHeavy(); } // Oct 19: tabs 8 and 9 don't need GPT-2 or the 23 MB embedding file, so their background downloads wait until another tab opens
     { const lock = S.station === 'flow' || S.station === 'mlbook'; ta.readOnly = lock; ta.title = S.station === 'mlbook' ? 'This page always uses one sentence from A Tale of Two Cities.' : lock ? 'The Animated flow uses stored GPT-2 numbers, so this sentence can’t be typed here. Choose a story in the dropdown; the flow adds each picked token itself.' : ''; }
     { const kc = $('#kSlider').closest('.ctl'); if (kc && S.station !== 'pick') kc.classList.remove('off'); }
     const needsText = ['next', 'ids', 'tokids', 'split', 'transformer', 'logits', 'pick', 'repeat', 'nmflow', 'pkscene'].includes(S.station) || (S.station === 'embeddings' && S.embView === 'input');
@@ -189,10 +199,15 @@
   fromHash();
   window.addEventListener('hashchange', () => { const [a, b] = location.hash.slice(1).split('/'); if (a !== S.top || (b && b !== S.sub)) fromHash(); });
   const idle = (fn, t) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: t }) : setTimeout(fn, t));
-  window.addEventListener('load', () => setTimeout(() => idle(() => NT.warmEmb(), 4000), 900));
+  // Oct 19 (Greg): no heavy background downloads while a student stays on tabs 8–9 (recorded data only)
+  const onAssist = () => ['assist', 'think'].includes(document.body.dataset.top);
+  let embWaiting = false;
+  const warm = () => { if (onAssist()) { embWaiting = true; return; } NT.warmEmb(); };
+  NT.resumeHeavy = () => { if (embWaiting) { embWaiting = false; idle(() => NT.warmEmb(), 4000); } if (NT.live.resumeIdle) NT.live.resumeIdle(); };
+  window.addEventListener('load', () => setTimeout(() => idle(warm, 4000), 900));
   NT.live.scheduleIdle();
   window.addEventListener('resize', autosize);
-  // number keys 1–6 jump between the lesson tabs (not while typing)
+  // number keys 1–9 jump between the lesson tabs (not while typing)
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const el = e.target, tag = el && el.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el && el.isContentEditable)) return;

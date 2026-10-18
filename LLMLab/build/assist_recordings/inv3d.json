@@ -1,0 +1,140 @@
+[
+ {
+  "q": "A school orders 238 boxes of 47 pencils each and gives out 7,869 pencils. How many pencils are left? Show your steps.",
+  "answer": 3317,
+  "product": 11186,
+  "seed": 1,
+  "text": "We are given:\n\n- Number of boxes: 238  \n- Number of pencils per box: 47  \n- Total pencils given out: 7,869  \n\nWe need to find how many pencils are **left**.\n\n---\n\n### Step 1: Calculate the total number of pencils ordered\n\n$$\n\\text{Total pencils ordered} = 238 \\times 47\n$$\n\n$$\n238 \\times 47 = 11,206\n$$\n\nSo, **238 boxes \u00d7 47 pencils per box = 11,206 pencils ordered**\n\n---\n\n### Step 2: Subtract the pencils given out from the total ordered\n\n$$\n\\text{Pencils left} = 11,206 - 7,869\n$$\n\n$$\n11,206 - 7,869 = 3,337\n$$\n\n---\n\n### \u2705 Final Answer:\n\n$$\n\\boxed{3337}\n$$\n\nSo, **3,337 pencils are left**.",
+  "prod_found": [
+   "11,206"
+  ],
+  "final": [
+   "3337"
+  ],
+  "ntok": 234
+ },
+ {
+  "q": "A school orders 238 boxes of 47 pencils each and gives out 7,869 pencils. How many pencils are left? Show your steps.",
+  "answer": 3317,
+  "product": 11186,
+  "seed": 2,
+  "text": "We are given:\n\n- **Number of boxes ordered:** 238  \n- **Each box contains 47 pencils**  \n- **Total pencils given out:** 7,869 pencils  \n\nWe are to find out how many **pencils are left**.\n\n---\n\n### Step 1: Calculate the total number of pencils ordered\n\n$$\n\\text{Total pencils ordered} = 238 \\times 47\n$$\n\n$$\n238 \\times 47 = 11,206\n$$\n\nSo, **11,206 pencils were ordered**.\n\n---\n\n### Step 2: Subtract the pencils given out from the ordered pencils\n\n$$\n\\text{Pencils left} = 11,206 - 7,869\n$$\n\n$$\n11,206 - 7,869 = 3,337\n$$\n\n---\n\n### \u2705 Final Answer:\n\n$$\n\\boxed{3337}\n$$\n\nSo, **3,337 pencils are left**.",
+  "prod_found": [
+   "11,206"
+  ],
+  "final": [
+   "3337"
+  ],
+  "ntok": 230
+ },
+ {
+  "q": "A school orders 238 boxes of 47 pencils each and gives out 7,869 pencils. How many pencils are left? Show your steps.",
+  "answer": 3317,
+  "product": 11186,
+  "seed": 3,
+  "text": "We are given:\n\n- Total number of boxes: **238**\n- Number of pencils per box: **47**\n- Total number of pencils given out: **7,869**\n\nWe need to find the number of **pencils left**.\n\n---\n\n### Step 1: Calculate total number of pencils\n\n$$\n\\text{Total pencils} = \\text{Boxes} \\times \\text{Pencils per box} = 238 \\times 47\n$$\n\n$$\n238 \\times 47 = 11,206\n$$\n\nSo, **11,206 pencils are given out**.\n\n---\n\n### Step 2: Subtract the number of pencils given out from the total\n\n$$\n\\text{Pencils left} = \\text{Total pencils} - \\text{Pencils given out} = 11,206 - 7,869\n$$\n\n$$\n11,206 - 7,869 = 3,337\n$$\n\n---\n\n### \u2705 Final Answer:\n\n$$\n\\boxed{3337}\n$$\n\nSo, **3,337 pencils are left**.",
+  "prod_found": [
+   "11,206"
+  ],
+  "final": [
+   "3337"
+  ],
+  "ntok": 260
+ },
+ {
+  "q": "A school orders 238 boxes of 47 pencils each and gives out 7,869 pencils. How many pencils are left? Show your steps.",
+  "answer": 3317,
+  "product": 11186,
+  "seed": 4,
+  "text": "We are given:\n\n- Number of boxes: 238  \n- Number of pencils per box: 47  \n- Total pencils given out: 7,869\n\n### Step 1: Calculate total pencils ordered\n\n$$\n238 \\times 47 = 11,186\n$$\n\n### Step 2: Subtract pencils given out from total ordered\n\n$$\n11,186 - 7,869 = 3,317\n$$\n\n### \u2705 Final Answer: **3,317 pencils are left**.",
+  "prod_found": [
+   "11,186"
+  ],
+  "final": [
+   "3,317"
+  ],
+  "ntok": 125
+ },
+ {
+  "q": "A school orders 238 boxes of 47 pencils each and gives out 7,869 pencils. How many pencils are left? Show your steps.",
+  "answer": 3317,
+  "product": 11186,
+  "seed": 5,
+  "text": "We are given:\n\n- Number of boxes: 238  \n- Number of pencils per box: 47  \n- Total number of pencils given out: 7,869  \n\nWe are asked to find how many pencils are **left**.\n\n---\n\n### Step 1: Calculate the total number of pencils ordered\n\n$$\n\\text{Total pencils ordered} = 238 \\times 47 = 11,146\n$$\n\n---\n\n### Step 2: Subtract the number of pencils given out from the total ordered\n\n$$\n\\text{Pencils left} = 11,146 - 7,869 = 3,277\n$$\n\n---\n\n### \u2705 Final Answer:\n\n$$\n\\boxed{3277}\n$$\n\nThere are **3,277 pencils left**.",
+  "prod_found": [
+   "11,146"
+  ],
+  "final": [
+   "3277"
+  ],
+  "ntok": 182
+ },
+ {
+  "q": "A school orders 386 boxes of 58 pencils each and gives out 9,475 pencils. How many pencils are left? Show your steps.",
+  "answer": 12913,
+  "product": 22388,
+  "seed": 1,
+  "text": "We are given:\n\n- Number of boxes: 386  \n- Each box contains 58 pencils  \n- Total number of pencils given out: 9,475  \n\nWe need to find how many pencils are **left**.\n\n---\n\n### Step 1: Calculate the total number of pencils ordered\n\n$$\n\\text{Total pencils ordered} = 386 \\times 58\n$$\n\n$$\n386 \\times 58 = 22,  386 \\times 50 = 19,300 \\\\\n386 \\times 8 = 3,088 \\\\\n\\text{Total} = 19,300 + 3,088 = 22,388\n$$\n\nSo, the school ordered **22,388 pencils**.\n\n---\n\n### Step 2: Subtract the number of pencils given out from the total ordered\n\n$$\n\\text{Pencils left} = 22,388 - 9,475\n$$\n\n$$\n22,388 - 9,475 = 12,913\n$$\n\n---\n\n### \u2705 Final Answer:\n\n",
+  "prod_found": [
+   "22,"
+  ],
+  "final": [
+   "22,388"
+  ],
+  "ntok": 260
+ },
+ {
+  "q": "A school orders 386 boxes of 58 pencils each and gives out 9,475 pencils. How many pencils are left? Show your steps.",
+  "answer": 12913,
+  "product": 22388,
+  "seed": 2,
+  "text": "We are given:\n\n- **Number of boxes ordered**: 386  \n- **Each box contains 58 pencils**: 58 pencils per box  \n- **Total pencils given out**: 9,475 pencils\n\nWe are to find out how many **pencils are left**.\n\n---\n\n### Step 1: Calculate the total number of pencils ordered\n\n$$\n\\text{Total pencils ordered} = 386 \\times 58\n$$\n\n$$\n386 \\times 58 = 22,  58 \\times 386 = 22,  58 \\times 386 = 22,  58 \\times 386 = 22,  58 \\times 386 = 22,  58 \\times 386 = 22,  58 \\times 386 = 22,  58 \\times 386 = 22,  58 \\times 386 = 22,  58 \\times 386 = 22,  58 \\times 386 =",
+  "prod_found": [
+   "22,"
+  ],
+  "final": [],
+  "ntok": 260
+ },
+ {
+  "q": "A school orders 386 boxes of 58 pencils each and gives out 9,475 pencils. How many pencils are left? Show your steps.",
+  "answer": 12913,
+  "product": 22388,
+  "seed": 3,
+  "text": "We are given:\n\n- Total number of boxes: **386**\n- Number of pencils per box: **58**\n- Total number of pencils given out: **9,475**\n\nWe need to find the number of **pencils left**.\n\n---\n\n### Step 1: Calculate total number of pencils\n\n$$\n\\text{Total pencils} = 386 \\times 58\n$$\n\n$$\n386 \\times 58 = 22, 468\n$$\n\nSo, **22,468 pencils** were ordered and **22,468 pencils** were given out.\n\n---\n\n### Step 2: Subtract pencils given out from total\n\n$$\n\\text{Pencils left} = 22,468 - 9,475\n$$\n\n$$\n22,468 - 9,475 = 12,993\n$$\n\n---\n\n### \u2705 Final Answer:\n\n$$\n\\boxed{12,993}\n$$\n\nThere are **12,993 pencils left**.",
+  "prod_found": [
+   "22,"
+  ],
+  "final": [
+   "12,993"
+  ],
+  "ntok": 239
+ },
+ {
+  "q": "A school orders 386 boxes of 58 pencils each and gives out 9,475 pencils. How many pencils are left? Show your steps.",
+  "answer": 12913,
+  "product": 22388,
+  "seed": 4,
+  "text": "We are given:\n\n- Number of boxes: 386  \n- Number of pencils per box: 58  \n- Total pencils given out: 9,475\n\n### Step 1: Calculate total pencils ordered\n\n$$\n386 \\times 58 = 22, 568 \\text{ pencils}\n$$\n\n### Step 2: Subtract the pencils given out from the total ordered\n\n$$\n22,568 - 9,475 = 13,093\n$$\n\n### \u2705 Final Answer: **13,093 pencils are left**.",
+  "prod_found": [
+   "22,"
+  ],
+  "final": [
+   "13,093"
+  ],
+  "ntok": 134
+ },
+ {
+  "q": "A school orders 386 boxes of 58 pencils each and gives out 9,475 pencils. How many pencils are left? Show your steps.",
+  "answer": 12913,
+  "product": 22388,
+  "seed": 5,
+  "text": "We are given:\n\n- Number of boxes: 386  \n- Number of pencils per box: 58  \n- Total number of pencils given: 9,475\n\nWe are to find how many pencils are **left**.\n\n---\n\n### Step 1: Find the total number of pencils ordered\n\n$$\n\\text{Total pencils ordered} = 386 \\times 58\n$$\n\n$$\n386 \\times 58 = 22,  386 \\times 50 = 19,300 \\\\\n386 \\times 8 = 3,088 \\\\\n\\text{Total} = 19,300 + 3,088 = 22,388\n$$\n\nSo, **22,388 pencils were ordered**.\n\n---\n\n### Step 2: Find how many pencils were given\n\n$$\n\\text{Pencils given} = 9,475\n$$\n\n---\n\n### Step 3: Subtract the pencils given from the total ordered\n\n$$\n\\text{Pencils left} = 22,388 - 9,475\n$$\n\n$$\n2",
+  "prod_found": [
+   "22,"
+  ],
+  "final": [
+   "22,388"
+  ],
+  "ntok": 260
+ }
+]

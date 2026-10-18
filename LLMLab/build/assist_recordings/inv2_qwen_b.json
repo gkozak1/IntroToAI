@@ -1,0 +1,41 @@
+{
+ "no_memory_photo": "Photosynthesis is the process by which plants, algae, and some bacteria convert light energy from the sun into chemical energy stored in glucose. This process occurs in the chloroplasts of plant cells, which are located in the thylakoid membranes of the chloroplasts.\n\nThe overall chemical equation for photosynthesis is:\n\n$$\n6\\text{CO}_2 + 6\\text{H}_2\\text{O} + \\text{light energy} \\rightarrow \\text{C}_6\\text{H}_{12}\\text{O}_6 + 6\\text{O}_2\n$$\n\nThis means that sunlight is used to fix carbon dioxide and water into glucose and oxygen. The glucose produced is then used by the plant for energy and growth.",
+ "no_memory_name": "Hello! I don't have a name, but I can help you with questions or tasks. What would you like to ask?",
+ "memory_photo": "Photosynthesis is the process by which plants, algae, and some bacteria convert light energy from the sun into chemical energy stored in glucose. This process occurs in the chloroplasts of plant cells, where water and carbon dioxide are used to produce glucose and oxygen.",
+ "memory_name": "Yes, I know your name. Jordan.",
+ "trim_conv": [
+  {
+   "role": "system",
+   "content": "You are a helpful assistant."
+  },
+  {
+   "role": "user",
+   "content": "Hi! My name is Jordan."
+  },
+  {
+   "role": "assistant",
+   "content": "Hello, Jordan! How can I assist you today?"
+  },
+  {
+   "role": "user",
+   "content": "What is the capital of France?"
+  },
+  {
+   "role": "assistant",
+   "content": "The capital of France is **Paris**."
+  },
+  {
+   "role": "user",
+   "content": "Name a fruit that is red."
+  },
+  {
+   "role": "assistant",
+   "content": "A fruit that is red is **peach**."
+  }
+ ],
+ "name_full": "Hello, Jordan! I'm here to help. If you're asking if I know your name, I don't have a name, but I can help you with questions or things you might want to know. Let me know what you need! \ud83d\ude0a",
+ "name_trimmed": "I don't know your name, but I can help you with questions about France, fruits, or other topics! Let me know if you need anything else.",
+ "tokens_full": 111,
+ "tokens_trim": 83,
+ "full_text": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nHi! My name is Jordan.<|im_end|>\n<|im_start|>assistant\nHello, Jordan! How can I assist you today?<|im_end|>\n<|im_start|>user\nWhat is the capital of France?<|im_end|>\n<|im_start|>assistant\nThe capital of France is **Paris**.<|im_end|>\n<|im_start|>user\nName a fruit that is red.<|im_end|>\n<|im_start|>assistant\nA fruit that is red is **peach**.<|im_end|>\n<|im_start|>user\nDo you know my name?<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+}

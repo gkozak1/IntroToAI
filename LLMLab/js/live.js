@@ -68,9 +68,11 @@
       })().catch(() => set('error', state.progress));
       return prefetching;
     },
+    // Oct 19: a prefetch that was skipped on tabs 8–9 starts when the student opens another tab
+    resumeIdle() { if (!NTl.waiting) return; NTl.waiting = false; const run = () => NTl.prefetch(); if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 4000 }); else setTimeout(run, 1500); },
     scheduleIdle() {
       const conn = navigator.connection; if (conn && conn.saveData) return;
-      const go = () => { const run = () => NTl.prefetch(); if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 4000 }); else setTimeout(run, 1500); };
+      const go = () => { const run = () => { if (['assist', 'think'].includes(document.body.dataset.top)) { NTl.waiting = true; return; } NTl.prefetch(); }; if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 4000 }); else setTimeout(run, 1500); };
       if (document.readyState === 'complete') setTimeout(go, 1200); else window.addEventListener('load', () => setTimeout(go, 1200));
     },
     // start the model session (reads the cached chunks; downloads whatever is missing)
