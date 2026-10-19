@@ -89,7 +89,7 @@ D["s2"] = {
 
 # ---------- Screen 3: Think & Use Tools (Qwen3-0.6B) ----------
 d3 = J("inv3d.json"); dd = J("inv3_238_think.json"); ti = J("inv34_tools_instr_a.json"); tn = J("inv34_tools_noinstr.json")
-ag2 = J("inv34_agent2.json"); ag4 = J("inv34_agent4.json")
+ag2 = J("inv34_agent2.json"); ag4 = J("inv34_agent4.json"); ag6 = J("inv34_agent6.json")
 think = [x for x in dd if x["mode"] == "thinking"][0]
 greedy = [x for x in dd if x["mode"] == "direct" and x["seed"] == "greedy"][0]
 th = think["text"].split("</think>")[0].replace("<think>", "").strip()
@@ -130,7 +130,7 @@ D["s3"] = {
              "rawReq": '<tool_call>\n{"name": "calculate", "arguments": {"expression": "238 * 47 - 7869"}}\n</tool_call>',
              "rawRes": "<tool_response>\n3317\n</tool_response>",
              "noInstr": clean(tn["pencil_tool"]["steps"][-1]["model"])},
-    "agentOk": {"q": ag2["agent_explicit"]["question"], "rounds": rounds(ag2["agent_explicit"])},
+    "agentOk": {"q": ag6["seq0"]["question"], "rounds": rounds(ag6["seq0"]), "note": "One tool request per turn: each turn stops after the model writes a request, so it sees each result before deciding its next step."},
     "agentBad": {"q": ag4["agent_k2_seq2"]["question"], "rounds": rounds(ag4["agent_k2_seq2"])},
 }
 
