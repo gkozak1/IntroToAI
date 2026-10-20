@@ -14,14 +14,20 @@
     box: (title, rows) => `<div class="numbers" id="numbersBox"><div class="nhead">${title}</div>${rows.join('')}</div>`,
   });
   const btn = $('#numBtn'), host = $('#numbersHost');
+  const NONUM = new Set(['astrust']); // registers the toggle, but no block on that page has tokens to show
+  // the Predict first switch: visible only where the page has a predict stop
+  const pb = $('#predBtn');
+  const syncPred = () => { if (!pb) return; const on = NT.predictOn(); pb.hidden = !NT.hasPredict(); pb.setAttribute('aria-pressed', on); pb.classList.toggle('on', on); };
+  if (pb) pb.addEventListener('click', () => { NT.setPredict(!NT.predictOn()); syncPred(); });
   let queued = false;
   function refresh() {
     queued = false;
     if (!btn || !host) return;
-    const fn = NT.numbers[S.station], stn = NT.stations[S.station], two = !!(stn && stn.onNums); let html = null;
+    const fn = NT.numbers[S.station], stn = NT.stations[S.station], two = !!(stn && stn.onNums) && !NONUM.has(S.station); let html = null;
     if (fn) { try { html = fn(); } catch (e) { html = null; } }
     btn.hidden = !html && !two; btn.classList.remove('dim'); // hidden where this page has no numbers layer yet (Oct 15) btn.title = two ? 'Switch between the simple story and the math behind it (N)' : html ? 'Show or hide the live numbers behind this view (N)' : 'This view has no numbers to show';
     host.innerHTML = S.nums && html ? html : '';
+    syncPred();
   }
   NT.numbersRefresh = () => { if (queued) return; queued = true; requestAnimationFrame(refresh); };
   // every view finishes a draw by setting the status line, so that is the cue to refresh

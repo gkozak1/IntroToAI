@@ -13,7 +13,7 @@
         <select id="starter" aria-label="Example sentences"></select>
         <label class="ctl">Temperature <input type="range" id="tSlider" min="0" max="17" step="1" /><span class="v" id="tVal"></span></label>
         <label class="ctl">Top-K <input type="range" id="kSlider" min="1" max="51" step="1" /><span class="v" id="kVal"></span></label>
-        <span class="topgap"></span><span id="liveChip" class="livechip" hidden></span><button id="numBtn" class="btn numtoggle" aria-pressed="false" title="Show the live numbers behind this view (N)"><span class="sw"></span><span class="nt-l">Show the numbers</span></button></div>
+        <span class="topgap"></span><span id="liveChip" class="livechip" hidden></span><button id="predBtn" class="btn numtoggle" aria-pressed="true" title="Pause for a class prediction before key reveals" hidden><span class="sw"></span><span class="nt-l">Predict first</span></button><button id="numBtn" class="btn numtoggle" aria-pressed="false" title="Show the live numbers behind this view (N)"><span class="sw"></span><span class="nt-l">Show the numbers</span></button></div>
       <section class="sentcard">
         <div class="sentwrap" id="sentWrap">
           <div class="sentback" id="sentBack" aria-hidden="true"></div>

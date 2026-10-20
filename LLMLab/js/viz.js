@@ -25,6 +25,25 @@
     for (let i = 0; i < n; i++) { const t = vals[i] / m, [r, g, b] = NT.div(Math.sign(t) * Math.sqrt(Math.abs(t))); img.data.set([r, g, b, 255], i * 4); }
     c.putImageData(img, 0, 0);
   };
+  // ---------- role-colored vectors (Oct 19): Query blue, Key orange, Value purple, MLP teal (NT.C). Near 0 is pale; a large positive
+  //            number is the role color, a large negative one a gray of the same hue — the same rule in How it really works, the story and Pre-Training. ----------
+  const hsl = (hex) => { const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
+    let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; const sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0; return [h, Math.round(sat * 100)]; };
+  const soft = ([h, s2], mx) => [h, Math.min(s2, mx)]; // a strip of many saturated cells glares; cap the saturation a little
+  V.ROLE = () => ({ q: soft(hsl(NT.C.q), 72), k: soft(hsl(NT.C.k), 85), v: soft(hsl(NT.C.v), 60), a: soft(hsl(NT.C.mlp), 55), m: soft(hsl(NT.C.mlp), 55), h: hsl(NT.C.head) });
+  V.rolePx = (hu, sa, t) => {
+    t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
+    const L = (t >= 0 ? 95 - 58 * t : 95 + 48 * t) / 100, S = (t >= 0 ? sa : 16) / 100, C = (1 - Math.abs(2 * L - 1)) * S, X = C * (1 - Math.abs(((hu / 60) % 2) - 1)), M = L - C / 2;
+    const [r, g, b] = hu < 60 ? [C, X, 0] : hu < 120 ? [X, C, 0] : hu < 180 ? [0, C, X] : hu < 240 ? [0, X, C] : hu < 300 ? [X, 0, C] : [C, 0, X];
+    return [(r + M) * 255, (g + M) * 255, (b + M) * 255, 255];
+  };
+  // a vector (kind q | k | v | m) as a strip in its role color; m: the shared scale (default this vector's p98)
+  V.role = (cv, vals, kind, m) => {
+    if (!cv) return; if (!vals) return V.gray(cv); const n = vals.length; m = m || V.p98(vals); cv.width = n; cv.height = 1;
+    const c = cv.getContext('2d'), img = c.createImageData(n, 1), [hu, sa] = V.ROLE()[kind];
+    for (let i = 0; i < n; i++) img.data.set(V.rolePx(hu, sa, vals[i] / m), i * 4);
+    c.putImageData(img, 0, 0);
+  };
   V.gray = (cv) => { if (!cv) return; cv.width = 1; cv.height = 1; const x = cv.getContext('2d'); x.fillStyle = '#d5d9e0'; x.fillRect(0, 0, 1, 1); };
   // one scale for a set of vectors that should be compared (e.g. token + position = input): the median of their p98s
   V.sharedScale = (vs) => { const a = vs.filter(Boolean).map(V.p98).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 1; };

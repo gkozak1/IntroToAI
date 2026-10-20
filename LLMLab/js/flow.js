@@ -104,11 +104,11 @@
       const stripH = Math.max(6, ROW - 10);
       let h = `<div class="fl-scene" id="flScene" style="width:${W}px;height:${H}px">`;
       h += `<svg class="fl-svg" id="flSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"></svg>`;
-      const heads = [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding vector'], ['pos', X.pos, 'Position vector'], ['inp', X.inp, 'Input vector'], ['bin', XB.in, `Into block ${DB}`], ['notes', XB.notes, '+ Notes'], ['facts', XB.facts, '+ Patterns'], ['bout', XB.out, `= After block ${DB}`]];
+      const heads = [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding vector'], ['pos', X.pos, 'Position vector'], ['inp', X.inp, 'Input vector'], ['bin', XB.in, `Into block ${DB}`], ['notes', XB.notes, '+ <span class="cv">Notes</span> <small>(attention)</small>'], ['facts', XB.facts, '+ <span class="cm">Patterns</span> <small>(MLP)</small>'], ['bout', XB.out, `= After block ${DB}`]];
       heads.forEach(([k, hx, t]) => (h += `<div class="fl-h" id="fh-${k}" style="left:${hx}px;top:${top - 34}px">${t}</div>`));
       const sp = (w) => esc(w).replace(/^ /, '<span class="sp">·</span>');
       for (let i = 0; i < T; i++) {
-        h += `<div class="fl-tok" id="ft${i}" style="font-size:${fs}px">${sp(Dt.raw[i])}</div>`;
+        { const TM = NT.tokMarks(Dt.raw.map((w) => w.trim())), sup = TM.label[i].slice(Dt.raw[i].trim().length); h += `<div class="fl-tok${i === T - 1 ? ' last' : ''}" id="ft${i}" style="font-size:${fs}px;--c:${TM.col[i]}">${sp(Dt.raw[i])}${sup ? `<span class="tsup">${sup}</span>` : ''}</div>`; }
         if (i) h += `<div class="fl-div" id="fd${i}" style="left:${G.sx[i] - 4}px;top:${10}px;height:${fs + 10}px"></div>`;
         h += `<div class="fl-id" id="fi${i}">${Dt.cur.ids[i]}</div>`;
         ['fe', 'fp', 'fn', 'fa', 'fm', 'fo'].forEach((c) => (h += `<canvas class="fl-strip" id="${c}${i}" style="width:${STRIPW}px;height:${stripH}px"></canvas>`));
@@ -118,7 +118,7 @@
       const mat = (id, title, sub) => `<div class="fl-mat" id="${id}"><div class="fl-mtitle">${title}</div><canvas id="${id}c"></canvas><div class="fl-ml"><small>${sub}</small></div></div>`;
       h += mat('fmE', 'Embedding matrix', '50,257 rows, one per token') + mat('fmP', 'Position matrix', `zoomed in: the first ${NPOS()} of its 1,024 rows`) + mat('fmV', 'Token vocab matrix', 'every token’s embedding row (its ID card): 50,257 rows');
       const I = ICO();
-      h += `<div class="fl-block" id="fBlock"><span id="fBlockT">Block ${DB}</span><span class="fl-bsteps"><i id="fbs0">${I.ask} investigations</i><i id="fbs1">${I.sup} lead</i><i id="fbs2">${I.fact} forensics</i></span><span class="fl-b12" id="fB12">${Array.from({ length: 12 }, (_, b) => `<i data-b="${b + 1}"></i>`).join('')}</span></div>`;
+      h += `<div class="fl-block" id="fBlock"><span id="fBlockT">Block ${DB}</span><span class="fl-bsteps"><i id="fbs0" class="bh">${I.ask} investigations</i><i id="fbs1" class="bv">${I.sup} lead</i><i id="fbs2" class="bm">${I.fact} forensics</i></span><span class="fl-b12" id="fB12">${Array.from({ length: 12 }, (_, b) => `<i data-b="${b + 1}"></i>`).join('')}</span></div>`;
       h += `<div class="fl-meter" id="fMeter"></div><canvas class="fl-strip" id="fMv" style="width:${STRIPW}px;height:${stripH}px"></canvas><div class="fl-table" id="fTable"></div><div class="fl-spin" id="fSpin"></div><div class="fl-fly" id="fFly"></div><div class="fl-ghost" id="fGhost"></div><div class="fl-loss" id="fLoss"></div><div class="fl-nudge" id="fNudge"></div>`;
       h += `</div>`;
       return h.replace(/ id="/g, ' id="' + P);
@@ -155,7 +155,7 @@
         const va = Dt.fv ? Dt.fv('a', b - 1, i) : null, vm = Dt.fv ? Dt.fv('m', b - 1, i) : null;
         // one color scale for all four vectors in a row, so after = into + notes + facts is honest; colors are stretched (square root) so small numbers still show
         const m = Math.max(vin ? p98(vin) : 0, vout ? p98(vout) : 0) || 1; F.rowM = F.rowM || []; F.rowM[i] = m;
-        [['fn', vin], ['fa', va], ['fm', vm], ['fo', vout]].forEach(([c, v]) => { const el = E(c + i); if (v) drawG(el, v, m); else grayStrip(el); });
+        [['fn', vin], ['fa', va, 'v'], ['fm', vm, 'm'], ['fo', vout]].forEach(([c, v, kind]) => { const el = E(c + i); if (!v) grayStrip(el); else if (kind) VZ.role(el, v, kind, m); else drawG(el, v, m); }); // notes purple (made from Values), patterns teal (MLP)
       }
       const fh = E('fh-bout'); if (fh) fh.textContent = `= After block ${b}`; const bi = E('fh-bin'); if (bi) bi.textContent = `Into block ${b}`;
       const bt = E('fBlockT'); if (bt) bt.textContent = `Block ${b}`;
@@ -351,7 +351,7 @@
       E('flDots').querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => { pause(); goStage(+b.dataset.k, false); }));
       if (opts.loop && S.flowFF && F.pass > 5 && F.playing && k >= SI.rank && k <= SI.add) E('flCap').querySelector('.fl-cd').insertAdjacentHTML('afterbegin', '<span class="fl-ff">⏩ Fast-forward: all 17 steps still happen; only the pick is shown.</span> ');
       if (opts.fitHeight) fit();
-      if (opts.main) NT.setStatus(`Pass ${F.pass} · ${STAGES[k].title}${k === SI.loop ? ' · block ' + sub : ''} · speed ×${eff().toFixed(2)}`);
+      if (opts.main) NT.setStatus(`Pass ${F.pass} · Step ${k + 1} of ${STAGES.length} · ${STAGES[k].title}${k === SI.loop ? ' · block ' + sub : ''}`);
     }
 
     // ---------- moving between stages ----------
@@ -377,8 +377,9 @@
       if (k >= SI.final && k <= SI.add) { paintOut(); const fh = E('fh-bout'); if (fh && k === SI.final) fh.textContent = 'Output vector'; }
       if (k === SI.vocab) mat('fmVc', 777, scoreRows().map((r) => [r.id / 50257, null])); // the output vector keeps the colors it had in the column
       const dur = animate ? ms(STAGES[k].base * 0.75) : 0;
-      const chips = (bs) => { [0, 1, 2].forEach((j) => { const e = E('fbs' + j); if (e) e.className = j === bs ? 'on' : j < bs ? 'done' : ''; }); };
+      const chips = (bs) => { [0, 1, 2].forEach((j) => { const e = E('fbs' + j); if (e) e.className = ['bh', 'bv', 'bm'][j] + ' ' + (j === bs ? 'on' : j < bs ? 'done' : ''); }); };
       host.querySelectorAll('.fl-tok .sp').forEach((e) => (e.style.display = k <= 1 ? '' : 'none')); // the leading space shows only while the sentence is being cut
+      { const sc = E('flScene'); if (sc) sc.classList.toggle('fl-col', k > 1); } // as a column, each token gets its identity bar (as on every tab)
       (E('fB12') ? E('fB12').querySelectorAll('i') : []).forEach((e) => (e.className = +e.dataset.b < b ? 'done' : +e.dataset.b === b ? 'on' : ''));
       if (k === SI.loop && animate) {
         // one block, in turn: the last block's output slides back in (the other columns fade) → the interviews' arcs → the notes → the facts → the new column, whose last vector travels into the meter

@@ -126,7 +126,7 @@
     if (!sp.revealed) {
       R.innerHTML = `<div class="ph"><h2>GPT-2’s tokens</h2></div><div class="hiddenbox"><span>GPT-2’s split stays hidden until the class has made its cuts.</span><button class="btn primary" id="spReveal">Reveal</button></div>`;
       $('#spReveal').onclick = () => { sp.revealed = true; draw(); };
-      NT.setStatus(`${cuts.size + 1} pieces so far`); return;
+      NT.setStatus(`${cuts.size + 1} ${cuts.size ? 'pieces' : 'piece'} so far`); return;
     }
     const words = sp.text.split(/\s+/).filter(Boolean).length;
     const rows = A.toks.map((x, i) => {

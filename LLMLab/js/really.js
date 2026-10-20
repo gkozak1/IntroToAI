@@ -12,13 +12,13 @@
   const { $, esc } = NT;
   const T = 13, SW = 1290, TOP = 70, ROW = 34, BH = 20, H = TOP + T * ROW + 70;
   const W = ['The', 'banker', 'left¹', 'the', 'bank¹', 'and', 'sat', 'on', 'the', 'left²', 'bank²', 'of', 'the'];
-  const COL = ['#9aa3b2', '#2b5aa8', '#d9730d', '#9aa3b2', '#1e8a3a', '#8e44ad', '#16a085', '#9aa3b2', '#9aa3b2', '#d9730d', '#1e8a3a', '#9aa3b2', '#c2185b'];
+  const COL = NT.tokMarks(W).col; // token identity colors: shared rule (js/core.js)
   const P = 'rw_', E = (id) => document.getElementById(P + id);
   const rowY = (i) => TOP + i * ROW, barY = (i) => rowY(i) + 4, midY = TOP + (T * ROW) / 2;
   const N = 14;
   const NAMES = ['Input vectors', 'Query', 'Key', 'Value', 'Q · K · V', 'Q × Kᵀ', 'Softmax', 'Weighted sum', 'Every token', '12 heads', 'W_O and add', 'MLP up', 'MLP down', '12 blocks'];
   // which screens belong to each detective step (the story's beat keys); the first one listed is where the panel opens
-  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [3], s: [6, 7, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], sup3: [11], sup4: [11], f1: [12], f2: [13], f3: [14], known: [14] };
+  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [3], ps: [3], s: [6, 7, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], sup3: [11], sup4: [11], f1: [12], f2: [13], f3: [14], known: [14] };
   // sizes: 768 numbers = 288 px, 64 = 24 px (screens 1–11); 768 = 96 px, 3,072 = 384 px (screens 12–14)
   const L768 = 288, L64 = 24, Z64 = L64, L3072 = 4 * L768; // every vector to one scale: 768 numbers = 288 px, 64 = 24 px, 3,072 = 1,152 px
 
@@ -36,9 +36,9 @@
   const att = (j) => blk().att[j];
   const gelu = (x) => 0.5 * x * (1 + Math.tanh(0.7978845608 * (x + 0.044715 * x * x * x)));
 
-  // ---------- pictures: input/output vectors keep the app's multicolor stripes; Q blue, K orange, V violet, MLP amber.
+  // ---------- pictures: input/output vectors keep the app's multicolor stripes; Q blue, K orange, V purple, MLP teal (NT.C).
   //            Near 0 is pale; a large positive value is the role color, a large negative one a gray of the same hue. ----------
-  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], a: [40, 92] };
+  const HUE = new Proxy({}, { get: (t, k) => NT.viz.ROLE()[k] }); // Q blue, K orange, V purple, a = MLP teal (NT.C, Oct 19)
   const p98 = NT.viz.p98, share = (vs) => NT.viz.sharedScale(vs);
   function px(hu, sa, t) {
     t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
@@ -49,13 +49,13 @@
   function role(cv, vals, kind, m) {
     if (!cv) return; const n = vals.length; m = m || p98(vals); cv.width = n; cv.height = 1;
     const c = cv.getContext('2d'), img = c.createImageData(n, 1), [hu, sa] = HUE[kind];
-    for (let i = 0; i < n; i++) img.data.set(px(hu, sa, vals[i] / m), i * 4);
+    for (let i = 0; i < n; i++) img.data.set(NT.viz.rolePx(hu, sa, vals[i] / m), i * 4);
     c.putImageData(img, 0, 0);
   }
   function matImg(cv, M, kind) { // a real weight matrix, sampled (every few rows/columns), as a grid of colored cells
     if (!cv || !M) return; const q = i8(M); cv.width = M.c; cv.height = M.r;
     const c = cv.getContext('2d'), img = c.createImageData(M.c, M.r), [hu, sa] = HUE[kind];
-    for (let i = 0; i < q.length; i++) img.data.set(px(hu, sa, q[i] / 127), i * 4);
+    for (let i = 0; i < q.length; i++) img.data.set(NT.viz.rolePx(hu, sa, q[i] / 127), i * 4);
     c.putImageData(img, 0, 0);
   }
   const multi = (cv, vals, m) => NT.viz.vec(cv, vals, m);
@@ -127,18 +127,18 @@
       h += dv('pc' + i, 'rw-tile rw-pc', ok ? (pc * 100).toFixed(1) + '%' : '0%', 50) + one('px' + i, '×');
       if (i < T - 1) h += one('pp' + i, '+');
     }
-    h += one('teq', '=') + cv('ns', Z64, 'rw-sum') + cv('nb', Z64) + dv('nl', 'rw-cap2', `= <b>head 1’s output</b> for “${esc(W[j])}” <small>1 × 64 (Detective 1’s Note)</small>`, 420);
+    h += one('teq', '=') + cv('ns', Z64, 'rw-sum') + cv('nb', Z64) + dv('nl', 'rw-cap2', `= <b class="rw-cv">head 1’s output</b> for “${esc(W[j])}” <small>1 × 64 (Detective 1’s Note)</small>`, 420);
     // screen 9: the attention grid for every token, then head 1's output for every token
-    h += hd('hg', 'Head 1 attention weights <small>each row: one token’s percentages, totaling 100% (Relevance)</small>', 430) + hd('hgo', 'Head 1 output <small>1 × 64 (Note)</small>', 110);
+    h += hd('hg', '<b class="rw-ch">Head 1</b> attention weights <small>each row: one token’s percentages, totaling 100% (Relevance)</small>', 430) + hd('hgo', '<b class="rw-cv">Head 1 output</b> <small>1 × 64 (Detective 1’s Note)</small>', 110);
     for (let c = 0; c < T; c++) h += dv('gl' + c, 'rw-gl', esc(W[c]), 30);
     for (let r = 0; r < T; r++) for (let c = 0; c < T; c++) { const p = c <= r ? att(r)[c] : -1; h += dv(`g${r}_${c}`, 'rw-gc' + (p < 0 ? ' rw-gm' : ''), p < 0 ? '—' : Math.round(p * 100), 30, 26); }
     for (let i = 0; i < T; i++) h += cv('go' + i, L64);
     // screen 10: 12 lanes, the other heads fly in, ‖ between, then joined
     for (let k = 0; k < 12; k++) h += dv('ln' + k, 'rw-lane', Array.from({ length: T }, () => '<i></i>').join(''), L64) + hd('lh' + k, `${k + 1}`, 24);
-    h += hd('hln', 'Head outputs <small>heads 1–12, 1 × 64 each (the Notes of Detectives 1–12)</small>', 560);
+    h += hd('hln', '<b class="rw-cv">Head outputs</b> <small>heads 1–12, 1 × 64 each (the Notes of Detectives 1–12)</small>', 560);
     for (let k = 0; k < 11; k++) h += sym('cc' + k, '‖', 22);
     for (let k = 0; k < 12; k++) for (let i = 0; i < T; i++) h += cv(`hs${k}_${i}`, L64);
-    h += hd('hcat', 'Concatenated Value Vectors <small>12 heads × 64 = 1 × 768 (all 12 Notes)</small>', 300);
+    h += hd('hcat', '<b class="rw-cv">Concatenated head outputs</b> <small>12 heads × 64 = 1 × 768 (all 12 Notes)</small>', 300);
     // screen 11: W_O, then the first addition
     h += matBox('wo', 'v', 'W<sub>O</sub> <small>768 × 768 · output projection (Lead Detective)</small>', L768, L768) + one('x2', '×') + one('e2', '=');
     h += hd('hao', '<b class="rw-cv">Attention output</b> <small>1 × 768 (Lead Detective’s result)</small>', 288) + hd('hin2', 'Input Vector <small>1 × 768 (Case File)</small>', 288) + hd('hup', 'Updated vector <small>1 × 768 (updated Case File)</small>', 288);
@@ -429,7 +429,8 @@
     await loadW(st.room);
     const s = st.target || st.list[0], key = `${st.room}|${st.q}`;
     st.tk++;
-    if (st.built !== key || replay || !animate || st.shown !== s - 1) { // draw the scene, jump through screens 1 … s−1, then play s
+    // (Oct 19) if the previous screen is still animating, its scheduled moves were just cancelled: redraw from scratch so nothing is left half-moved
+    if (st.built !== key || replay || !animate || st.shown !== s - 1 || Date.now() < (st.busyUntil || 0)) { // draw the scene, jump through screens 1 … s−1, then play s
       box.innerHTML = `<div class="rw-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="rw-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>${build()}</div>`;
       Object.keys(cur).forEach((k) => delete cur[k]);
       box.querySelectorAll('.rw-scene > *:not(svg)').forEach((el) => { el.style.opacity = 0; });
@@ -438,12 +439,12 @@
       box.querySelectorAll('.rw-tok').forEach((el) => (el.onclick = () => { st.q = +el.dataset.i; show(true, true); }));
     }
     run(s, !!animate);
-    st.shown = s;
+    st.shown = s; st.busyUntil = animate ? Date.now() + Math.round(DUR[s - 1] * 0.85) : 0;
     const [t, d] = cap(s);
     E('cap').innerHTML = `<div class="fl-ch"><b>${esc(t)}</b></div><div class="fl-cd">${esc(d)}</div>`;
     E('dots').innerHTML = Array.from({ length: N }, (_, k) => `<button class="rw-dot ${k + 1 === s ? 'on' : ''} ${st.list.includes(k + 1) ? 'mine' : ''}" data-s="${k + 1}" title="${k + 1}. ${NAMES[k]}">${k + 1}</button>`).join('') + '<span class="rw-dkey">tinted = this story step</span>';
     E('dots').querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { pause(); go(+b.dataset.s, true); }));
-    E('src').textContent = `Block ${st.room} · head 1 · ${NAMES[s - 1]}`;
+    E('src').textContent = `Block ${st.room} · ${s >= 2 && s <= 9 ? 'head 1 · ' : ''}${NAMES[s - 1]}`;
     E('back').disabled = s === 1; E('rew').disabled = s === 1; E('next').disabled = s === N;
   }
   function fit() {

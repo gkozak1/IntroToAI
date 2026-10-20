@@ -16,6 +16,7 @@
   const STRIPW = 170, CELL = 50, NV = 10, MAXT = 32;
   const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3]; let speedIx = 2, SEQ = 0;
   const LIVE = new Set();
+  NT.onPredict(() => LIVE.forEach((x) => { if (x.alive() && x.recap) x.recap(); })); // the Predict first switch changes the opening caption of Token + position
   const minus = (v, d = 3) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(d);
   // one element's color: the same rule as the vector strips (sign · square root, shared scale)
   const cellCol = (v, m) => { const t = v / m, u = Math.sign(t) * Math.sqrt(Math.min(1, Math.abs(t))), [r, g, b] = NT.div(u); return { bg: `rgb(${r | 0},${g | 0},${b | 0})`, fg: Math.abs(u) > 0.72 ? '#fff' : '#1d2634' }; };
@@ -57,7 +58,7 @@
       [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding vector'], ['vals', X.vals, 'Element values (the first 10 of 768)'], ['pos', X.pos, 'Position vector'], ['inp', X.inp, 'Input vector']].forEach(([k, hx, t]) => (h += `<div class="fl-h" id="${P}h-${k}" style="left:${hx}px;top:${top - 34}px">${t}</div>`));
       const sp = (w) => esc(w).replace(/^ /, '<span class="sp">·</span>');
       for (let i = 0; i < T; i++) {
-        h += `<div class="fl-tok" id="${P}t${i}" style="font-size:${fs}px">${sp(D.raw[i])}</div>`;
+        { const TM = NT.tokMarks(D.raw.map((w) => w.trim())), sup = TM.label[i].slice(D.raw[i].trim().length); h += `<div class="fl-tok${i === T - 1 ? ' last' : ''}" id="${P}t${i}" style="font-size:${fs}px;--c:${TM.col[i]}">${sp(D.raw[i])}${sup ? `<span class="tsup">${sup}</span>` : ''}</div>`; }
         if (i) h += `<div class="fl-div" id="${P}d${i}" style="left:${G.sx[i] - 4}px;top:10px;height:${fs + 10}px"></div>`;
         h += `<div class="fl-id" id="${P}i${i}">${D.ids[i]}</div>`;
         ['e', 'p', 'n'].forEach((c) => (h += `<canvas class="fl-strip" id="${P}${c}${i}" style="width:${STRIPW}px;height:${sh}px"></canvas>`));
@@ -154,11 +155,16 @@
       else if (act && act.kind === 'pos') {
         const i = act.i, j = firstSame(i);
         [t, d] = [`Token ${i + 1}, ${tw(i)}: add position row ${i + 1}.`, `Its embedding vector + the position vector for place ${i + 1} = its <b>input vector</b>, element by element (${mode === 'pos' ? 'the table on the right' : 'below'}).${j >= 0 ? ` Token ${j + 1} is the same token with the same embedding vector, but it sits at place ${j + 1}, so it gets a different position vector, and the two input vectors now differ.` : ''}`];
+      } else if (s.pos.length === 0 && mode === 'pos' && NT.predictOn() && reps.length) { // Predict first (Oct 19): same token twice, before position vectors are added
+        const TM = NT.tokMarks(D.raw.map((w) => w.trim())), pickId = reps.find((id) => TM.col[D.ids.indexOf(id)] !== NT.C.tokGray) ?? reps[0]; // prefer a content word (bank, left) over “the”
+        const r = D.ids.indexOf(pickId), n = D.ids.filter((id) => id === pickId).length, all = n === 2 ? 'both' : `all ${n}`;
+        [t, d] = [`🤔 Predict first: will ${all} ${tw(r)}s end up with the same input vector?`, `GPT-2 adds a <b>position vector</b> (one learned row of 768 numbers for each place in the text) to every embedding vector. The ${n === 2 ? 'two' : n === 3 ? 'three' : n} ${tw(r)}s start with the same ID and exactly the same embedding vector. After each adds the row for its own place, will their input vectors still match? Decide, then press <b>Next</b>.`];
       } else if (s.pos.length === 0) [t, d] = ['Add where each token is.', `An embedding vector says what a token is, not where it is. GPT-2 keeps a second table, the <b>position matrix</b>: one row of 768 numbers for each place in the text (1st, 2nd, … up to the 1,024th), also learned in training. Each token adds the row for its place.${mode === 'pos' ? ' Double-click a row, or press <b>Get the next position vector</b>.' : ''}`];
       // (questions students ask here are answered in the panel under the scene: is this only adding? what if a sum goes past 1?)
       else if (s.pos.length < T) [t, d] = [`${s.pos.length} of ${T} input vectors.`, 'Embedding vector + position vector = input vector. Click a row to see its numbers added below; double-click a row to add its position vector.'];
       else [t, d] = ['Input vectors: what each token is, and where it is.', `Each of the ${T} tokens now has one input vector of 768 numbers. ${reps.length ? 'Repeated tokens started with the same embedding vector, but their input vectors differ, because their places differ. ' : ''}These ${T} vectors are what enters block 1 (Transformer). Here a <b>row</b> and a <b>vector</b> mean the same thing: a list of 768 numbers.`];
       const no = mode === 'all' ? `${N.k + 1}. ` : '';
+      E('cap').classList.toggle('predict', t.startsWith('🤔'));
       E('cap').innerHTML = `<div class="fl-ch"><b>${no}${t}</b></div><div class="fl-cd">${d}${D.cut ? ` <span class="muted">(The first ${T} tokens are shown.)</span>` : ''}</div>`;
     }
     // ---------- the element-by-element panel (position steps) ----------
@@ -191,6 +197,7 @@
       const dur = animate ? ms(act ? 1100 : 1400) : 0;
       apply(layout(s, act), dur); overlay(s, animate ? act : null); caption(s, act); detail(s);
       E('sc').querySelectorAll('.fl-tok .sp').forEach((e) => (e.style.display = s.stage <= 1 ? '' : 'none')); // the leading space shows only while the sentence is being cut (as in the flow)
+      E('sc').classList.toggle('fl-col', s.stage > 1); // as a column, each token gets its identity bar (as on every tab)
       if (act && animate && act.kind === 'pos') { const el = E('n' + act.i); if (el) { el.classList.remove('flash'); void el.offsetWidth; setTimeout(() => el.classList.add('flash'), Math.round(dur * 0.9)); } }
       syncButtons(s);
       if (opts.onSelect) { const i = N.sel >= 0 ? N.sel : act ? act.i : -1; if (i >= 0) opts.onSelect(N.data.ids[i], i); }
@@ -226,7 +233,7 @@
       const pl = E('play'); if (pl) pl.textContent = N.playing ? '⏸ Pause' : '▶ Play';
       if (mode === 'all') { b('back', N.k <= 0); b('next', N.k >= stepsAll() - 1); b('play', N.k >= stepsAll() - 1 && !N.playing); }
       if (mode === 'ids') { b('back', N.stage === 0 && !N.emb.length); b('next', N.stage >= 3 && N.emb.length >= D.T); b('one', N.emb.length >= D.T); b('all', N.emb.length >= D.T); b('play', N.emb.length >= D.T && !N.playing); }
-      if (mode === 'pos') { b('back', !N.pos.length); b('one', N.pos.length >= D.T); b('all', N.pos.length >= D.T); }
+      if (mode === 'pos') { b('back', !N.pos.length); b('next', N.pos.length >= D.T); b('one', N.pos.length >= D.T); b('all', N.pos.length >= D.T); b('play', N.pos.length >= D.T && !N.playing); }
       const more = E('more'); if (more) more.hidden = !(mode === 'all' ? N.k >= stepsAll() - 1 : mode === 'ids' ? N.emb.length >= D.T : N.pos.length >= D.T);
     }
     // ---------- clicking rows ----------
@@ -248,7 +255,7 @@
     const btn = (id, label, cls = '', title = '') => `<button class="btn ${cls}" id="${P}${id}"${title ? ` title="${title}"` : ''}>${label}</button>`;
     const ctl = mode === 'all' ? btn('rew', '⏮', '', 'Start over') + btn('back', '◀ Back', '', 'Back one step') + btn('next', 'Next ▶', 'primary') + btn('play', '▶ Play')
       : mode === 'ids' ? btn('rew', '⏮', '', 'Start over') + btn('back', '◀ Back', '', 'Back one step') + btn('next', 'Next ▶', 'primary') + btn('one', 'Look up next ID’s embedding vector') + btn('all', 'Look up all token IDs') + btn('play', '▶ Play')
-      : btn('rew', '⏮', '', 'Start over') + btn('back', '◀ Back', '', 'Take the last one back') + btn('one', 'Get the next position vector', 'primary') + btn('all', 'Get all position vectors');
+      : btn('rew', '⏮', '', 'Start over') + btn('back', '◀ Back', '', 'Take the last one back') + btn('next', 'Next ▶', 'primary') + btn('one', 'Get the next position vector') + btn('all', 'Get all position vectors') + btn('play', '▶ Play'); // (Oct 19) the same player as Token IDs
     host.innerHTML = `<section class="panel fl-panel nv-panel"><div class="fl-head"><div class="fl-ctl">${ctl}<label class="delay">Speed <input type="range" id="${P}speed" min="0" max="${SPEEDS.length - 1}" value="${speedIx}"><b id="${P}spv">×${SPEEDS[speedIx]}</b></label>${opts.more ? `<button class="btn ghost" id="${P}more" hidden>${opts.more[0]}</button>` : ''}</div></div>
       <div class="fl-cap fixed" id="${P}cap"></div>${mode === 'pos' ? `<div class="nv-body"><div class="fl-box nv-box" id="${P}box"></div><div class="nv-det side" id="${P}det"></div></div><div class="nv-note" id="${P}qa"></div>` : `<div class="fl-box nv-box" id="${P}box"></div><div class="nv-det" id="${P}det" hidden></div>`}</section>`;
     NT.guideRow(host.querySelector('.nv-panel')); // the player beside the caption, as on every other page
@@ -258,7 +265,7 @@
     on('all', () => { pause(); if (mode === 'ids' && N.stage < 3) { N.stage = 3; draw(null, false); } all(mode === 'ids' ? 'emb' : 'pos'); });
     E('speed').oninput = (e) => { speedIx = +e.target.value; E('spv').textContent = '×' + SPEEDS[speedIx]; };
     if (opts.more) on('more', opts.more[1]);
-    const inst = { fit, alive, pause };
+    const inst = { fit, alive, pause, recap: () => { if (G && N.data) caption(cur(), null); } };
     LIVE.add(inst);
     (async () => {
       if (!NT.current().ids.length) { E('box').innerHTML = '<div class="panel emptynote">Type a sentence at the top, or choose one, to begin.</div>'; return; }

@@ -20,7 +20,7 @@
   const STORY = 'story', RIVER = 7850, T = 13, LAST = 12;
   const tr = { beat: 0, room: 1, q: LAST, ctx: null, fv: null, playing: false, timer: null };
   const W = ['The', 'banker', 'left¹', 'the', 'bank¹', 'and', 'sat', 'on', 'the', 'left²', 'bank²', 'of', 'the'];
-  const COL = ['#9aa3b2', '#2b5aa8', '#d9730d', '#9aa3b2', '#1e8a3a', '#8e44ad', '#16a085', '#9aa3b2', '#9aa3b2', '#d9730d', '#1e8a3a', '#9aa3b2', '#c2185b'];
+  const COL = NT.tokMarks(W).col; // token identity colors: shared rule (js/core.js)
   // ---------- our analogy, room 1 (from the old Use Context pages, as Greg's notes A–H ask) ----------
   // interviewer 1 of each room has its own line of questioning: [short topic, its question to each token (A), each token\'s response (B), how much each response helps (G)]
   const THEMES = {
@@ -63,7 +63,7 @@
   };
   // the other interviewers' lines of questioning (short topics), mixed differently in every room
   const POOL = ['Where?', 'Who?', 'What happened?', 'Money or nature?', 'Just before me?', 'Which side?', 'Seen this place?', 'Sit on what?', 'A name coming?', '“of” connects?', 'Bank of what?', 'What next?', 'When?', 'Person or thing?', 'Past or now?', 'Indoors or out?', 'How many?', 'Big or small?', 'Doing or being?', 'Same word before?'];
-  const ICOL = ['#5b38d1', '#c2185b', '#1e8a3a', '#d9730d', '#2b5aa8', '#8e44ad', '#16a085', '#b8860b', '#c0392b', '#0f6b8a', '#6d4c41', '#7a8699'];
+  const ICOL = Array.from({ length: 12 }, () => NT.C.head); // every detective (attention head) in the detective color; the number tells them apart
   const topics = (r) => { const t1 = THEMES[r][0], rest = POOL.filter((x) => x !== t1); const out = [t1]; for (let k = 0; out.length < 12; k++) out.push(rest[(r * 7 + k * 3) % rest.length]); return [...new Set(out)].concat(rest).slice(0, 12); };
   const TH = () => THEMES[tr.room];
   const QUESTION = 'Where is this happening?';
@@ -89,6 +89,7 @@
     [2, 'focus', 'To make things simpler, we’ll only focus on one detective.', 'While all 12 work in parallel, we\'re just going to see what Detective 1 is up to, whose line of inquiry is: “{topic}”'],
     [3, 'q', 'Detective 1 forms a Question (Query) to gain more understanding of each token’s Case File.', 'Our illustrative specialty is “{topic}”. The actual Query is a learned numerical transformation.'],
     [3, 'k', 'Each witness provides a Statement (Key) in response to the Question.', 'A Key contains what information a witness can offer; it is not an answer to the Query.'],
+    [3, 'ps', '🤔 Predict first: which earlier words will “{q}” rely on most?', 'Compare its Question with each Statement. Pick the two most relevant witnesses, then press Next to see Detective 1’s Relevance.'], // only with Predict first on, room 1
     [3, 's', 'Question–Statement matches determine Relevance (Attention Weights).', '“{q}” can use itself and earlier tokens only. The detective measures Relevance (totaling 100%) not truth.'],
     [3, 'v', 'Evidence Packets (Values) are combined in proportion to Relevance.', 'Each token hands over an Evidence Packet to support its Statement, which is used in proportion to its Relevance.  Keys and Values are different transformations of each Case File.'],
     [3, 'n', 'The detective writes a short note about each token (a 64-element vector: 768 ÷ 12).', 'Detective 1 makes a separate 64-number note for every token, using its permitted witnesses.'],
@@ -167,20 +168,21 @@
     const head = (k, t, w = 140) => (h += `<div class="fl-h tr-h" id="${P}h-${k}" style="width:${w}px">${t}</div>`);
     head('tok', 'Token', 80); head('id', 'Token ID', 60); head('emb', 'Embedding vector'); head('pos', 'Position vector'); head('card', r === 1 ? 'Input vector' : `🪪 Case Files <small>from Room ${r - 1}</small>`, 150);
     const tp = topics(r); for (let k = 0; k < 12; k++) head('l' + k, `<span class="tr-topic" style="--ic:${ICOL[k]}">🎤${k + 1}<i>${esc(tp[k])}</i></span>`, 74);
-    head('lanes', 'Detective notes', 300); head('lanes2', 'Detective', 200);
-    head('q', '<span class="tr-qh">❓ Question <small>(query)</small></span>', 175); head('k', '🏷️ Statement <small>(key)</small>', 175); head('s', 'Relevance', 60); head('v', '📨 Evidence <small>(value)</small>', 130); head('n', '📝 Detective’s note', 110); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
+    head('lanes', '<span class="cv">📝 Detective notes</span>', 300); head('lanes2', 'Detective', 200);
+    head('q', '<span class="cq">❓ Question</span> <small>(query)</small>', 175); head('k', '<span class="ck">🏷️ Statement</span> <small>(key)</small>', 175); head('s', 'Relevance', 60); head('v', '<span class="cv">📨 Evidence</span> <small>(value)</small>', 130); head('n', '<span class="cv">📝 Detective’s note</span>', 110); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
     head('sum', '✍️ Lead’s summary', 118); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 210);
-    head('f', '📚 Learned patterns', 118); head('fx', 'Pattern examples <span class="tr-an">our analogy</span>', 220); head('fin', '🪪 Final Case File', 118); head('fnx', 'Final file examples <span class="tr-an">our analogy</span>', 270);
+    head('f', '<span class="cm">📚 Learned patterns</span>', 118); head('fx', 'Pattern examples <span class="tr-an">our analogy</span>', 220); head('fin', '🪪 Final Case File', 118); head('fnx', 'Final file examples <span class="tr-an">our analogy</span>', 270);
     for (let i = 0; i < T; i++) {
       h += `<div class="tr-c tr-tok" id="${P}t${i}" data-i="${i}" style="--c:${COL[i]};width:84px;height:${ROW - 6}px">${esc(W[i])}</div>`;
       h += cell('id' + i, 'tr-id', NT.current().ids[i], 56);
       h += cv('emb' + i) + `<div class="fl-op" id="${P}p1${i}">+</div>` + cv('pos' + i) + `<div class="fl-op" id="${P}e1${i}">=</div>` + cv('card' + i, 140);
       for (let k = 0; k < 12; k++) h += `<div class="tr-lane empty" id="${P}lb${k}_${i}" style="--ic:${ICOL[k]};width:${laneW - 4}px;height:${ROW - 14}px"></div>`;
       for (let k = 0; k < 12; k++) h += `<div class="tr-lane" id="${P}l${k}_${i}" style="--ic:${ICOL[k]};width:${laneW - 4}px;height:${ROW - 14}px">${cv('lc' + k + '_' + i, laneW - 6, 'tr-lc')}</div>`;
-      h += cell('q' + i, 'tr-tx tr-qcol', esc(txt('q', i) || ''), 175) + cell('k' + i, 'tr-tx tr-tag', esc(txt('k', i) || ''), 175) + cell('s' + i, 'tr-pc', '', 50) + cv('v' + i, 120) + cv('n' + i, 100) + cell('nx' + i, 'tr-tx', esc(txt('nx', i) || ''), 240);
+      h += cell('q' + i, 'tr-tx tr-qcol', esc(txt('q', i) || ''), 175) + cell('k' + i, 'tr-tx tr-tag', esc(txt('k', i) || ''), 175) + cell('s' + i, 'tr-pc', '', 50) + cv('v' + i, 120) + cv('n' + i, 100) + cell('nx' + i, 'tr-tx tr-notex', esc(txt('nx', i) || ''), 240);
       h += `<div class="fl-op" id="${P}sp${i}">+</div><div class="fl-op" id="${P}se${i}">=</div>` + cv('sum' + i, 120) + cell('sx' + i, 'tr-tx', esc(txt('sx', i) || ''), 210);
       h += `<div class="fl-op" id="${P}fp${i}">+</div><div class="fl-op" id="${P}fe${i}">=</div>` + cv('f' + i, 120) + cell('fx' + i, 'tr-tx tr-fact', esc(txt('fx', i) || ''), 220) + cv('fin' + i, 140) + cell('fnx' + i, 'tr-tx', esc(txt('fnx', i) || ''), 258);
     }
+    h += `<div class="fl-akey tr-akey" id="${P}akey" style="width:250px">${VZ.arcKeyHTML()}</div>`; // the same arc key as Whole Process
     h += `<div class="tr-c tr-total" id="${P}tot" style="width:60px">100%</div><div class="tr-c tr-sumrow" id="${P}vsum" style="width:240px">= the note for <b id="${P}vsumw"></b> ${cv('vsumc', 100)}</div>`;
     h += `<div class="tr-panel2" id="${P}panel"><div class="rk-tt">📚 Learned Patterns <small class="muted">learned in training</small></div>${FACTS.map((f) => `<div class="tr-fl">• ${esc(f)}</div>`).join('')}</div>`;
     h += `<div class="tr-box" id="${P}box"></div>`;
@@ -191,8 +193,8 @@
     for (let i = 0; i < T; i++) {
       const c0 = card(r - 1, i), s1 = add(c0, att(r, i));
       VZ.vec(E('emb' + i), emb(i)); VZ.vec(E('pos' + i), NT.posRow(i)); VZ.vec(E('card' + i), c0);
-      for (let k = 0; k < 12; k++) VZ.vec(E('lc' + k + '_' + i), note(r, i, k));
-      VZ.vec(E('n' + i), note(r, i, 0)); VZ.vec(E('sum' + i), s1); VZ.vec(E('f' + i), mlp(r, i)); VZ.vec(E('fin' + i), card(r, i));
+      for (let k = 0; k < 12; k++) VZ.role(E('lc' + k + '_' + i), note(r, i, k), 'v');
+      VZ.role(E('n' + i), note(r, i, 0), 'v'); VZ.vec(E('sum' + i), s1); VZ.role(E('f' + i), mlp(r, i), 'm'); VZ.vec(E('fin' + i), card(r, i));
     }
     interview();
   }
@@ -201,11 +203,11 @@
     const q = tr.q, w = shares(q), r = tr.room;
     for (let j = 0; j < T; j++) {
       const s = E('s' + j); s.textContent = j <= q ? Math.round(w[j] * 100) + '%' : ''; s.style.color = VZ.shareCol(w[j]);
-      const v = E('v' + j); VZ.vec(v, part(r, j)); v.style.opacity = tr.beat < B.v || BEATS[tr.beat][0] !== 3 ? 0 : j <= q ? (0.12 + Math.min(0.88, w[j] * 3.2)).toFixed(2) : 0.08;
+      const v = E('v' + j); VZ.role(v, part(r, j), 'v'); v.style.opacity = tr.beat < B.v || BEATS[tr.beat][0] !== 3 ? 0 : j <= q ? (0.12 + Math.min(0.88, w[j] * 3.2)).toFixed(2) : 0.08;
       [E('t' + j), E('k' + j), E('q' + j)].forEach((el) => el && el.classList.toggle('tr-later', j > q));
       E('t' + j).classList.toggle('tr-me', j === q);
     }
-    VZ.vec(E('vsumc'), note(r, q, 0)); E('vsumw').textContent = `“${W[q]}”`;
+    VZ.role(E('vsumc'), note(r, q, 0), 'v'); E('vsumw').textContent = `“${W[q]}”`;
     arcs();
   }
   function arcs() {
@@ -214,7 +216,7 @@
     if (b === 3 && sub >= B.s && sub <= B.nx) { // from the interviewee's response to each witness's response, bulging to the right, beside the responses
       const q = tr.q, w = shares(q), x = X.k + 179, y0 = rowY(q) + ROW / 2 - 3;
       for (let j = 0; j < q; j++) { const y = rowY(j) + ROW / 2 - 3, bl = 8 + (q - j) * 5; g += `<path d="M${x} ${y0} C ${x + bl} ${y0}, ${x + bl} ${y}, ${x} ${y}" fill="none" stroke="${VZ.shareCol(w[j])}" stroke-width="${(0.5 + w[j] * 7).toFixed(1)}" stroke-linecap="round" opacity=".9"/>`; }
-      if (q > 0) g += `<circle cx="${x}" cy="${y0}" r="3" fill="#c2185b"/>`;
+      if (q > 0) g += `<circle cx="${x}" cy="${y0}" r="3" fill="${NT.C.last}"/>`;
     }
     if (b === 6) { const y = rowY(LAST) + ROW / 2 - 3; g += `<rect x="${X.card - 4}" y="${rowY(LAST) - 4}" width="148" height="${ROW - 6}" rx="4" fill="none" stroke="#5b38d1" stroke-width="2.5"/><path d="M${X.card + 150} ${y} C ${X.box - 60} ${y}, ${X.box - 70} ${TOP + 60}, ${X.box - 6} ${TOP + 40}" fill="none" stroke="#5b38d1" stroke-width="2" marker-end="url(#${P}ar)"/>`; }
     svg.innerHTML = `<defs><marker id="${P}ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#5b38d1"/></marker></defs>` + g;
@@ -270,7 +272,7 @@
       set('f' + i, { x: X.f, y: y + 4, o: cols.f, from: fromPanel, delay: bt === B.f1 ? i * 160 : 0 }); set('fx' + i, { x: X.fx, y, o: cols.fx, from: fromPanel, delay: bt === B.f1 ? i * 160 : 0 });
       set('fe' + i, { x: X.fe, y: y + 2, o: cols.fe }); set('fin' + i, { x: finX, y: y + 4, o: cols.fin ? (step === 6 && i !== LAST ? 0.45 : 1) : 0, delay: bt === B.f2 ? 200 : 0 }); set('fnx' + i, { x: X.fnx, y, o: cols.fnx, delay: bt === B.f2 ? 600 : 0 });
     }
-    set('tot', { x: X.s - 6, y: rowY(T), o: cols.s }); set('vsum', { x: X.v - 120, y: rowY(T) + 26, o: cols.v && bt === B.v ? 1 : 0 });
+    set('tot', { x: X.s - 6, y: rowY(T), o: cols.s }); set('akey', { x: X.k, y: rowY(T) + 2, o: step === 3 && bt >= B.s && bt <= B.nx ? 1 : 0 }); set('vsum', { x: X.v - 120, y: rowY(T) + 26, o: cols.v && bt === B.v ? 1 : 0 });
     set('panel', { x: X.panel, y: TOP - 4, o: step === 5 && bt < B.f3 ? 1 : 0 });
     set('box', { x: X.box, y: TOP - 34, o: step === 6 ? 1 : 0 });
     return L;
@@ -306,7 +308,7 @@
     async init() {
       pause();
       if (NT.current().text !== NT.EX[STORY].text) { this.switching = true; NT.setText(NT.EX[STORY].text, 'edit'); this.switching = false; }
-      st().innerHTML = `<section class="panel tr-panel"><div class="tr-head"><div class="fl-ctl"><button class="btn" id="trRew" title="Start over">⏮</button><button class="btn" id="trBack">◀ Back</button><button class="btn primary" id="trNext">Next ▶</button><button class="btn" id="trPlay">▶ Play</button><label class="delay">Speed <input type="range" id="trSpeed" min="0" max="4" value="${tr.sp == null ? 2 : tr.sp}"></label></div></div>
+      st().innerHTML = `<section class="panel tr-panel"><div class="tr-head"><div class="fl-ctl"><button class="btn" id="trRew" title="Start over">⏮</button><button class="btn" id="trBack">◀ Back</button><button class="btn primary" id="trNext">Next ▶</button><button class="btn" id="trPlay">▶ Play</button><label class="delay">Speed <input type="range" id="trSpeed" min="0" max="4" value="${tr.sp == null ? 2 : tr.sp}"><b id="trSpV">×${[0.5, 0.75, 1, 1.5, 2][tr.sp == null ? 2 : tr.sp]}</b></label></div></div>
         <div class="fl-cap fixed" id="trCap"></div><div class="fl-box" id="trBox"></div>
         <div class="tr-legend">Text in <span class="tr-an">our analogy</span> columns is made up, to tell the story. Striped columns are numbers: Case Files, Lead’s summaries and MLP results are real GPT-2 vectors; attention columns are illustrative (real ones: <b>How it really works</b>, below).</div>
         <div id="trReally"></div></section>`;
@@ -316,7 +318,7 @@
       $('#trBack').onclick = () => { pause(); back(); };
       $('#trNext').onclick = () => { pause(); if (!tr.busy) next(); };
       $('#trPlay').onclick = () => (tr.playing ? pause() : play());
-      $('#trSpeed').oninput = (e) => { tr.sp = +e.target.value; };
+      $('#trSpeed').oninput = (e) => { tr.sp = +e.target.value; $('#trSpV').textContent = '×' + [0.5, 0.75, 1, 1.5, 2][tr.sp]; };
       $('#trBox').innerHTML = NT.pendingHTML('Getting GPT-2’s numbers for the story…');
       await loadData();
       if (S.station === 'tfroom') rebuild(false);
@@ -368,13 +370,18 @@
     const k = Math.max(0.5, Math.min(1.25, box.clientWidth / SW, avail > 250 ? avail / H : 9)); sc.style.transform = `translate(${Math.max(0, (box.clientWidth - SW * k) / 2)}px,0) scale(${k})`; box.style.height = Math.ceil(H * k) + 'px';
   }
   window.addEventListener('resize', () => { if (S.station === 'tfroom') fit(); });
+  // the Predict first stop: shown in room 1 only, and only while the switch is on
+  const skip = (i) => BEATS[i] && BEATS[i][1] === 'ps' && (!NT.predictOn() || tr.room > 1);
+  NT.onPredict((on) => { if (!on && S.station === 'tfroom' && BEATS[tr.beat] && BEATS[tr.beat][1] === 'ps') go(tr.beat + 1, false); });
   function go(bt, animate) {
+    if (skip(bt)) bt++;
     tr.beat = bt;
     const step = BEATS[bt][0];
     apply(layout(bt), animate ? ms(bt === B.sup2 ? 900 : bt === B.focus ? 700 : 1100) : 0);
     interview(); // significance, contribution (only from its own beat on) and arcs
     arcs(); if (step === 6) knownBox();
     const fill = (t) => t.replace(/\{r\}/g, tr.room).replace(/\{q\}/g, W[tr.q]).replace('{topic}', TH()[1][0]).replace('{next}', tr.room < 12 ? `They leave room ${tr.room} and become room ${tr.room + 1}’s starting Case Files.` : 'This was room 12, the last room.');
+    $('#trCap').classList.toggle('predict', BEATS[bt][1] === 'ps');
     $('#trCap').innerHTML = `<div class="fl-ch"><b>${fill(BEATS[bt][2])}</b></div><div class="fl-cd">${fill(BEATS[bt][3])}</div>`;
     // the steps are the sub-tabs: chevrons right under the main tabs, then the block counter and a jump to the next block
     const subs = $('#subtabs');
@@ -388,19 +395,19 @@
     if (NT.really) NT.really.sync(BEATS[bt][1], tr.room, tr.q);
     const b = $('#trBack'); if (b) b.disabled = tr.room === 1 && bt === B.start;
     const n = $('#trNext'); if (n) n.disabled = tr.room === 12 && bt === BEATS.length - 1;
-    NT.setStatus(`Block ${tr.room} of 12 · ${STEPS[step - 1][2]}`);
+    NT.setStatus(`Block ${tr.room} of 12 · Step ${step} of ${STEPS.length} · ${STEPS[step - 1][2]}`);
   }
   function next() {
-    if (tr.beat < BEATS.length - 1) { go(tr.beat + 1, true); return true; }
+    if (tr.beat < BEATS.length - 1) { go(tr.beat + 1 + (skip(tr.beat + 1) ? 1 : 0), true); return true; }
     if (tr.room < 12) { toNextRoom(); return true; } // 7) return to 2) for the next room, in place
     return false;
   }
   function back() {
     const first = tr.room === 1 ? B.start : B.room;
-    if (tr.beat > first) { go(tr.beat - 1, false); return; }
+    if (tr.beat > first) { go(tr.beat - 1 - (skip(tr.beat - 1) ? 1 : 0), false); return; }
     if (tr.room > 1) { tr.room--; tr.beat = BEATS.length - 1; rebuild(false); }
   }
-  function play() { tr.playing = true; syncPlay(); const tick = () => { tr.timer = setTimeout(() => { if (!tr.playing || S.station !== 'tfroom') return; if (next()) tick(); else pause(); }, ms(BEATS[tr.beat][0] === 6 ? 3600 : tr.beat === B.focus ? 4200 : 2600)); }; tick(); }
+  function play() { tr.playing = true; syncPlay(); const tick = () => { tr.timer = setTimeout(() => { if (!tr.playing || S.station !== 'tfroom') return; if (next()) { if (BEATS[tr.beat][1] === 'ps') pause(); else tick(); } else pause(); /* Play stops at a Predict first stop */ }, ms(BEATS[tr.beat][0] === 6 ? 3600 : tr.beat === B.focus ? 4200 : 2600)); }; tick(); }
   function pause() { tr.playing = false; clearTimeout(tr.timer); syncPlay(); }
   function syncPlay() { const p = $('#trPlay'); if (p) p.textContent = tr.playing ? '⏸ Pause' : '▶ Play'; }
 })();
