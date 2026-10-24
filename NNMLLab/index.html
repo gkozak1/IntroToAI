@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NNML Lab</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <h1>NNML Lab</h1>
+      <nav class="parts" id="parts" aria-label="Experiences"></nav>
+      <span class="grow"></span>
+      <div class="seg mode" id="mode" role="group" aria-label="Detail level">
+        <button data-m="concept" class="on">Concept</button>
+        <button data-m="hiw">How it works</button>
+      </div>
+    </header>
+    <div class="steprow" id="steprow">
+      <div class="chev" id="chev"></div>
+      <div class="player" id="player">
+        <button class="btn icon" id="pFirst" title="Start over (Home)">&#x23EE;</button>
+        <button class="btn" id="pBack" title="Back (&larr;)">&#9664; Back</button>
+        <button class="btn primary" id="pNext" title="Next (&rarr;)">Next &#9654;</button>
+        <button class="btn" id="pPlay" title="Play / pause (space)">&#9654; Play</button>
+        <label class="speed" title="Animation speed"><input type="range" id="pSpeed" min="0" max="4" step="1" value="2" /><span id="pSpeedV">1&times;</span></label>
+      </div>
+      <span class="code" id="stepCode" title="Step code: tell the class to open this step"></span>
+      <button class="btn ghost small predtog" id="pPredict" aria-pressed="true" title="Predict first: ask the class before key results are shown (P)"><span class="sw"></span>Predict</button>
+      <button class="btn ghost small" id="pReset" title="Reset this experience to its starting example">Reset</button>
+      <button class="btn ghost small" id="pAbout" title="About this page" aria-label="About">&#9432;</button>
+      <button class="btn ghost small" id="pContents" title="Contents: all experiences and steps" aria-label="Contents">&#9776;</button>
+    </div>
+    <div class="caption" id="caption"><b id="cap1"></b><span id="cap2"></span></div>
+    <div class="about" id="about" hidden></div>
+    <main class="stage" id="stage"></main>
+    <div class="contents" id="contents" hidden></div>
+  </div>
+  <script src="./data/core-data.js"></script>
+  <script src="./data/ladder-data.js"></script>
+  <script src="./data/learner-data.js"></script>
+  <script src="./data/runs-data.js"></script>
+  <script src="./data/delivery-data.js"></script>
+  <script src="./data/photo-data.js" onerror="window.NN_PHOTO=null"></script>
+  <script src="./js/engine.js"></script>
+  <script src="./js/core.js"></script>
+  <script src="./js/visuals.js"></script>
+  <script src="./js/n1.js"></script>
+  <script src="./js/n2.js"></script>
+  <script src="./js/n3.js"></script>
+  <script src="./js/n4.js"></script>
+  <script src="./js/n5.js"></script>
+  <script src="./js/m1.js"></script>
+  <script src="./js/m2.js"></script>
+  <script src="./js/m3.js"></script>
+  <script src="./js/m4.js"></script>
+  <script src="./js/m5.js"></script>
+  <script src="./js/m6.js"></script>
+  <script src="./js/main.js"></script>
+</body>
+</html>
