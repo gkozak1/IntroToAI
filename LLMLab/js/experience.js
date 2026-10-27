@@ -9,7 +9,7 @@
   const MAX = 100;
   const TODO_CLASS = 'Gather next word ideas from the class, compare to GPT-2’s list, add to sentence, repeat.';
   const TODO_GEN = 'Watch GPT-2 pick tokens. Pause to look closely; Stop to go back to class guesses.';
-  const ex = { guesses: [], revealed: false, editing: -1, tok: 0, gen: false, delay: 1000, running: false, run: 0, busy: false, log: [], base: null, baseIds: null, sel: -1, ours: false, genId: 1 };
+  const ex = { guesses: [], revealed: false, editing: -1, tok: 0, gen: false, delay: 1000, running: false, run: 0, busy: false, log: [], base: null, baseIds: null, sel: -1, ours: false, genId: 1, spinPick: -1 };
   const cp = NT.chancePct;
   const show = (t) => (/\S/.test(t) ? esc(t) : '↵');
   const fmtD = (ms) => (ms === 0 ? 'Instant' : (ms % 1000 ? (ms / 1000).toFixed(2).replace(/0$/, '') : (ms / 1000).toFixed(1)) + ' s');
@@ -39,14 +39,14 @@
   NT.stations.next = {
     init() {
       NT.onLive = () => { if (S.station === 'next' && (ex.revealed || ex.gen)) drawModel(); };
-      NT.onBubble = (g) => { if (ex.gen && g.id === ex.genId && ex.log[g.i]) { ex.sel = g.i; drawGen(); } };
+      NT.onBubble = (g) => { if (ex.gen && g.id === ex.genId && ex.log[g.i]) { ex.sel = g.i; ex.spinPick = -1; drawGen(); } };
       tools();
       if (ex.gen) genInit(); else classInit();
     },
     onText(how) {
       if (ex.gen) {
         if (ex.ours) return; // our own append; the run loop redraws
-        stopRun(); ex.log = []; ex.sel = -1; ex.base = null; ex.genId++; genInit(); return;
+        stopRun(); ex.log = []; ex.sel = -1; ex.spinPick = -1; ex.base = null; ex.genId++; genInit(); return;
       }
       if (how !== 'append') resetRound();
       classInit();
@@ -63,8 +63,8 @@
     $('#genDelay').oninput = (e) => { ex.delay = +e.target.value * 250; $('#genDelayV').textContent = fmtD(ex.delay); };
     $('#genStep').onclick = () => { stopRun(); if (!ex.gen) enterGen(); stepOnce(); };
     $('#genPlay').onclick = () => { if (ex.running) { stopRun(); return; } if (!ex.gen) enterGen(); runAuto(); };
-    $('#genStop').onclick = () => { stopRun(); ex.gen = false; ex.base = null; ex.log = []; ex.sel = -1; ex.genId++; resetRound(); NT.stations.next.init(); };
-    $('#genReset').onclick = () => { stopRun(); const b0 = ex.base; ex.log = []; ex.sel = -1; ex.genId++; ex.ours = true; NT.setText(b0, 'append'); ex.ours = false; drawGen(); };
+    $('#genStop').onclick = () => { stopRun(); ex.gen = false; ex.base = null; ex.log = []; ex.sel = -1; ex.spinPick = -1; ex.genId++; resetRound(); NT.stations.next.init(); };
+    $('#genReset').onclick = () => { stopRun(); const b0 = ex.base; ex.log = []; ex.sel = -1; ex.spinPick = -1; ex.genId++; ex.ours = true; NT.setText(b0, 'append'); ex.ours = false; drawGen(); };
     syncButtons();
   }
   function enterGen() { ex.gen = true; NT.stations.next.init(); }
@@ -178,7 +178,7 @@
     // a calm page while GPT-2 writes: the waiting note sits inside the bar (no block that pushes the page down), the sentence box keeps one size
     st().innerHTML = `<div class="genbar"><span class="gcount" id="genCount"></span><span class="gwait" id="genWait"></span><span class="grow"></span><span id="genLegend"></span></div>
       <div class="genwide"><section class="panel" id="genPick"></section><section class="panel"><div class="ph"><h2>Every pick so far</h2><span class="sub">click a row or a bubble to see that pick</span></div><div class="glog" id="genLog"></div></section></div><div id="genHood"></div>`;
-    $('#genLog').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-i]'); if (tr) { ex.sel = +tr.dataset.i; drawGen(true); } });
+    $('#genLog').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-i]'); if (tr) { ex.sel = +tr.dataset.i; ex.spinPick = -1; drawGen(true); } });
     drawGen();
   }
   function drawGen(keepScroll) {
@@ -199,7 +199,10 @@
         <div class="expick"><div class="rk-card exrk">${NT.viz.rankTable(pr, x.K, { n, hit: x.rank - 1 })}</div><div class="exwheel" id="genWheel"></div></div>
         <div class="rnote">Random number r = <b>${x.r.toFixed(3)}</b> fell in “${esc(x.t.trim() || '↵')}”’s range, so GPT-2 added it: ${esc(NT.pickTip(x))}.</div>
         ${NT.flow ? `<button class="btn" id="genHoodBtn" style="margin-top:8px">🔍 Under the hood: watch how GPT-2 made pick ${sel + 1}</button>` : ''}`;
-      NT.viz.wheel($('#genWheel'), { pr, K: x.K, r: x.r, hit: x.rank - 1, n, size: 190, idp: 'gw_' });
+      const spin = ex.spinPick === sel;
+      NT.viz.wheel($('#genWheel'), { pr, K: x.K, r: x.r, hit: x.rank - 1, n, size: 190, idp: 'gw_', spin, dur: 850, word: x.t.trim() || '↵',
+        stillHere: () => S.station === 'next' && ex.gen && ex.spinPick === sel && (ex.sel < 0 ? ex.log.length - 1 : ex.sel) === sel,
+        done: () => { if (ex.spinPick === sel) { ex.spinPick = -1; drawGen(true); } } });
       $('#genHoodBtn').onclick = () => openHood(sel);
     }
     const lg = $('#genLog');
@@ -234,7 +237,7 @@
       let lo = 0; for (let j = 0; j < i; j++) lo += pr.p[j];
       const id = pr.ids[i], K = S.K >= NT.ALL ? NT.ALL : pr.K;
       const x = { id, t: id === 50256 ? '\n\n' : NT.tokText(id), rank: i + 1, K, T: S.T, p: pr.p[i], logit: pr.logits[i], r, lo, top: Array.from({ length: Math.min(10, pr.K) }, (_, j) => [pr.ids[j], pr.p[j], pr.logits[j]]) };
-      ex.log.push(x); ex.sel = -1;
+      ex.log.push(x); ex.sel = -1; ex.spinPick = ex.log.length - 1;
       ex.ours = true; NT.setText(S.text + x.t, 'append', NT.makeMark(x, { id: ex.genId, i: ex.log.length - 1 })); ex.ours = false;
       return true;
     } catch (e) { if ($('#genWait')) $('#genWait').textContent = waitNote('GPT-2 could not be reached. Stored sentences still work.'); return false; }

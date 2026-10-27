@@ -42,14 +42,10 @@
     [2, 'rank', 'Line the scores up from best to worst.', 'The logits here are large negative numbers, but that doesn’t matter: only the gaps between them count, as the next steps show.'],
     [3, 'topk', 'Top-K decides which tokens are allowed.', 'Only the K highest scores stay in the running; every other token is out. Move the Top-K slider at the top, or try a preset.{auto}'],
     [3, 'temp', 'Temperature reshapes the gaps between the scores.', 'Every allowed logit is divided by the Temperature. Below 1, the gaps stretch and the leader pulls ahead; above 1, they shrink and the scores bunch together.'],
-    [4, 'guess', '🤔 Predict first: how big a slice of the spinner will “{t1}” get?', '“{t1}” has the best score at this Temperature and Top-K. More than half of the spinner, or less? Decide, then press Next to see the probabilities.'], // only with Predict first on
     [4, 'soft', 'Scores into probabilities: each allowed token gets a slice of the spinner.', 'Softmax gives probabilities totaling 100%. Each slice shows selection probability, not factual correctness.'],
     [5, 'pick', 'Pick with r: spin the wheel.', 'A random number r between 0 and 1 turns the needle. Whichever slice it stops in is the next token. Press 🎲 Spin.'],
   ];
   const B = Object.fromEntries(BEATS.map((b, i) => [b[1], i]));
-  // the Predict first stop still shows the scores (the step-3 picture); the probabilities stay hidden until Next
-  const vstep = (bt) => (BEATS[bt][1] === 'guess' ? 3 : BEATS[bt][0]);
-  const skip = (i) => BEATS[i] && BEATS[i][1] === 'guess' && !NT.predictOn();
   const STEPS = [[1, 'From the Transformer'], [2, 'Score every token'], [3, 'Temperature & Top-K'], [4, 'Scores into probabilities'], [5, 'Pick with r']];
 
   // ---------- data ----------
@@ -96,11 +92,11 @@
 
   function build() {
     G = geom();
-    const { T, ROW, TOP, H } = G, hy = TOP - 30, TM = NT.tokMarks(C.W);
+    const { T, ROW, TOP, H } = G, hy = TOP - 30;
     let h = `<div class="fl-scene pk-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="fl-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>`;
     h += `<div class="fl-h" style="left:18px;top:${hy}px;width:80px">Token</div><div class="fl-h pk-fade" id="${P}hc" style="left:108px;top:${hy}px;width:160px">🪪 Case File <small>after block 12</small></div>`;
     for (let i = 0; i < T; i++) {
-      h += `<div class="tr-c tr-tok ${i === T - 1 ? 'tr-me' : ''}" style="left:18px;top:${G.rowY(i)}px;--c:${TM.col[i]};width:84px;height:${ROW - 6}px">${esc(TM.label[i])}</div>`;
+      h += `<div class="tr-c tr-tok ${i === T - 1 ? 'tr-me' : ''}" style="left:18px;top:${G.rowY(i)}px;--c:${i === T - 1 ? '#c2185b' : '#9aa3b2'};width:84px;height:${ROW - 6}px">${esc(C.W[i])}</div>`;
       h += `<canvas class="fl-strip pk-fade" id="${P}c${i}" style="left:108px;top:${G.rowY(i) + 4}px;width:140px;height:${Math.max(8, ROW - 14)}px"></canvas>`;
     }
     h += `<div class="pk-q" id="${P}q" style="left:62px;top:${G.rowY(T)}px">?</div>`;
@@ -141,7 +137,7 @@
   }
   // the parts that follow Temperature and Top-K
   function paintLive() {
-    const bt = pk.beat, step = vstep(bt), K = S.K >= NT.ALL ? NT.ALL : S.K;
+    const bt = pk.beat, step = BEATS[bt][0], K = S.K >= NT.ALL ? NT.ALL : S.K;
     const base = NT.probs(C.d, 1, NT.ALL), pr = NT.probs(C.d, S.T, S.K), vec = C.ex && C.ex.final;
     if (step === 2) E('tab').innerHTML = VZ.rankCard(base, NT.ALL, { n: 10, prob: false, vecId: vec ? P + 'tv' : null, vecTitle: `The output vector for “${esc(C.last)}”…`, title: '…scored against every token’s embedding row (logits):' });
     if (step === 3) E('tk').innerHTML = tkTable(base);
@@ -199,7 +195,7 @@
 
   // ---------- which parts show at each beat ----------
   function show() {
-    const bt = pk.beat, step = vstep(bt), o = {};
+    const bt = pk.beat, step = BEATS[bt][0], o = {};
     const on = (id, v = 1) => (o[id] = v);
     for (let i = 0; i < C.T; i++) on('c' + i, bt === B.start ? 1 : i === C.T - 1 && bt === B.focus ? 1 : bt === B.focus ? 0.12 : 0);
     on('hc', bt <= B.focus ? 1 : 0);
@@ -220,7 +216,7 @@
     lines();
   }
   function lines() {
-    const svg = E('svg'); if (!svg) return; const bt = pk.beat, step = vstep(bt);
+    const svg = E('svg'); if (!svg) return; const bt = pk.beat, step = BEATS[bt][0];
     let g = '';
     const lastY = G.rowY(C.T - 1) + G.ROW / 2 - 3;
     if (bt === B.start) g += `<rect x="104" y="${G.rowY(C.T - 1)}" width="148" height="${G.ROW - 6}" rx="4" fill="none" stroke="#5b38d1" stroke-width="2.5"/><path d="M254 ${lastY} C ${G.BOX - 50} ${lastY}, ${G.BOX - 60} ${G.TOP + 60}, ${G.BOX - 6} ${G.TOP + 40}" fill="none" stroke="#5b38d1" stroke-width="2" marker-end="url(#${P}ar)"/>`;
@@ -251,7 +247,7 @@
         <div class="tr-legend">All numbers are real GPT-2: the Case Files, the output vector, every score, probability and pick. The token vocab matrix is drawn as a pale stand-in: its 50,257 rows are far too many to show.</div></section>`;
       NT.guideRow(st().querySelector('.tr-panel'));
       $('#pkRew').onclick = () => { pause(); go(0); };
-      $('#pkBack').onclick = () => { pause(); if (pk.beat > 0) go(pk.beat - 1 - (skip(pk.beat - 1) ? 1 : 0)); };
+      $('#pkBack').onclick = () => { pause(); if (pk.beat > 0) go(pk.beat - 1); };
       $('#pkNext').onclick = () => { pause(); next(); };
       $('#pkPlay').onclick = () => (pk.playing ? pause() : play());
       if (!(await load())) return;
@@ -272,15 +268,13 @@
   function cap() {
     const id = labeled()[0], sc = C.score(id);
     const fill = (t) => t.replace(/\{last\}/g, esc(C.last)).replace('{t1}', sh(id)).replace('{s1}', sc != null ? sc.toFixed(1) : '—').replace('{auto}', pk.autoK ? ' (Top-K was All; it’s set to 10 here so the wheel stays readable.)' : '');
-    $('#pkCap').classList.toggle('predict', BEATS[pk.beat][1] === 'guess');
     $('#pkCap').innerHTML = `<div class="fl-ch"><b>${fill(BEATS[pk.beat][2])}</b></div><div class="fl-cd">${fill(BEATS[pk.beat][3])}</div>`;
   }
-  NT.onPredict((on) => { if (!on && S.station === 'pkscene' && BEATS[pk.beat][1] === 'guess') go(pk.beat + 1); });
-  function go(bt) {
-    if (skip(bt)) bt++;
+  function go(bt, animatePick = false) {
     pk.beat = bt; const step = BEATS[bt][0];
     if (bt === B.topk && S.K >= NT.ALL && !pk.autoK) { pk.autoK = true; NT.setTK(null, 10); } // the first time: Top-K 10, as in Whole Process
     if (step < 5) { pk.r = null; pk.spun = false; pk.spinning = false; }
+    else if (animatePick && pk.r == null) { pk.r = Math.random(); pk.spun = false; pk.spinning = true; pk.fresh = true; }
     if (!E('sc')) return;
     show(); paintLive(); winBox(); cap();
     if (bt === B.soft) E('wh').querySelectorAll('svg path, svg circle:not([r="7"])').forEach((el, i) => { el.classList.add('pk-slice'); el.style.animationDelay = (i * 0.12).toFixed(2) + 's'; }); // the slices appear one by one, biggest first
@@ -293,8 +287,8 @@
     $('#pkBack').disabled = bt === 0; $('#pkNext').disabled = bt === BEATS.length - 1;
     NT.setStatus(`Step ${step} of 5 · ${STEPS[step - 1][1]}`);
   }
-  function next() { if (pk.beat < BEATS.length - 1) { go(pk.beat + 1); return true; } return false; } // go() steps over the Predict first stop when it is off
-  function play() { pk.playing = true; syncPlay(); const tick = () => { pk.timer = setTimeout(() => { if (!pk.playing || S.station !== 'pkscene') return; if (next()) { if (BEATS[pk.beat][1] === 'guess') pause(); else tick(); } else pause(); /* Play stops at a Predict first stop */ }, 3200); }; tick(); }
+  function next() { if (pk.beat < BEATS.length - 1) { go(pk.beat + 1, true); return true; } return false; }
+  function play() { pk.playing = true; syncPlay(); const tick = () => { pk.timer = setTimeout(() => { if (!pk.playing || S.station !== 'pkscene') return; if (next()) tick(); else pause(); }, 3200); }; tick(); }
   function pause() { pk.playing = false; clearTimeout(pk.timer); syncPlay(); }
   function syncPlay() { const p = $('#pkPlay'); if (p) p.textContent = pk.playing ? '⏸ Pause' : '▶ Play'; }
 })();

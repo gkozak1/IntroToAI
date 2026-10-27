@@ -12,8 +12,8 @@
   const LD = () => window.LEARN;
   const STORY = 'story', RIVER = 7850, T = 13;
   const W = ['The', 'banker', 'left¹', 'the', 'bank¹', 'and', 'sat', 'on', 'the', 'left²', 'bank²', 'of', 'the'];
-  const COL = NT.tokMarks(['The', 'banker', 'left', 'the', 'bank', 'and', 'sat', 'on', 'the', 'left', 'bank', 'of', 'the']).col;
-  const ICOL = Array.from({ length: 12 }, () => NT.C.head);
+  const COL = ['#9aa3b2', '#2b5aa8', '#d9730d', '#9aa3b2', '#1e8a3a', '#8e44ad', '#16a085', '#9aa3b2', '#9aa3b2', '#d9730d', '#1e8a3a', '#9aa3b2', '#c2185b'];
+  const ICOL = ['#5b38d1', '#c2185b', '#1e8a3a', '#d9730d', '#2b5aa8', '#8e44ad', '#16a085', '#b8860b', '#c0392b', '#0f6b8a', '#6d4c41', '#7a8699'];
   const TOPICS = ['Where?', 'Who?', 'What happened?', 'Money or nature?', 'Just before me?', 'Which side?', 'Seen this place?', 'Sit on what?', 'A name coming?', '“of” connects?', 'Bank of what?', 'What next?'];
   const NOTEBOOK = ['bankers work at banks', '“left the bank” usually means went away', 'people sit on benches, grass, banks', 'river banks are places to sit', '“on the left” is a side', '“bank of the …” is followed by a kind of place'];
   const tt = (id) => NT.tokText(id);
@@ -50,7 +50,7 @@
       { const bd = $('#ptBody'); NT.fitZoom(bd); setTimeout(() => NT.fitZoom(bd), 700); } // keep the whole picture on screen
       $('#ptBack').disabled = P.beat === 0; $('#ptNext').disabled = P.beat === steps.length - 1 && !opts.more;
       $('#ptNext').textContent = P.beat === steps.length - 1 && opts.more ? opts.more[0] : 'Next ▶';
-      NT.setStatus(`Step ${P.beat + 1} of ${steps.length} · ${s.chip.replace(/^\S+\s/, '')}`);
+      NT.setStatus(`Step ${P.beat + 1} of ${steps.length}: ${s.chip.replace(/^\S+\s/, '')}`);
     };
     const next = () => { if (P.beat < steps.length - 1) { P.beat++; draw(true); return true; } if (opts.more) opts.more[1](); return false; };
     const pause = () => { P.playing = false; clearTimeout(P.timer); const p = $('#ptPlay'); if (p) p.textContent = '▶ Play'; };

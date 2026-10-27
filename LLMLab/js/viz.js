@@ -25,25 +25,6 @@
     for (let i = 0; i < n; i++) { const t = vals[i] / m, [r, g, b] = NT.div(Math.sign(t) * Math.sqrt(Math.abs(t))); img.data.set([r, g, b, 255], i * 4); }
     c.putImageData(img, 0, 0);
   };
-  // ---------- role-colored vectors (Oct 19): Query blue, Key orange, Value purple, MLP teal (NT.C). Near 0 is pale; a large positive
-  //            number is the role color, a large negative one a gray of the same hue — the same rule in How it really works, the story and Pre-Training. ----------
-  const hsl = (hex) => { const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
-    let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; const sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0; return [h, Math.round(sat * 100)]; };
-  const soft = ([h, s2], mx) => [h, Math.min(s2, mx)]; // a strip of many saturated cells glares; cap the saturation a little
-  V.ROLE = () => ({ q: soft(hsl(NT.C.q), 72), k: soft(hsl(NT.C.k), 85), v: soft(hsl(NT.C.v), 60), a: soft(hsl(NT.C.mlp), 55), m: soft(hsl(NT.C.mlp), 55), h: hsl(NT.C.head) });
-  V.rolePx = (hu, sa, t) => {
-    t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
-    const L = (t >= 0 ? 95 - 58 * t : 95 + 48 * t) / 100, S = (t >= 0 ? sa : 16) / 100, C = (1 - Math.abs(2 * L - 1)) * S, X = C * (1 - Math.abs(((hu / 60) % 2) - 1)), M = L - C / 2;
-    const [r, g, b] = hu < 60 ? [C, X, 0] : hu < 120 ? [X, C, 0] : hu < 180 ? [0, C, X] : hu < 240 ? [0, X, C] : hu < 300 ? [X, 0, C] : [C, 0, X];
-    return [(r + M) * 255, (g + M) * 255, (b + M) * 255, 255];
-  };
-  // a vector (kind q | k | v | m) as a strip in its role color; m: the shared scale (default this vector's p98)
-  V.role = (cv, vals, kind, m) => {
-    if (!cv) return; if (!vals) return V.gray(cv); const n = vals.length; m = m || V.p98(vals); cv.width = n; cv.height = 1;
-    const c = cv.getContext('2d'), img = c.createImageData(n, 1), [hu, sa] = V.ROLE()[kind];
-    for (let i = 0; i < n; i++) img.data.set(V.rolePx(hu, sa, vals[i] / m), i * 4);
-    c.putImageData(img, 0, 0);
-  };
   V.gray = (cv) => { if (!cv) return; cv.width = 1; cv.height = 1; const x = cv.getContext('2d'); x.fillStyle = '#d5d9e0'; x.fillRect(0, 0, 1, 1); };
   // one scale for a set of vectors that should be compared (e.g. token + position = input): the median of their p98s
   V.sharedScale = (vs) => { const a = vs.filter(Boolean).map(V.p98).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 1; };
@@ -95,7 +76,7 @@
     const others = 1 - a;
     if (others > 0.001) { g += arc(a, 1, '#d5d9e0'); if (others > 0.08) { const [tx, ty] = pt((a + 1) / 2, R * 0.55); g += `<text x="${tx}" y="${ty + 4}" text-anchor="middle" font-size="12" fill="#5b6577">all others</text>`; } }
     [0, 0.25, 0.5, 0.75].forEach((t) => { const [x0, y0] = pt(t, R), [x1, y1] = pt(t, R + 7), [lx, ly] = pt(t, R + 20); g += `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="#33455a" stroke-width="1.5"/><text x="${lx}" y="${ly + 4}" text-anchor="middle" font-size="11" fill="#33455a">${t === 0 ? '0 | 1' : t}</text>`; });
-    const r = o.r, hit = o.hit == null ? -1 : o.hit, rot = r == null ? 0 : r * 360 + 360 * 4, word = hit >= 0 ? NT.tokText(pr.ids[hit]).trim() : '';
+    const r = o.r, hit = o.hit == null ? -1 : o.hit, rot = r == null ? 0 : r * 360 + 360 * 4, word = o.word ?? (hit >= 0 && pr.ids[hit] != null ? NT.tokText(pr.ids[hit]).trim() : '');
     const needle = o.needle === false ? '' : `<g id="${P}fNeedle" style="transform-origin:${C}px ${C}px;transform:rotate(0deg)"><line x1="${C}" y1="${C}" x2="${C}" y2="${C - R + 6}" stroke="#1d2634" stroke-width="4" stroke-linecap="round"/><polygon points="${C - 7},${C - R + 16} ${C + 7},${C - R + 16} ${C},${C - R + 2}" fill="#1d2634"/></g><circle cx="${C}" cy="${C}" r="9" fill="#fff" stroke="#1d2634" stroke-width="3"/>`;
     const note = others > 0.001 ? `<div class="fl-rl">gray: the other ${NT.int(pr.K - n)} allowed tokens, ${(others * 100).toFixed(1)}% together</div>` : '';
     const size = o.size || 330;

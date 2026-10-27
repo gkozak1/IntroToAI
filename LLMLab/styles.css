@@ -5,13 +5,6 @@
   --fp: #4e79a7; --err: #7b61a8; --bp: #4b5563; --gd: #c04a8a;
   --r1: #e9eefb; --r2: #f6eefb; --r3: #eaf6f0;
   --shadow: 0 2px 10px rgba(20, 31, 48, .06);
-  /* one color per concept (mirrors NT.C in js/core.js). --accent is UI only. */
-  --q: #1f63d6; --q-d: #1a4fae; --q-s: #eaf1fd; --q-m: #9dbcf0;
-  --k: #e07a10; --k-d: #a85500; --k-s: #fff1e1; --k-m: #f4bd7f;
-  --v: #9c2fb5; --v-d: #7a2190; --v-s: #f7ebfa; --v-m: #d29de0;
-  --head: #7a5230; --head-d: #5e3e22; --head-s: #f4ede6; --head-m: #c4a586;
-  --mlp: #0e8a8c; --mlp-d: #0a6b6d; --mlp-s: #e3f4f4; --mlp-m: #8fcfd0;
-  --last: #c2185b; --last-s: #fdf2f7;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.35; }
@@ -1728,62 +1721,3 @@ body.nums-on .as-clip .as-bt { max-height: none; -webkit-mask-image: none; mask-
 .as-miss { font-size: 11.5px; color: #8a0010; background: #fdecef; border: 1px dashed #f3b9c2; border-radius: 7px; padding: 4px 8px; }
 .as-stakes { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; font-size: 13px; }
 .as-side { display: flex; flex-direction: column; gap: 8px; }
-
-/* ===================== Oct 19: one color per concept (see :root and NT.C in js/core.js) =====================
-   Query/Question blue · Key/Statement orange · Value/Evidence and everything made from Values purple · Detective (attention head) brown ·
-   Forensics (MLP) teal · last token crimson · accent purple only for buttons, tabs, links and + / = signs. */
-.cq { color: var(--q); } .ck { color: var(--k-d); } .cv { color: var(--v); } .cm { color: var(--mlp); } .ch { color: var(--head); }
-.tr-h .cq, .tr-h .ck, .tr-h .cv, .tr-h .cm, .tr-h .ch, .fl-h .cq, .fl-h .ck, .fl-h .cv, .fl-h .cm, .fl-h .ch { font-weight: 800; }
-.tr-c.tr-qcol { background: var(--q-s); border-left: 3px solid var(--q); color: #173a73; }
-.tr-c.tr-tag { background: var(--k-s); border-left: 3px solid var(--k); color: #5c3200; }
-.tr-c.tr-notex { background: var(--v-s); border-left: 3px solid var(--v-m); color: #4a1658; }
-.tr-c.tr-fact, .tr-fact { background: var(--mlp-s); border-left: 3px solid var(--mlp-m); color: #0b4d4e; }
-.tr-panel2 { border-left-color: var(--mlp); }
-.tr-panel2 .rk-tt { color: var(--mlp-d); }
-.tr-sumrow { color: var(--v-d); border-top-color: var(--v); }
-.tr-lane { background: var(--head-s); }
-.tr-lane.full { background: #fff; }
-.tr-topic { color: var(--head); }
-.tr-tok.tr-me, .tr-c.tr-tok.tr-me { color: var(--last); background: var(--last-s); }
-table.tr-t tr.me td.tr-tok { color: var(--last); }
-/* How it really works: the same concept colors */
-.rw-cq { color: var(--q); } .rw-ck { color: var(--k-d); } .rw-cv { color: var(--v); } .rw-ca { color: var(--mlp); } .rw-ch { color: var(--head); }
-.rw-mq { border-color: var(--q-m); color: var(--q-d); background-color: var(--q-s); } .rw-mk { border-color: var(--k-m); color: var(--k-d); background-color: var(--k-s); }
-.rw-mv { border-color: var(--v-m); color: var(--v-d); background-color: var(--v-s); } .rw-ma { border-color: var(--mlp-m); color: var(--mlp-d); background-color: var(--mlp-s); }
-.rw-mq canvas { border-color: var(--q-m); } .rw-mq .rw-matl { color: var(--q-d); }
-.rw-mk canvas { border-color: var(--k-m); } .rw-mk .rw-matl { color: var(--k-d); }
-.rw-mv canvas { border-color: var(--v-m); } .rw-mv .rw-matl { color: var(--v-d); }
-.rw-ma canvas { border-color: var(--mlp-m); } .rw-ma .rw-matl { color: var(--mlp-d); }
-.rw-gelu { border-color: var(--mlp-m) !important; color: var(--mlp-d) !important; background: rgba(227, 244, 244, .85) !important; }
-.rw-lnq { stroke: var(--q-m); } .rw-lnk { stroke: var(--k-m); } .rw-lnv { stroke: var(--v-m); } .rw-lna { stroke: var(--mlp-m); }
-/* Pre-/Post-Training: Q/K/V and MLP in their role colors, the detective (attention head) brown */
-.pt2-rn span { color: inherit; } .pt2-rn span i { font-style: normal; }
-.pt2 canvas.pt2-hd { border-color: #d5d9e0; } .pt2 canvas.pt2-fc { border-color: var(--mlp-m); }
-.pt2-col.hd i { background: var(--head); } .pt2-col.fc i { background: var(--mlp); }
-.pt2-col.hd { color: var(--head-d); } .pt2-col.fc { color: var(--mlp-d); }
-#pb_coA, .pt2-co.hd { border: 2px solid var(--head) !important; } #pb_coF, .pt2-co.fc { border: 2px solid var(--mlp) !important; }
-.pt2-tok.tr-me { color: var(--last); font-weight: 700; background: var(--last-s); }
-/* token columns on Input and Whole Process: the same identity bar, superscripts and last-token crimson as the Transformer and Output tabs */
-.fl-tok .tsup { display: none; }
-.fl-col .fl-tok { border-left: 4px solid var(--c, #9aa3b2); padding-left: 6px; }
-.fl-col .fl-tok .tsup { display: inline; }
-.fl-col .fl-tok.last { color: var(--last); font-weight: 700; }
-/* Whole Process block chips: investigations = the detectives (brown), lead = the assembled notes (purple), forensics = MLP (teal) */
-.fl-bsteps i.bh.on { background: var(--head); } .fl-bsteps i.bv.on { background: var(--v); } .fl-bsteps i.bm.on { background: var(--mlp); }
-.fl-bsteps i.bh.done { background: var(--head-s); color: var(--head-d); } .fl-bsteps i.bv.done { background: var(--v-s); color: var(--v-d); } .fl-bsteps i.bm.done { background: var(--mlp-s); color: var(--mlp-d); }
-/* one "real" badge everywhere (Output, How it really works, Pre-Training, Assistant): green, small caps */
-.tr-real, .tag.real { display: inline-block; font-size: .64rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; font-style: normal; padding: 1px 7px; border-radius: 999px; background: #e8f6ee; color: #1f6b40; border: 1px solid #b9e0c8; vertical-align: 1px; }
-/* the speed readout beside every player's speed slider */
-.delay b { font-weight: 700; color: var(--accent-d); font-size: .78rem; margin-left: 4px; }
-/* Pre-/Post-Training (Oct 19): steps as sub-tab chevrons, player beside the caption, as on Transformer and Output */
-.subtabs .pt2-subs { margin: 0; flex-wrap: nowrap; }
-.subtabs .pt2-subs + .whotog { margin-left: auto; }
-.guide .pt2-cap .fl-ch, .guide .pt2-cap .fl-cd { white-space: normal; }
-.guide .pt2-cap.fl-cap.fixed { margin-bottom: 0; padding: 8px 12px; }
-/* a hidden top-bar switch must stay hidden (.numtoggle sets display) */
-#numBtn[hidden], #predBtn[hidden] { display: none !important; }
-#predBtn { margin-right: 6px; }
-/* a Predict first stop: the caption gets an amber edge, no extra height */
-.fl-cap.predict { border-left: 4px solid var(--warm); background: #fff6ea; }
-/* Output at laptop widths: the compact label belongs to each switch (the Predict switch must not read "Numbers") */
-@media (max-width: 1360px) { body[data-top="pick"] #predBtn::after { content: "Predict"; } }

@@ -18,10 +18,9 @@
 
   // ---------- shared drawing ----------
   const rnd = (seed) => { let s = (seed * 9301 + 49297) % 2147483647 || 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647) * 2 - 1; };
-  // kind (q | k | v | m): paint in that role's color (Query blue, Key orange, Value purple, MLP teal, as in How it really works); none: the red–green number scale
-  function paint(cv, seed, lv, wd = 48, ht = 1, kind) {
-    if (!cv) return; cv.width = wd; cv.height = ht; const c = cv.getContext('2d'), img = c.createImageData(wd, ht), r = rnd(seed), t = Math.min(1, lv / 5), HS = kind && NT.viz.ROLE()[kind];
-    for (let y = 0; y < ht; y++) for (let x = 0; x < wd; x++) { const n = r(), s = Math.sin(x * 0.55 + seed * 1.7) * Math.cos(y * 0.6 + seed) * 0.9, v = (1 - t) * n * 0.75 + t * s; const vv = Math.max(-1, Math.min(1, v)); if (HS) img.data.set(NT.viz.rolePx(HS[0], HS[1], vv), (y * wd + x) * 4); else { const [R, G, B] = NT.div(vv); img.data.set([R, G, B, 255], (y * wd + x) * 4); } }
+  function paint(cv, seed, lv, wd = 48, ht = 1) {
+    if (!cv) return; cv.width = wd; cv.height = ht; const c = cv.getContext('2d'), img = c.createImageData(wd, ht), r = rnd(seed), t = Math.min(1, lv / 5);
+    for (let y = 0; y < ht; y++) for (let x = 0; x < wd; x++) { const n = r(), s = Math.sin(x * 0.55 + seed * 1.7) * Math.cos(y * 0.6 + seed) * 0.9, v = (1 - t) * n * 0.75 + t * s; const [R, G, B] = NT.div(Math.max(-1, Math.min(1, v))); img.data.set([R, G, B, 255], (y * wd + x) * 4); }
     c.putImageData(img, 0, 0);
   }
   // a curly brace from y0 to y1 at x: open = '{' (tip points left), otherwise '}' (tip points right). Width 20.
@@ -59,7 +58,7 @@
   const COY = GY + 12 * RH + 36; // the callout boxes' top (their titles sit 24 px above)
   const tfHTML = () => {
     let h = `<div class="pt2-tf" id="${P}tf" style="left:${TFX}px;top:${TFY}px;width:${TFW}px;height:${H - TFY - 6}px"><div class="pt2-tft">🧠 Transformer · 12 blocks</div></div>`;
-    for (let r = 0; r < 12; r++) h += `<div class="pt2-rn" style="left:${TFX + 6}px;top:${ryOf(r)}px"><b>${r + 1}</b><span><i class="cq">Q</i><br><i class="ck">K</i><br><i class="cv">V</i></span></div>`;
+    for (let r = 0; r < 12; r++) h += `<div class="pt2-rn" style="left:${TFX + 6}px;top:${ryOf(r)}px"><b>${r + 1}</b><span>Q<br>K<br>V</span></div>`;
     for (let b = 0; b < 12; b++) {
       const bx = bxOf(b);
       h += `<div class="pt2-bn" style="left:${bx}px;top:${GY - 17}px">${b + 1}</div>`;
@@ -67,13 +66,13 @@
       h += `<canvas class="fx pt2-fc" data-x="${bx + 30}" id="${P}f${b}" style="left:${bx + 30}px;top:${GY}px;width:9px;height:${12 * RH - 3}px"></canvas>`;
     }
     h += `<div class="pt2-col hd" id="${P}lA" style="left:${GX}px;top:${COY - 24}px;width:232px"><i></i> Detective (attention head)</div><div class="pt2-col fc" id="${P}lF" style="left:654px;top:${COY - 24}px;width:244px"><i></i> Forensics (MLP)</div>`;
-    h += `<div class="pt2-co hd" id="${P}coA" style="left:${GX}px;top:${COY}px;width:232px">${['Query', 'Key', 'Value'].map((n, i) => `<div class="cr"><span class="${['cq', 'ck', 'cv'][i]}">${n}</span><canvas class="fx" data-x="460" id="${P}q${n}" style="width:96px;height:14px"></canvas><b>768 × 64</b></div>`).join('')}</div>`;
+    h += `<div class="pt2-co hd" id="${P}coA" style="left:${GX}px;top:${COY}px;width:232px">${['Query', 'Key', 'Value'].map((n) => `<div class="cr"><span>${n}</span><canvas class="fx" data-x="460" id="${P}q${n}" style="width:96px;height:14px"></canvas><b>768 × 64</b></div>`).join('')}</div>`;
     h += `<div class="pt2-co fc" id="${P}coF" style="left:654px;top:${COY}px;width:244px"><div class="cf"><div><canvas class="fx" data-x="690" id="${P}m1" style="width:120px;height:30px"></canvas><b>768 × 3,072</b></div><div><canvas class="fx" data-x="820" id="${P}m2" style="width:30px;height:54px"></canvas><b>3,072 × 768</b></div></div></div>`;
     return h;
   };
   function paintTF(lv) {
-    for (let b = 0; b < 12; b++) { for (let r = 0; r < 12; r++) for (let q = 0; q < 3; q++) paint(E(`h${b}_${r}_${q}`), 100 + b * 36 + r * 3 + q, lv, 12, 2, 'qkv'[q]); paint(E('f' + b), 300 + b, lv, 4, 40, 'm'); }
-    ['Query', 'Key', 'Value'].forEach((n, i) => paint(E('q' + n), 400 + i, lv, 48, 6, 'qkv'[i])); paint(E('m1'), 410, lv, 60, 16, 'm'); paint(E('m2'), 411, lv, 16, 32, 'm');
+    for (let b = 0; b < 12; b++) { for (let r = 0; r < 12; r++) for (let q = 0; q < 3; q++) paint(E(`h${b}_${r}_${q}`), 100 + b * 36 + r * 3 + q, lv, 12, 2); paint(E('f' + b), 300 + b, lv, 4, 40); }
+    ['Query', 'Key', 'Value'].forEach((n, i) => paint(E('q' + n), 400 + i, lv, 48, 6)); paint(E('m1'), 410, lv, 60, 16); paint(E('m2'), 411, lv, 16, 32);
   }
   // the table fades in; ½ s later the Q/K/V callout flies out of row 4, column 3; ½ s after it lands, the MLP callout flies out of row 4 of the green column
   const FLY = [1100, 2500];
@@ -88,17 +87,15 @@
       e.style.transform = 'none'; e.style.opacity = 1; });
   }
   const tfLines = (fly) => { const bx = bxOf(HB);
-    return `<g ${later(fly ? 500 : 0)}><rect x="${bx - 2}" y="${ryOf(HR) - 2}" width="32" height="${RH + 1}" fill="none" stroke="${NT.C.head}" stroke-width="2" rx="3"/></g><g ${later(fly ? FLY[0] + 900 : 0)}><path d="M${bx + 14} ${ryOf(HR) + RH - 1} C ${bx + 14} ${COY - 50}, ${GX + 116} ${COY - 40}, ${GX + 116} ${COY - 26}" fill="none" stroke="${NT.C.head}" stroke-width="1.6" stroke-dasharray="4 3"/></g>
-      <g ${later(fly ? FLY[0] + 900 : 0)}><rect x="${bx + 28}" y="${GY - 2}" width="13" height="${12 * RH + 1}" fill="none" stroke="${NT.C.mlp}" stroke-width="2" rx="3"/></g><g ${later(fly ? FLY[1] + 900 : 0)}><path d="M${bx + 35} ${ryOf(HR) + RH / 2} C ${bx + 70} ${ryOf(HR) + 60}, 776 ${COY - 60}, 776 ${COY - 26}" fill="none" stroke="${NT.C.mlp}" stroke-width="1.6" stroke-dasharray="4 3"/></g>`; };
+    return `<g ${later(fly ? 500 : 0)}><rect x="${bx - 2}" y="${ryOf(HR) - 2}" width="32" height="${RH + 1}" fill="none" stroke="#c2185b" stroke-width="2" rx="3"/></g><g ${later(fly ? FLY[0] + 900 : 0)}><path d="M${bx + 14} ${ryOf(HR) + RH - 1} C ${bx + 14} ${COY - 50}, ${GX + 116} ${COY - 40}, ${GX + 116} ${COY - 26}" fill="none" stroke="#c2185b" stroke-width="1.6" stroke-dasharray="4 3"/></g>
+      <g ${later(fly ? FLY[0] + 900 : 0)}><rect x="${bx + 28}" y="${GY - 2}" width="13" height="${12 * RH + 1}" fill="none" stroke="#1e8a3a" stroke-width="2" rx="3"/></g><g ${later(fly ? FLY[1] + 900 : 0)}><path d="M${bx + 35} ${ryOf(HR) + RH / 2} C ${bx + 70} ${ryOf(HR) + 60}, 776 ${COY - 60}, 776 ${COY - 26}" fill="none" stroke="#1e8a3a" stroke-width="1.6" stroke-dasharray="4 3"/></g>`; };
   const BR_L = TFX - 26, BR_R = TFX + TFW + 24; // braces sit a few pixels clear of the transformer's frame
 
   // ---------- the page shell: controls, stage chevrons and ⓘ About in the sub-tab row; a two-line caption; the scene ----------
   function shell(M) {
-    // (Oct 19) the same layout as Transformer and Output: the steps are the sub-tab chevrons; the player sits left of the caption
-    st().innerHTML = `<section class="panel tr-panel pt2-panel"><div class="fl-ctl pt2-ctl"><button class="btn" id="pbRew" title="Start over">⏮</button><button class="btn" id="pbBack">◀ Back</button><button class="btn primary" id="pbNext">Next ▶</button><button class="btn" id="pbPlay">▶ Play</button></div><div class="fl-cap fixed pt2-cap" id="pbCap"></div><div class="fl-box" id="pbBox"></div></section>`;
-    NT.guideRow(st().querySelector('.pt2-panel'), $('#pbCap'));
-    const subs = $('#subtabs'); subs.querySelectorAll('.pt2-ctl,.minichev,.pt2-subs').forEach((e) => e.remove());
-    subs.insertAdjacentHTML('afterbegin', `<div class="subtabs pt2-subs" id="pbSteps"></div>`);
+    st().innerHTML = `<section class="panel tr-panel pt2-panel"><div class="fl-cap fixed pt2-cap" id="pbCap"></div><div class="fl-box" id="pbBox"></div></section>`;
+    const subs = $('#subtabs'); subs.querySelectorAll('.pt2-ctl,.minichev').forEach((e) => e.remove());
+    subs.insertAdjacentHTML('afterbegin', `<div class="fl-ctl pt2-ctl"><button class="btn" id="pbRew" title="Start over">⏮</button><button class="btn" id="pbBack">◀ Back</button><button class="btn primary" id="pbNext">Next ▶</button><button class="btn" id="pbPlay">▶ Play</button></div><div class="tr-steps minichev pt2-chev" id="pbSteps"></div>`);
     $('#pbRew').onclick = () => { M.pause(); M.go(0, true); };
     $('#pbBack').onclick = () => { M.pause(); if (M.beat > 0) M.go(M.beat - 1, false); };
     $('#pbNext').onclick = () => { M.pause(); M.next(); };
@@ -114,10 +111,10 @@
       M.beat = b; const tk = ++M.tk, B = BEATS[b];
       M.alive = () => M.tk === tk && S.station === station && !!E('sc');
       $('#pbCap').innerHTML = `<div class="fl-ch"><b>${B.t}</b></div><div class="fl-cd">${B.d}</div>`;
-      $('#pbSteps').innerHTML = CH.map(([ic, l], i) => `<button class="sub ${i === B.ch ? 'on' : i < B.ch ? 'done' : ''}" data-c="${i}">${l}</button>`).join('');
+      $('#pbSteps').innerHTML = CH.map(([ic, l], i) => `<button class="tr-st ${i === B.ch ? 'on' : i < B.ch ? 'done' : ''}" data-c="${i}">${ic} ${l}</button>`).join('');
       $('#pbSteps').querySelectorAll('[data-c]').forEach((x) => (x.onclick = () => { M.pause(); M.go(BEATS.findIndex((q) => q.ch === +x.dataset.c), true); }));
       $('#pbBack').disabled = b === 0; $('#pbNext').disabled = b === BEATS.length - 1;
-      NT.setStatus(`Step ${b + 1} of ${BEATS.length} · ${CH[B.ch][1]}`); if (b > 0) NT.setWho(false);
+      NT.setStatus(`Step ${b + 1} of ${BEATS.length}: ${CH[B.ch][1]}`); if (b > 0) NT.setWho(false);
       E('pop').classList.remove('on'); E('end').classList.remove('on'); cancelAnimationFrame(gdRaf);
       run(b, animate, M); fit(); setTimeout(fit, 60);
     };
@@ -170,7 +167,7 @@
     h += `<div class="pt2-shelf" id="${P}shelf" style="left:${SHX}px;top:${SHY}px">${SPINES.map(([w, ht, c], i) => (i === BOOK ? `<div class="pt2-gap" style="width:38px"></div>` : `<div class="pt2-spine" style="width:${w}px;height:${ht}px;background:${c}"></div>`)).join('')}<div class="pt2-board"></div></div><div class="pt2-shcap" id="${P}shcap" style="left:${SHX}px;top:${SHY + 268}px">A bookshelf of all the world’s digitized knowledge</div>`;
     h += `<div class="pt2-spine pt2-tale" id="${P}tale" style="left:${taleX0}px;top:${SHY + 22}px;height:228px"><span>A Tale of Two Cities</span></div>`;
     h += `<div class="pt2-book" id="${P}book"><div class="pg l"><div class="bt">A TALE OF TWO CITIES</div><div class="ba">Charles Dickens · 1859</div><div class="bc">Book the First<br>Recalled to Life</div><div class="bc">Chapter I<br>The Period</div></div><div class="pg r"><p><span class="hl">It was the best of times, it was the</span> <b class="wr">worst</b> of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity…</p></div></div>`;
-    { const TM = NT.tokMarks(IDS.map((id) => NT.tokText(id).trim() || NT.tokText(id))); IDS.forEach((id, i) => { h += `<div class="pt2-tok${i === IDS.length - 1 ? ' tr-me' : ''}" id="${P}t${i}" style="border-left-color:${TM.col[i]}">${esc(TM.label[i])}</div>`; }); }
+    IDS.forEach((id, i) => { const t = NT.tokText(id); h += `<div class="pt2-tok" id="${P}t${i}">${esc(t.trim() || t)}</div>`; });
     h += `<div class="pt2-mh" id="${P}evh" style="left:95px;top:8px">Embedding vectors</div><div class="pt2-mh" id="${P}pvh" style="left:236px;top:8px">Position vectors</div>`;
     for (let i = 0; i < 10; i++) h += `<canvas class="fx" data-x="150" id="${P}e${i}" style="left:95px;top:${ROWY(i) + 2}px;width:110px;height:22px"></canvas><div class="pt2-plus" id="${P}pl${i}" style="left:210px;top:${ROWY(i) + 2}px">+</div><canvas class="fx" data-x="260" id="${P}p${i}" style="left:228px;top:${ROWY(i) + 2}px;width:98px;height:22px"></canvas>`;
     // the batch shelf (left) and the stylized vocabulary output (right)

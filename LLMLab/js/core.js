@@ -244,41 +244,6 @@ const NT = (window.NT = {});
   NT.pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
   NT.num = (x, d = 2) => (x < 0 ? '−' : '') + Math.abs(x).toFixed(d);
   NT.int = (x) => x.toLocaleString('en-US');
-  // ---------- one color per concept (Oct 19 consistency pass) — every tab draws from here (CSS mirrors these as --q, --k, …) ----------
-  // UI accent purple is for buttons, tabs, links and the + / = signs only. Vectors of plain numbers keep the red–yellow–green scale (NT.div).
-  NT.C = {
-    accent: '#5b38d1',
-    q: '#1f63d6', k: '#e07a10', v: '#9c2fb5',   // Query / Question · Key / Statement · Value / Evidence (and everything made from Values: notes, head outputs, attention output)
-    head: '#7a5230',                            // a Detective / attention head as a unit (12 per block)
-    mlp: '#0e8a8c',                             // the Forensics Expert / MLP (feed-forward) and its output
-    last: '#c2185b',                            // the last token: the one whose next token is being predicted
-    tokGray: '#9aa3b2',
-    tok: ['#2f4a7a', '#c95f8f', '#6e8a12', '#3d8fb0'], // content words, in order of first appearance (repeats share a color)
-  };
-  // token identity: content words get NT.C.tok colors in order of first appearance (a repeated word keeps its color and gets ¹ ² …),
-  // short function words and punctuation are gray, the last token is crimson. Used by every table of token rows.
-  const FUNC = new Set('the a an of on in at to and or but is was were be been are it its it’s this that these those he she they we you i me my his her their our your as by for from with into than then so if not no do did does had has have will would can could should may might there here what which who whom when where why how all any some up out about just also very s t'.split(' '));
-  const SUP = ['', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
-  NT.tokMarks = (words) => {
-    const n = words.length, key = words.map((w) => String(w).trim().toLowerCase().replace(/[¹²³⁴⁵⁶⁷⁸⁹]/g, '')), colOf = {}, count = {}, seen = {};
-    let next = 0;
-    key.forEach((k, i) => { if (i === n - 1 || !/[a-z0-9]/i.test(k) || FUNC.has(k)) return; count[k] = (count[k] || 0) + 1; if (!(k in colOf)) colOf[k] = next < NT.C.tok.length ? NT.C.tok[next++] : null; });
-    const col = [], label = [];
-    key.forEach((k, i) => {
-      const raw = String(words[i]).trim().replace(/[¹²³⁴⁵⁶⁷⁸⁹]/g, '') || '·';
-      if (i === n - 1) { col.push(NT.C.last); label.push(raw); return; }
-      const c = colOf[k]; col.push(c || NT.C.tokGray);
-      if (c && count[k] > 1) { seen[k] = (seen[k] || 0) + 1; label.push(raw + (SUP[seen[k]] || '')); } else label.push(raw);
-    });
-    return { col, label };
-  };
-  // ---------- "Predict first" (Oct 19): optional stops that ask the class to predict before a key reveal.
-  //            One switch in the top bar, shown only on pages that have such a stop; remembered in this browser. ----------
-  NT.PREDICT_STATIONS = ['tfroom', 'pkscene'];
-  NT.hasPredict = () => NT.PREDICT_STATIONS.includes(NT.state.station) || (NT.state.station === 'embeddings' && NT.state.embView === 'input'); // + Input › Token + position
-  NT.predictOn = () => { try { return localStorage.getItem('llmlab.predict') !== 'off'; } catch (e) { return true; } };
-  NT.setPredict = (on) => { try { localStorage.setItem('llmlab.predict', on ? 'on' : 'off'); } catch (e) {} (NT.predictHooks || []).forEach((f) => f(on)); };
-  NT.onPredict = (f) => { (NT.predictHooks = NT.predictHooks || []).push(f); };
   NT.PALETTE = ['#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#76b7b2', '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#8c8c8c'];
   NT.tokColor = (i, n) => (n <= 10 ? NT.PALETTE[i % 10] : null);
   NT.tokStyle = (i, n) => { const c = NT.tokColor(i, n); return c ? `border-color:${c};background:${c}22` : ''; };
