@@ -1734,3 +1734,6 @@ body.nums-on .as-clip .as-bt { max-height: none; -webkit-mask-image: none; mask-
 .tr-scene .tr-lane.full { border: 0; background: transparent; }
 .tr-scene .tr-lane .tr-lc { flex: none; width: 24px; height: 20px; }
 .tr-scene .tr-h.num .tr-topic { width: 24px; border-top-width: 0; background: transparent; }
+
+/* Column subtitles use explicit lines and smaller type. */
+.tr-scene .tr-h small, .rw-scene .rw-h small { font-size: 0.8em; line-height: 1.15; display: block; }
