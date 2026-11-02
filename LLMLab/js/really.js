@@ -106,7 +106,7 @@
     const j = st.q; let h = dv('band', 'rw-band', '', 268, ROW - 4);
     // headers
     h += hd('hin', 'Input Vector <small>1 × 768 · (Case File)</small>', 288);
-    h += hd('hq', '<b class="rw-cq">Query</b> <small>1 × 64 (Question)</small>', 70) + hd('hk', '<b class="rw-ck">Key</b> <small>1 × 64 (Statement)</small>', 70) + hd('hv', '<b class="rw-cv">Value</b> <small>1 × 64 (Evidence)</small>', 70);
+    h += hd('hq', '<b class="rw-cq">Query</b> <small>1 × 64</small><small>(Question)</small>', 70) + hd('hk', '<b class="rw-ck">Key</b> <small>1 × 64</small><small>(Statement)</small>', 70) + hd('hv', '<b class="rw-cv">Value</b> <small>1 × 64</small><small>(Evidence)</small>', 70);
     h += matBox('wq', 'q', 'W<sub>Q</sub> <small>768 × 64</small>', L64, L768) + matBox('wk', 'k', 'W<sub>K</sub> <small>768 × 64</small>', L64, L768) + matBox('wv', 'v', 'W<sub>V</sub> <small>768 × 64</small>', L64, L768);
     h += one('x1', '×') + one('e1', '=');
     for (let i = 0; i < T; i++) h += tok(i) + cv('in' + i, L768) + cv('q' + i, L64) + cv('k' + i, L64) + cv('v' + i, L64);

@@ -170,12 +170,12 @@
     const r = tr.room, laneW = 30;
     let h = `<div class="fl-scene tr-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="fl-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>`;
     const head = (k, t, w = 140) => (h += `<div class="fl-h tr-h" id="${P}h-${k}" style="width:${w}px">${t}</div>`);
-    head('tok', 'Token', 80); head('id', 'Token ID', 60); head('emb', 'Embedding vector'); head('pos', 'Position vector'); head('card', r === 1 ? 'Input vector' : `🪪 Case Files <small>from Room ${r - 1}</small>`, 150);
+    head('tok', 'Token', 80); head('id', 'Token ID', 60); head('emb', 'Embedding <small>Embedding Vector: 768 Numbers</small>', 288); head('pos', 'Position <small>Position Vector: 768 Numbers</small>', 288); head('card', r === 1 ? 'Input vector' : `🪪 Case Files <small>from Room ${r - 1}</small>`, 150);
     const tp = topics(r); for (let k = 0; k < 12; k++) head('l' + k, `<span class="tr-topic" style="--ic:${ICOL[k]}">🎤${k + 1}<i>${esc(tp[k])}</i></span>`, 74);
     head('lanes', 'Detective notes', 300); head('lanes2', 'Detective', 200);
-    head('q', '<span class="tr-qh">❓ Question <small>Q · 64</small></span>', 175); head('k', '<span class="tr-kh">🏷️ Statement <small>K · 64</small></span>', 175); head('s', 'Relevance', 60); head('v', '📨 Evidence <small>(value)</small>', 130); head('n', '<span class="tr-vh">📝 Note <small>64 numbers</small></span>', 110); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
-    head('sum', '✍️ Lead’s summary', 118); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 150);
-    head('f', '📚 Learned patterns', 118); head('fx', 'Pattern examples <span class="tr-an">our analogy</span>', 220); head('fin', '🪪 Final Case File <small>768 numbers</small>', 118); head('fnx', 'Final file examples <span class="tr-an">our analogy</span>', 150);
+    head('q', '<span class="tr-qh">❓ Question <small>Q: 64 Numbers</small></span>', 175); head('k', '<span class="tr-kh">🏷️ Statement <small>K: 64 Numbers</small></span>', 175); head('s', 'Relevance', 60); head('v', '📨 Evidence <small>V: 64 Numbers</small>', 130); head('n', '<span class="tr-vh">📝 Note <small>Head Output: 64 Numbers</small></span>', 155); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
+    head('sum', '✍️ Lead’s summary <small>Hidden State: 768 Numbers</small>', 288); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 150);
+    head('f', '📚 Learned patterns <small>MLP Output: 768 Numbers</small>', 190); head('fx', 'Pattern examples <span class="tr-an">our analogy</span>', 220); head('fin', '🪪 Final Case File <small>Hidden State: 768 Numbers</small>', 288); head('fnx', 'Final file examples <span class="tr-an">our analogy</span>', 150);
     for (let i = 0; i < T; i++) {
       h += `<div class="tr-c tr-tok" id="${P}t${i}" data-i="${i}" style="--c:${COL[i]};width:84px;height:${ROW - 6}px">${esc(W[i])}</div>`;
       h += cell('id' + i, 'tr-id', NT.current().ids[i], 56);
@@ -207,7 +207,7 @@
     const values = Array.from({ length: T }, (_, j) => illustrativeValue(r, j));
     const valueScale = VZ.sharedScale(values);
     const weighted = tr.beat >= B.v;
-    E('h-v').innerHTML = '<span class="tr-vh">' + (weighted ? 'Weighted evidence' : 'Evidence · V') + '<small>64 numbers</small></span>';
+    E('h-v').innerHTML = '<span class="tr-vh">' + (weighted ? 'Weighted evidence' : 'Evidence') + '<small>' + (weighted ? 'Weighted V' : 'V') + ': 64 Numbers</small></span>';
     for (let j = 0; j < T; j++) {
       const s = E('s' + j); s.textContent = j <= q ? Math.round(w[j] * 100) + '%' : '0%'; s.style.color = VZ.shareCol(w[j]);
       const v = E('v' + j);
@@ -258,7 +258,7 @@
     set('h-sum', { x: sumX, y: hy, o: cols.sum ? 1 : 0 }); set('h-sx', { x: X.sx, y: hy, o: cols.sx ? 1 : 0 });
     [['f', X.f], ['fx', X.fx], ['fnx', X.fnx]].forEach(([k, x]) => set('h-' + k, { x, y: hy, o: cols[k] ? 1 : 0 }));
     set('h-fin', { x: finX, y: hy, o: cols.fin ? 1 : 0 });
-    const hdr = E('h-card'); if (hdr) hdr.innerHTML = bt === B.start ? 'Input vector · 768' : tr.room > 1 ? `🪪 Case Files · 768 <small>from Room ${tr.room - 1}</small>` : '🪪 Case File · 768';
+    const hdr = E('h-card'); if (hdr) { hdr.style.width = '288px'; hdr.innerHTML = '🪪 Case File<small>' + (tr.room === 1 ? 'Input Vector' : 'Hidden State') + ': 768 Numbers</small>'; }
     for (let i = 0; i < T; i++) {
       const y = rowY(i);
       set('t' + i, { x: X.tok, y });
