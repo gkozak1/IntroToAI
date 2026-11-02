@@ -101,7 +101,7 @@
       if (total > W - 60) { const k = (W - 60) / total; fs = Math.max(11, Math.floor(fs * k)); cv.font = `${fs}px Georgia`; widths = meas(); }
       let x = 30; G.sx = widths.map((w) => { const a = x; x += w + 8; return a; }); G.sw = widths; G.fs = fs;
       G.text = Dt.cur.tokens.join('').replace(/\n/g, ' '); G.textW = cv.measureText(G.text).width; G.colScale = Math.min(1, 17 / fs) * (ROW < 24 ? 0.8 : 1);
-      const stripH = Math.max(6, ROW - 10);
+      const stripH = VZ.vectorSize(768, STRIPW).height;
       let h = `<div class="fl-scene" id="flScene" style="width:${W}px;height:${H}px">`;
       h += `<svg class="fl-svg" id="flSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"></svg>`;
       const heads = [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding vector'], ['pos', X.pos, 'Position vector'], ['inp', X.inp, 'Input vector'], ['bin', XB.in, `Into block ${DB}`], ['notes', XB.notes, '+ Notes'], ['facts', XB.facts, '+ Patterns'], ['bout', XB.out, `= After block ${DB}`]];
@@ -136,8 +136,8 @@
       // one color scale for every embedding row, position row and input vector, so the colors visibly add up
       { const all = [...Dt.tok.map(p98), ...Dt.pos.map(p98)].sort((x, y) => x - y); Dt.scaleIn = all[Math.floor(all.length / 2)]; } // the median row size: big values saturate, small ones stay visible
       for (let i = 0; i < T; i++) {
-        NT.drawStrip(E('fe' + i), Dt.tok[i], Dt.scaleIn); NT.drawStrip(E('fp' + i), Dt.pos[i], Dt.scaleIn);
-        NT.drawStrip(E('fn' + i), Float32Array.from(Dt.tok[i], (v, k) => v + Dt.pos[i][k]), Dt.scaleIn);
+        VZ.vec(E('fe' + i), Dt.tok[i], Dt.scaleIn); VZ.vec(E('fp' + i), Dt.pos[i], Dt.scaleIn);
+        VZ.vec(E('fn' + i), Float32Array.from(Dt.tok[i], (v, k) => v + Dt.pos[i][k]), Dt.scaleIn);
       }
       mat('fmEc', 50257, F.data.cur.ids.map((id, i) => [id / 50257, Dt.tok[i]]));
       mat('fmPc', 1024, F.data.cur.ids.map((_, i) => [(i + 0.5) / NPOS(), null]), NPOS());
@@ -155,7 +155,7 @@
         const va = Dt.fv ? Dt.fv('a', b - 1, i) : null, vm = Dt.fv ? Dt.fv('m', b - 1, i) : null;
         // one color scale for all four vectors in a row, so after = into + notes + facts is honest; colors are stretched (square root) so small numbers still show
         const m = Math.max(vin ? p98(vin) : 0, vout ? p98(vout) : 0) || 1; F.rowM = F.rowM || []; F.rowM[i] = m;
-        [['fn', vin], ['fa', va], ['fm', vm], ['fo', vout]].forEach(([c, v]) => { const el = E(c + i); if (v) drawG(el, v, m); else grayStrip(el); });
+        [['fn', vin], ['fa', va], ['fm', vm], ['fo', vout]].forEach(([c, v]) => { const el = E(c + i); if (v) { if (c === 'fa') VZ.role(el, v, 'v', m); else if (c === 'fm') VZ.role(el, v, 'a', m); else drawG(el, v, m); } else grayStrip(el); });
       }
       const fh = E('fh-bout'); if (fh) fh.textContent = `= After block ${b}`; const bi = E('fh-bin'); if (bi) bi.textContent = `Into block ${b}`;
       const bt = E('fBlockT'); if (bt) bt.textContent = `Block ${b}`;
@@ -289,7 +289,7 @@
     function table(showHit) {
       const t = E('fTable'), pr = probs(); if (!t) return;
       if (!pr) { t.innerHTML = '<div class="panel emptynote">GPT-2’s scores for this sentence need GPT-2 loaded.</div>'; braceFit(); return; }
-      t.innerHTML = `<div class="fl-tt">The output vector from the final block…</div><canvas class="fl-strip fl-tvec" id="${P}fTv"></canvas><div class="fl-tt">Next-token ranking · Temperature ${TT() <= 1 ? TT().toFixed(1) : TT()} · Top-K ${NT.kLabel(KK())}${F.autoK && KK() === 10 ? ' <span class="muted">(set to 10 so the wheel is readable; change it at the top)</span>' : ''}</div>${VZ.rankTable(pr, KK(), { hit: showHit ? F.hit : -1 })}`;
+      t.innerHTML = `<div class="fl-tt">The output vector from the final block…</div><canvas class="fl-strip fl-tvec" id="${P}fTv" style="width:${STRIPW}px;height:${VZ.vectorSize(768, STRIPW).height}px"></canvas><div class="fl-tt">Next-token ranking · Temperature ${TT() <= 1 ? TT().toFixed(1) : TT()} · Top-K ${NT.kLabel(KK())}${F.autoK && KK() === 10 ? ' <span class="muted">(set to 10 so the wheel is readable; change it at the top)</span>' : ''}</div>${VZ.rankTable(pr, KK(), { hit: showHit ? F.hit : -1 })}`;
       { const v = outVec(), c = E('fTv'); if (c) { if (v) drawG(c, v, p98(v)); else grayStrip(c); } }
       braceFit();
     }

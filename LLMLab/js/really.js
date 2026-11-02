@@ -46,12 +46,7 @@
     const [r, g, b] = hu < 60 ? [C, X, 0] : hu < 180 ? [0, C, X] : hu < 240 ? [0, X, C] : [X, 0, C];
     return [(r + M) * 255, (g + M) * 255, (b + M) * 255, 255];
   }
-  function role(cv, vals, kind, m) {
-    if (!cv) return; const n = vals.length; m = m || p98(vals); cv.width = n; cv.height = 1;
-    const c = cv.getContext('2d'), img = c.createImageData(n, 1), [hu, sa] = HUE[kind];
-    for (let i = 0; i < n; i++) img.data.set(px(hu, sa, vals[i] / m), i * 4);
-    c.putImageData(img, 0, 0);
-  }
+  const role = NT.viz.role;
   function matImg(cv, M, kind) { // a real weight matrix, sampled (every few rows/columns), as a grid of colored cells
     if (!cv || !M) return; const q = i8(M); cv.width = M.c; cv.height = M.r;
     const c = cv.getContext('2d'), img = c.createImageData(M.c, M.r), [hu, sa] = HUE[kind];
@@ -138,7 +133,7 @@
     h += hd('hln', 'Head outputs <small>heads 1–12, 1 × 64 each (the Notes of Detectives 1–12)</small>', 560);
     for (let k = 0; k < 11; k++) h += sym('cc' + k, '‖', 22);
     for (let k = 0; k < 12; k++) for (let i = 0; i < T; i++) h += cv(`hs${k}_${i}`, L64);
-    h += hd('hcat', 'Concatenated Value Vectors <small>12 heads × 64 = 1 × 768 (all 12 Notes)</small>', 300);
+    h += hd('hcat', 'Concatenated head outputs <small>12 heads × 64 = 1 × 768 (all 12 Notes)</small>', 300);
     // screen 11: W_O, then the first addition
     h += matBox('wo', 'v', 'W<sub>O</sub> <small>768 × 768 · output projection (Lead Detective)</small>', L768, L768) + one('x2', '×') + one('e2', '=');
     h += hd('hao', '<b class="rw-cv">Attention output</b> <small>1 × 768 (Lead Detective’s result)</small>', 288) + hd('hin2', 'Input Vector <small>1 × 768 (Case File)</small>', 288) + hd('hup', 'Updated vector <small>1 × 768 (updated Case File)</small>', 288);

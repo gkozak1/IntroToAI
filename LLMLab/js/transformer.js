@@ -87,15 +87,15 @@
     [1, 'fadein', 'Each token brings its Case File (Input Vector) to 12 Detectives.', 'The Case File is really the token\'s Embedding Vector + Position Vector = its 768-number Input Vector.'],
     [2, 'room', 'Each Investigation Room (Transformer Block) updates every token’s Case File.', '12 heads work in parallel on the same incoming Case Files. Each later block needs the previous block’s output.'],
     [2, 'focus', 'To make things simpler, we’ll only focus on one detective.', 'While all 12 work in parallel, we\'re just going to see what Detective 1 is up to, whose line of inquiry is: “{topic}”'],
-    [3, 'q', 'Detective 1 forms a Question (Query) to gain more understanding of each token’s Case File.', '“{topic}” is an analogy. One learned Q matrix × different Case Files gives different Queries.'],
-    [3, 'k', 'Each witness provides a Statement (Key) for comparison with the Question.', 'A Key contains what information a witness can offer; it is not an answer to the Query.'],
-    [3, 's', 'Question–Statement matches determine Relevance (Attention Weights).', '“{q}” can use itself and earlier tokens only. The detective measures Relevance (totaling 100%) not truth.'],
-    [3, 'v', 'Evidence Packets (Values) are combined in proportion to Relevance.', 'Multiply each Value by its attention percentage, then add: this weighted blend is the 64-number Note. Keys and Values use different learned matrices.'],
+    [3, 'q', 'Detective 1 forms a Question (Query) to gain more understanding of each token’s Case File.', 'Q, K and V are separate learned transformations of each Case File. “{topic}” is our analogy.'],
+    [3, 'k', 'Each witness provides a Statement (Key) for comparison with the Question.', 'Statements and Evidence are prepared independently of the Question. Each represents 64 numbers.'],
+    [3, 's', 'Question–Statement matches determine Relevance (Attention Weights).', '“{q}” uses itself and earlier tokens. Future Evidence cannot contribute: 0%. Relevance is not truth.'],
+    [3, 'v', 'Evidence Packets (Values) are combined in proportion to Relevance.', 'Evidence is already prepared. Multiply each Value by its percentage, then add the weighted vectors: one 64-number Note.'],
     [3, 'n', 'The detective writes a short note about each token (a 64-element vector: 768 ÷ 12).', 'Detective 1 makes a separate 64-number note for every token, using its permitted witnesses.'],
     [3, 'nx', 'What the notes say.', 'The notes are really a vector of 64 numbers; these words are our analogy of what they hold.'],
     [4, 'sup1', 'All 12 detectives’ notes are assembled together.', 'Join 12 × 64 numbers end to end: 768 numbers. Joining is not adding.'],
     [4, 'sup2', 'All 12 detectives’ notes are assembled together.', 'Join 12 × 64 numbers end to end: 768 numbers. Joining is not adding.'],
-    [4, 'sup3', 'The Lead Detective summarizes the notes and adds the result to each Case File.', 'A learned matrix mixes the 12 notes and, using vector addition, updates the 768-number Case File.'],
+    [4, 'sup3', 'The Lead Detective summarizes the notes and adds the result to each Case File.', 'Join 12 Notes → transform the 768 numbers with W_O → add to the existing Case File.'],
     [4, 'sup4', 'The Lead Detective’s summary is added to the existing Case File.', 'Each 768-number summarized note is added to its Case File. It is still 768 numbers long.'],
     [5, 'f1', 'The Forensics Expert (MLP) uses additional expertise to refine each Case File.', 'It expands each Case File to 3,072 numbers, transforms them with learned patterns, and condenses the result back to 768.'],
     [5, 'f2', 'The Final Case File.', 'Add the MLP output back: a second residual update. Each Case File stays 768 numbers.'],
@@ -119,7 +119,7 @@
   const SW = 1290, TOP = 74, ROW = 34, VW = 120;
   const H = TOP + T * ROW + 70;
   const rowY = (i) => TOP + i * ROW;
-  const X = { tok: 18, card: 108, id: 112, emb: 175, p1: 302, pos: 318, e1: 444, inp: 460, lane: (k, w) => 268 + k * w, q: 252, k: 432, s: 690, v: 768, n: 900, nx: 1012, sp: 248, se: 920, sum: 940, sx: 1070, fp: 248, f: 266, fx: 396, fe: 622, fin: 640, fnx: 792, panel: 1060, box: 330 };
+  const X = { tok: 18, card: 108, id: 112, emb: 175, p1: 475, pos: 495, e1: 800, inp: 825, lane: (k, w) => 420 + k * w, q: 410, k: 590, s: 800, v: 880, n: 970, nx: 1020, sp: 405, se: 800, sum: 825, sx: 1125, fp: 405, f: 435, fx: 565, fe: 800, fin: 825, fnx: 1125, panel: 1060, box: 430 };
 
   const P = 'tr_', E = (id) => document.getElementById(P + id);
 
@@ -141,8 +141,9 @@
   const emb = (i) => { const ex = NT.current().ex; return ex && ex.tok ? ex.tok.slice(i * 768, i * 768 + 768) : zero(); };
   const shares = (q) => { const REL = TH()[3]; const w = REL.map((r, j) => (j <= q ? Math.pow(j === q ? Math.min(r, 0.15) : r, 1.6) : 0)); const s = w.reduce((a, b) => a + b, 0) || 1; return w.map((x) => x / s); };
   // the interview pictures: each witness's part of its card (64 numbers), and the notes made from them in proportion
-  const part = (b, j, k = 0) => card(b - 1, j).slice(k * 64, k * 64 + 64);
-  const note = (b, i, k = 0) => { const w = shares(i), o = new Float32Array(64); for (let j = 0; j <= i; j++) { const p = part(b, j, k); for (let e = 0; e < 64; e++) o[e] += w[j] * p[e]; } return o; };
+  const illustrativeValue = (b, j, k = 0) => card(b - 1, j).slice(k * 64, k * 64 + 64);
+  const note = (b, i, k = 0) => { const w = shares(i), o = new Float32Array(64); for (let j = 0; j <= i; j++) { const p = illustrativeValue(b, j, k); for (let e = 0; e < 64; e++) o[e] += w[j] * p[e]; } return o; };
+  const role = VZ.role;
   const riverRank = (b) => { const L = tr.ctx && tr.ctx.lens && tr.ctx.lens[b]; if (!L) return null; const k = L.findIndex(([id]) => id === RIVER); return k < 0 ? null : k + 1; };
 
   // ---------- building the scene for one room ----------
@@ -160,28 +161,32 @@
     return later(r, i) || fromTop;
   }
   const cell = (id, cls, html, w, style = '') => `<div class="tr-c ${cls}" id="${P}${id}" style="width:${w}px;height:${ROW - 6}px;${style}">${html}</div>`;
-  const cv = (id, w = VW, cls = '') => `<canvas class="fl-strip tr-cv ${cls}" id="${P}${id}" style="width:${w}px;height:${ROW - 14}px"></canvas>`;
+  const cv = (id, w = VW, cls = '') => {
+    const head = /^(?:v\d|n\d|lc\d|vsumc)/.test(id);
+    const size = VZ.vectorSize(head ? 64 : 768, /^(?:card|sum|fin|emb|pos)/.test(id) ? 288 : w);
+    return `<canvas class="fl-strip tr-cv ${cls}" id="${P}${id}" style="width:${size.width}px;height:${size.height}px"></canvas>`;
+  };
   function build() {
-    const r = tr.room, laneW = 50;
+    const r = tr.room, laneW = 30;
     let h = `<div class="fl-scene tr-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="fl-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>`;
     const head = (k, t, w = 140) => (h += `<div class="fl-h tr-h" id="${P}h-${k}" style="width:${w}px">${t}</div>`);
     head('tok', 'Token', 80); head('id', 'Token ID', 60); head('emb', 'Embedding vector'); head('pos', 'Position vector'); head('card', r === 1 ? 'Input vector' : `🪪 Case Files <small>from Room ${r - 1}</small>`, 150);
     const tp = topics(r); for (let k = 0; k < 12; k++) head('l' + k, `<span class="tr-topic" style="--ic:${ICOL[k]}">🎤${k + 1}<i>${esc(tp[k])}</i></span>`, 74);
     head('lanes', 'Detective notes', 300); head('lanes2', 'Detective', 200);
-    head('q', '<span class="tr-qh">❓ Question <small>(query)</small></span>', 175); head('k', '🏷️ Statement <small>(key)</small>', 175); head('s', 'Relevance', 60); head('v', '📨 Evidence <small>(value)</small>', 130); head('n', '📝 Detective’s note', 110); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
-    head('sum', '✍️ Lead’s summary', 118); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 210);
-    head('f', '📚 Learned patterns', 118); head('fx', 'Pattern examples <span class="tr-an">our analogy</span>', 220); head('fin', '🪪 Final Case File', 118); head('fnx', 'Final file examples <span class="tr-an">our analogy</span>', 270);
+    head('q', '<span class="tr-qh">❓ Question <small>Q · 64</small></span>', 175); head('k', '<span class="tr-kh">🏷️ Statement <small>K · 64</small></span>', 175); head('s', 'Relevance', 60); head('v', '📨 Evidence <small>(value)</small>', 130); head('n', '<span class="tr-vh">📝 Note <small>64 numbers</small></span>', 110); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
+    head('sum', '✍️ Lead’s summary', 118); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 150);
+    head('f', '📚 Learned patterns', 118); head('fx', 'Pattern examples <span class="tr-an">our analogy</span>', 220); head('fin', '🪪 Final Case File <small>768 numbers</small>', 118); head('fnx', 'Final file examples <span class="tr-an">our analogy</span>', 150);
     for (let i = 0; i < T; i++) {
       h += `<div class="tr-c tr-tok" id="${P}t${i}" data-i="${i}" style="--c:${COL[i]};width:84px;height:${ROW - 6}px">${esc(W[i])}</div>`;
       h += cell('id' + i, 'tr-id', NT.current().ids[i], 56);
       h += cv('emb' + i) + `<div class="fl-op" id="${P}p1${i}">+</div>` + cv('pos' + i) + `<div class="fl-op" id="${P}e1${i}">=</div>` + cv('card' + i, 140);
-      for (let k = 0; k < 12; k++) h += `<div class="tr-lane empty" id="${P}lb${k}_${i}" style="--ic:${ICOL[k]};width:${laneW - 4}px;height:${ROW - 14}px"></div>`;
-      for (let k = 0; k < 12; k++) h += `<div class="tr-lane" id="${P}l${k}_${i}" style="--ic:${ICOL[k]};width:${laneW - 4}px;height:${ROW - 14}px">${cv('lc' + k + '_' + i, laneW - 6, 'tr-lc')}</div>`;
-      h += cell('q' + i, 'tr-tx tr-qcol', esc(txt('q', i) || ''), 175) + cell('k' + i, 'tr-tx tr-tag', esc(txt('k', i) || ''), 175) + cell('s' + i, 'tr-pc', '', 50) + cv('v' + i, 120) + cv('n' + i, 100) + cell('nx' + i, 'tr-tx', esc(txt('nx', i) || ''), 240);
-      h += `<div class="fl-op" id="${P}sp${i}">+</div><div class="fl-op" id="${P}se${i}">=</div>` + cv('sum' + i, 120) + cell('sx' + i, 'tr-tx', esc(txt('sx', i) || ''), 210);
-      h += `<div class="fl-op" id="${P}fp${i}">+</div><div class="fl-op" id="${P}fe${i}">=</div>` + cv('f' + i, 120) + cell('fx' + i, 'tr-tx tr-fact', esc(txt('fx', i) || ''), 220) + cv('fin' + i, 140) + cell('fnx' + i, 'tr-tx', esc(txt('fnx', i) || ''), 258);
+      for (let k = 0; k < 12; k++) h += `<div class="tr-lane empty" id="${P}lb${k}_${i}" style="--ic:${ICOL[k]};width:24px;height:20px"></div>`;
+      for (let k = 0; k < 12; k++) h += `<div class="tr-lane" id="${P}l${k}_${i}" style="--ic:${ICOL[k]};width:24px;height:20px">${cv('lc' + k + '_' + i, laneW - 6, 'tr-lc')}</div>`;
+      h += cell('q' + i, 'tr-tx tr-qcol', esc(txt('q', i) || ''), 175) + cell('k' + i, 'tr-tx tr-tag', esc(txt('k', i) || ''), 175) + cell('s' + i, 'tr-pc', '', 50) + cv('v' + i, 100) + cv('n' + i, 100) + cell('nx' + i, 'tr-tx', esc(txt('nx', i) || ''), 240);
+      h += `<div class="fl-op" id="${P}sp${i}">+</div><div class="fl-op" id="${P}se${i}">=</div>` + cv('sum' + i, 120) + cell('sx' + i, 'tr-tx', esc(txt('sx', i) || ''), 150);
+      h += `<div class="fl-op" id="${P}fp${i}">+</div><div class="fl-op" id="${P}fe${i}">=</div>` + cv('f' + i, 120) + cell('fx' + i, 'tr-tx tr-fact', esc(txt('fx', i) || ''), 220) + cv('fin' + i, 140) + cell('fnx' + i, 'tr-tx', esc(txt('fnx', i) || ''), 150);
     }
-    h += `<div class="tr-c tr-total" id="${P}tot" style="width:60px">100%</div><div class="tr-c tr-sumrow" id="${P}vsum" style="width:240px">= the note for <b id="${P}vsumw"></b> ${cv('vsumc', 100)}</div>`;
+    h += `<div class="tr-c tr-total" id="${P}tot" style="width:60px">100%</div><div class="tr-c tr-sumrow" id="${P}vsum" style="width:240px">Σ weighted V for <b id="${P}vsumw"></b> ${cv('vsumc', 100)}</div>`;
     h += `<div class="tr-panel2" id="${P}panel"><div class="rk-tt">📚 Learned Patterns <small class="muted">learned in training</small></div>${FACTS.map((f) => `<div class="tr-fl">• ${esc(f)}</div>`).join('')}</div>`;
     h += `<div class="tr-box" id="${P}box"></div>`;
     return h + '</div>';
@@ -191,21 +196,28 @@
     for (let i = 0; i < T; i++) {
       const c0 = card(r - 1, i), s1 = add(c0, att(r, i));
       VZ.vec(E('emb' + i), emb(i)); VZ.vec(E('pos' + i), NT.posRow(i)); VZ.vec(E('card' + i), c0);
-      for (let k = 0; k < 12; k++) VZ.vec(E('lc' + k + '_' + i), note(r, i, k));
-      VZ.vec(E('n' + i), note(r, i, 0)); VZ.vec(E('sum' + i), s1); VZ.vec(E('f' + i), mlp(r, i)); VZ.vec(E('fin' + i), card(r, i));
+      for (let k = 0; k < 12; k++) role(E('lc' + k + '_' + i), note(r, i, k), 'v');
+      role(E('n' + i), note(r, i, 0), 'v'); VZ.vec(E('sum' + i), s1); role(E('f' + i), mlp(r, i), 'a'); VZ.vec(E('fin' + i), card(r, i));
     }
     interview();
   }
   // significance, contribution and the note sum for the interviewee q
   function interview() {
     const q = tr.q, w = shares(q), r = tr.room;
+    const values = Array.from({ length: T }, (_, j) => illustrativeValue(r, j));
+    const valueScale = VZ.sharedScale(values);
+    const weighted = tr.beat >= B.v;
+    E('h-v').innerHTML = '<span class="tr-vh">' + (weighted ? 'Weighted evidence' : 'Evidence · V') + '<small>64 numbers</small></span>';
     for (let j = 0; j < T; j++) {
-      const s = E('s' + j); s.textContent = j <= q ? Math.round(w[j] * 100) + '%' : ''; s.style.color = VZ.shareCol(w[j]);
-      const v = E('v' + j); VZ.vec(v, part(r, j)); v.style.opacity = tr.beat < B.v || BEATS[tr.beat][0] !== 3 ? 0 : j <= q ? (0.12 + Math.min(0.88, w[j] * 3.2)).toFixed(2) : 0.08;
+      const s = E('s' + j); s.textContent = j <= q ? Math.round(w[j] * 100) + '%' : '0%'; s.style.color = VZ.shareCol(w[j]);
+      const v = E('v' + j);
+      role(v, weighted ? Float32Array.from(values[j], x => x * w[j]) : values[j], 'v', valueScale);
+      v.classList.toggle('tr-masked-value', tr.beat >= B.s && j > q);
+      v.title = j > q && tr.beat >= B.s ? 'Masked: future position contributes 0%' : (weighted ? 'Value × attention percentage' : 'Prepared Value: 64 illustrative numbers');
       [E('t' + j), E('k' + j), E('q' + j)].forEach((el) => el && el.classList.toggle('tr-later', j > q));
       E('t' + j).classList.toggle('tr-me', j === q);
     }
-    VZ.vec(E('vsumc'), note(r, q, 0)); E('vsumw').textContent = `“${W[q]}”`;
+    role(E('vsumc'), note(r, q, 0), 'v', valueScale); E('vsumw').textContent = `“${W[q]}”`;
     arcs();
   }
   function arcs() {
@@ -216,7 +228,7 @@
       for (let j = 0; j < q; j++) { const y = rowY(j) + ROW / 2 - 3, bl = 8 + (q - j) * 5; g += `<path d="M${x} ${y0} C ${x + bl} ${y0}, ${x + bl} ${y}, ${x} ${y}" fill="none" stroke="${VZ.shareCol(w[j])}" stroke-width="${(0.5 + w[j] * 7).toFixed(1)}" stroke-linecap="round" opacity=".9"/>`; }
       if (q > 0) g += `<circle cx="${x}" cy="${y0}" r="3" fill="#c2185b"/>`;
     }
-    if (b === 6) { const y = rowY(LAST) + ROW / 2 - 3; g += `<rect x="${X.card - 4}" y="${rowY(LAST) - 4}" width="148" height="${ROW - 6}" rx="4" fill="none" stroke="#5b38d1" stroke-width="2.5"/><path d="M${X.card + 150} ${y} C ${X.box - 60} ${y}, ${X.box - 70} ${TOP + 60}, ${X.box - 6} ${TOP + 40}" fill="none" stroke="#5b38d1" stroke-width="2" marker-end="url(#${P}ar)"/>`; }
+    if (b === 6) { const y = rowY(LAST) + ROW / 2 - 3; g += `<rect x="${X.card - 4}" y="${rowY(LAST) - 4}" width="296" height="${ROW - 6}" rx="4" fill="none" stroke="#5b38d1" stroke-width="2.5"/><path d="M${X.card + 298} ${y} C ${X.box - 60} ${y}, ${X.box - 70} ${TOP + 60}, ${X.box - 6} ${TOP + 40}" fill="none" stroke="#5b38d1" stroke-width="2" marker-end="url(#${P}ar)"/>`; }
     svg.innerHTML = `<defs><marker id="${P}ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#5b38d1"/></marker></defs>` + g;
   }
 
@@ -225,12 +237,12 @@
     const L = {}, set = (id, o) => (L[id] = Object.assign({ x: 0, y: 0, o: 1 }, o)), hide = (id, x, y) => set(id, { x, y, o: 0 });
     const step = BEATS[bt][0], hy = TOP - 30;
     const cols = { id: 0, emb: 0, pos: 0, p1: 0, e1: 0, card: 0, lanes: 0, q: 0, k: 0, s: 0, v: 0, n: 0, nx: 0, sp: 0, lanefill: 0, se: 0, sum: 0, sx: 0, fp: 0, f: 0, fx: 0, fe: 0, fin: 0, fnx: 0 };
-    let cardX = X.card, laneW = 78, sumX = X.sum, finX = X.fin, cardO = 1;
+    let cardX = X.card, laneW = 68, sumX = X.sum, finX = X.fin, cardO = 1;
     if (bt === B.start) Object.assign(cols, { id: 1, emb: 1, p1: 1, pos: 1, e1: 1, card: 1 }), (cardX = X.inp);
     if (bt === B.fadein) cols.card = 1;
     if (step === 2) Object.assign(cols, { card: 1, lanes: 1 });
-    if (step === 3) { cols.card = 1; cols.q = 1; if (bt >= B.k) cols.k = 1; if (bt >= B.s) cols.s = 1; if (bt >= B.v) cols.v = 1; if (bt >= B.n) cols.n = 1; if (bt >= B.nx) cols.nx = 1; }
-    if (step === 4) { laneW = 54; Object.assign(cols, { card: 1, sp: 1, lanes: 1, lanefill: bt === B.sup1 ? 1 : 12 }); if (bt >= B.sup3) Object.assign(cols, { se: 1, sum: 1, sx: 1 }); if (bt === B.sup4) { Object.assign(cols, { sp: 0, lanes: 0, se: 0, sx: 0 }); sumX = X.card; cardO = 0; } }
+    if (step === 3) { cols.card = 1; cols.q = 1; if (bt >= B.k) cols.k = 1; if (bt >= B.s) cols.s = 1; if (bt >= B.k) cols.v = 1; if (bt >= B.n) cols.n = 1; if (bt >= B.nx) cols.nx = 1; }
+    if (step === 4) { laneW = 30; Object.assign(cols, { card: 1, sp: 1, lanes: 1, lanefill: bt === B.sup1 ? 1 : 12 }); if (bt >= B.sup3) Object.assign(cols, { se: 1, sum: 1, sx: 1 }); if (bt === B.sup4) { Object.assign(cols, { sp: 0, lanes: 0, se: 0, sx: 0 }); sumX = X.card; cardO = 0; } }
     if (step === 5) { Object.assign(cols, { sum: 1, fp: 1, f: 1, fx: 1 }); sumX = X.card; cardO = 0; cols.card = 1; if (bt >= B.f2) Object.assign(cols, { fe: 1, fin: 1, fnx: 1 }); if (bt === B.f3) { Object.assign(cols, { fp: 0, f: 0, fx: 0, fe: 0, fnx: 0, sum: 0 }); finX = X.card; } }
     if (step === 6) { Object.assign(cols, { fin: 1 }); finX = X.card; cardO = 0; cols.card = 1; }
     // headers
@@ -246,7 +258,7 @@
     set('h-sum', { x: sumX, y: hy, o: cols.sum ? 1 : 0 }); set('h-sx', { x: X.sx, y: hy, o: cols.sx ? 1 : 0 });
     [['f', X.f], ['fx', X.fx], ['fnx', X.fnx]].forEach(([k, x]) => set('h-' + k, { x, y: hy, o: cols[k] ? 1 : 0 }));
     set('h-fin', { x: finX, y: hy, o: cols.fin ? 1 : 0 });
-    const hdr = E('h-card'); if (hdr) hdr.innerHTML = bt === B.start ? 'Input vector' : tr.room > 1 ? `🪪 Case Files <small>from Room ${tr.room - 1}</small>` : '🪪 Case File';
+    const hdr = E('h-card'); if (hdr) hdr.innerHTML = bt === B.start ? 'Input vector · 768' : tr.room > 1 ? `🪪 Case Files · 768 <small>from Room ${tr.room - 1}</small>` : '🪪 Case File · 768';
     for (let i = 0; i < T; i++) {
       const y = rowY(i);
       set('t' + i, { x: X.tok, y });
@@ -308,7 +320,7 @@
       if (NT.current().text !== NT.EX[STORY].text) { this.switching = true; NT.setText(NT.EX[STORY].text, 'edit'); this.switching = false; }
       st().innerHTML = `<section class="panel tr-panel"><div class="tr-head"><div class="fl-ctl"><button class="btn" id="trRew" title="Start over">⏮</button><button class="btn" id="trBack">◀ Back</button><button class="btn primary" id="trNext">Next ▶</button><button class="btn" id="trPlay">▶ Play</button><label class="delay">Speed <input type="range" id="trSpeed" min="0" max="4" value="${tr.sp == null ? 2 : tr.sp}"></label></div></div>
         <div class="fl-cap fixed" id="trCap"></div><div class="fl-box" id="trBox"></div>
-        <div class="tr-legend">Text in <span class="tr-an">our analogy</span> columns is made up, to tell the story. Striped columns are numbers: Case Files, Lead’s summaries and MLP results are real GPT-2 vectors; attention columns are illustrative (real ones: <b>How it really works</b>, below).</div>
+        <div class="tr-legend">Story text, Evidence and attention weights are <span class="tr-an">illustrative</span>. Case Files and block updates use real GPT-2 vectors. <b>How it really works</b> shows actual Q/K/V calculations. Vector proportions and role colors match the technical view; scenes use different zoom levels.</div>
         <div id="trReally"></div></section>`;
       NT.guideRow(st().querySelector('.tr-panel'));
       if (NT.really) NT.really.mount($('#trReally')); // "How it really works": the real GPT-2 operations behind the current step

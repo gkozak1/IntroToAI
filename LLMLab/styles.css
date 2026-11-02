@@ -1721,3 +1721,16 @@ body.nums-on .as-clip .as-bt { max-height: none; -webkit-mask-image: none; mask-
 .as-miss { font-size: 11.5px; color: #8a0010; background: #fdecef; border: 1px dashed #f3b9c2; border-radius: 7px; padding: 4px 8px; }
 .as-stakes { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; font-size: 13px; }
 .as-side { display: flex; flex-direction: column; gap: 8px; }
+
+/* Analogy role colors match the technical Q/K/V view; scene geometry is unchanged. */
+.tr-scene .tr-qcol, .tr-scene .tr-qh { color: #185ca8; background: #edf4fc; border-color: #2877c5; }
+.tr-scene .tr-tag { color: #914606; background: #fff3e7; border-left: 3px solid #ed7b13; }
+.tr-scene .tr-kh { color: #b65709; }
+.tr-scene .tr-vh { color: #7932a9; }
+.tr-scene canvas.tr-masked-value { filter: grayscale(1); }
+
+/* Each assembly slot has the same footprint as its 64-number head output. */
+.tr-scene .tr-lane { box-sizing: border-box; width: 24px; height: 20px; }
+.tr-scene .tr-lane.full { border: 0; background: transparent; }
+.tr-scene .tr-lane .tr-lc { flex: none; width: 24px; height: 20px; }
+.tr-scene .tr-h.num .tr-topic { width: 24px; border-top-width: 0; background: transparent; }

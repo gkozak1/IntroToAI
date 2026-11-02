@@ -30,6 +30,23 @@
   V.sharedScale = (vs) => { const a = vs.filter(Boolean).map(V.p98).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 1; };
   V.vecHTML = (id, cls = '') => `<canvas class="vz-vec ${cls}" id="${id}"></canvas>`;
 
+  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], a: [40, 92] };
+  const p98 = V.p98;
+  function px(hu, sa, t) {
+    t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
+    const L = (t >= 0 ? 95 - 58 * t : 95 + 48 * t) / 100, S = (t >= 0 ? sa : 16) / 100, C = (1 - Math.abs(2 * L - 1)) * S, X = C * (1 - Math.abs(((hu / 60) % 2) - 1)), M = L - C / 2;
+    const [r, g, b] = hu < 60 ? [C, X, 0] : hu < 180 ? [0, C, X] : hu < 240 ? [0, X, C] : [X, 0, C];
+    return [(r + M) * 255, (g + M) * 255, (b + M) * 255, 255];
+  }
+  function role(cv, vals, kind, m) {
+    if (!cv) return; const n = vals.length; m = m || p98(vals); cv.width = n; cv.height = 1;
+    const c = cv.getContext('2d'), img = c.createImageData(n, 1), [hu, sa] = HUE[kind];
+    for (let i = 0; i < n; i++) img.data.set(px(hu, sa, vals[i] / m), i * 4);
+    c.putImageData(img, 0, 0);
+  }
+
+  V.role = role;
+  V.vectorSize = (n, width) => ({ width: n === 64 ? 24 : width, height: n === 64 ? 20 : width * 20 / (n * 0.375) });
   // ---------- the ranking table ----------
   // pr: NT.probs(d, T, K) → { ids, logits, p, K }. K: the Top-K setting (NT.ALL for All), used for the band colors.
   // o: n (rows, 10) · hit (row index to highlight, -1) · prob (Probability column, true) · range (0–1 Range column, true) ·
