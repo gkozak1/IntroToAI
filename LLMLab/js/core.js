@@ -118,7 +118,7 @@ const NT = (window.NT = {});
 
   // ---------- shared state: sentence, temperature, Top-K ----------
   NT.TEMPS = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  NT.state = { station: 'next', text: EX.story.text, T: 1, K: NT.ALL };
+  NT.state = { station: 'next', text: EX.story.text, T: 1, K: 10 };
   const S = NT.state;
   const curCache = { text: null, val: null };
   NT.current = () => {
