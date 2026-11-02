@@ -18,7 +18,7 @@
   const N = 14;
   const NAMES = ['Input vectors', 'Query', 'Key', 'Value', 'Q · K · V', 'Q × Kᵀ', 'Softmax', 'Weighted sum', 'Every token', '12 heads', 'W_O and add', 'MLP up', 'MLP down', '12 blocks'];
   // which screens belong to each detective step (the story's beat keys); the first one listed is where the panel opens
-  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [3], s: [6, 7, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], sup3: [11], sup4: [11], f1: [12], f2: [13], f3: [14], known: [14] };
+  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [5, 3, 4], s: [7, 6, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], join: [10], project: [11], sup3: [11], sup4: [11], f1: [13, 12], f2: [13], f3: [14], known: [14] };
   // sizes: 768 numbers = 288 px, 64 = 24 px (screens 1–11); 768 = 96 px, 3,072 = 384 px (screens 12–14)
   const L768 = 288, L64 = 24, Z64 = L64, L3072 = 4 * L768; // every vector to one scale: 768 numbers = 288 px, 64 = 24 px, 3,072 = 1,152 px
 
@@ -38,7 +38,7 @@
 
   // ---------- pictures: input/output vectors keep the app's multicolor stripes; Q blue, K orange, V violet, MLP amber.
   //            Near 0 is pale; a large positive value is the role color, a large negative one a gray of the same hue. ----------
-  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], a: [40, 92] };
+  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [40, 92] };
   const p98 = NT.viz.p98, share = (vs) => NT.viz.sharedScale(vs);
   function px(hu, sa, t) {
     t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
@@ -56,13 +56,14 @@
   const multi = (cv, vals, m) => NT.viz.vec(cv, vals, m);
 
   // ---------- state ----------
-  const st = { open: false, list: [1], idx: 0, room: 1, q: 12, key: 'start', tk: 0, playing: false, timer: null, built: '', shown: 0 };
-  const later = (ms, fn) => { const tk = st.tk; setTimeout(() => { if (tk === st.tk && E('sc')) fn(); }, ms); };
+  const st = { following: true, speed: 1, request: 0, open: false, list: [1], idx: 0, room: 1, q: 12, key: 'start', tk: 0, playing: false, timer: null, built: '', shown: 0 };
+  const later = (ms, fn) => { const tk = st.tk; setTimeout(() => { if (tk === st.tk && E('sc')) fn(); }, ms * (st.following ? 0.18 / st.speed : 1)); };
 
   // ---------- placing things: absolute, moved with transform (the story's easing) ----------
   const cur = {};
   function put(id, p, d = 0) {
     const el = E(id); if (!el) return;
+    d *= st.following ? 0.18 / st.speed : 1;
     let c = cur[id];
     if (!c) { c = cur[id] = Object.assign({ x: 0, y: 0, r: 0 }, p, { o: 0 }); el.style.transition = 'none'; el.style.transform = `translate(${c.x}px,${c.y}px) rotate(${c.r || 0}deg)`; if (c.w != null) el.style.width = c.w + 'px'; el._dirty = true; }
     if (d && el._dirty) { void el.offsetWidth; el._dirty = false; } // commit the start, so the move animates from there
@@ -135,12 +136,12 @@
     for (let k = 0; k < 12; k++) for (let i = 0; i < T; i++) h += cv(`hs${k}_${i}`, L64);
     h += hd('hcat', 'Concatenated head outputs <small>12 heads × 64 = 1 × 768 (all 12 Notes)</small>', 300);
     // screen 11: W_O, then the first addition
-    h += matBox('wo', 'v', 'W<sub>O</sub> <small>768 × 768 · output projection (Lead Detective)</small>', L768, L768) + one('x2', '×') + one('e2', '=');
-    h += hd('hao', '<b class="rw-cv">Attention output</b> <small>1 × 768 (Lead Detective’s result)</small>', 288) + hd('hin2', 'Input Vector <small>1 × 768 (Case File)</small>', 288) + hd('hup', 'Updated vector <small>1 × 768 (updated Case File)</small>', 288);
+    h += matBox('wo', 'o', 'W<sub>O</sub> <small>768 × 768 · output projection (Lead Detective)</small>', L768, L768) + one('x2', '×') + one('e2', '=');
+    h += hd('hao', '<b class="rw-co">Attention output</b> <small>1 × 768 (Lead Detective’s Output)</small>', 288) + hd('hin2', 'Input Vector <small>1 × 768 (Case File)</small>', 288) + hd('hup', 'Updated vector <small>1 × 768 (Lead Detective’s Summary)</small>', 288);
     for (let i = 0; i < T; i++) h += cv('ao' + i, L768) + cv('in2_' + i, L768) + cv('up' + i, L768);
     h += sym('pl1', '+', 22) + sym('eq1', '=', 22);
     // screens 12–13: the MLP, vectors to scale (the 3,072-number hidden layer is 4× as long); W1 and W2 drawn at ¼ scale
-    h += hd('hup2', 'Updated vector <small>1 × 768 (updated Case File)</small>', 288) + hd('hhid', '<b class="rw-ca">Hidden layer</b> <small>1 × 3,072: four times as long (Forensics Expert)</small>', 560) + hd('hf', '<b class="rw-ca">MLP output</b> <small>1 × 768 (Forensics Expert’s result)</small>', 288) + hd('hu3', 'Updated vector <small>1 × 768</small>', 288) + hd('hbo', `Block ${st.room} output <small>1 × 768 (final Case File)</small>`, 288);
+    h += hd('hup2', 'Updated vector <small>1 × 768 (Lead Detective’s Summary)</small>', 288) + hd('hhid', '<b class="rw-ca">Hidden layer</b> <small>1 × 3,072: four times as long (Forensics Expert)</small>', 560) + hd('hf', '<b class="rw-ca">MLP output</b> <small>1 × 768 (Forensics Expert’s result)</small>', 288) + hd('hu3', 'Updated vector <small>1 × 768</small>', 288) + hd('hbo', `Block ${st.room} output <small>1 × 768 (final Case File)</small>`, 288);
     h += matBox('m1', 'a', 'W<sub>1</sub> <small>768 × 3,072 (¼ scale)</small>', L768, L768 / 4) + matBox('m2', 'a', 'W<sub>2</sub> <small>3,072 × 768 (¼ scale)</small>', L768 / 4, L768) + one('x3', '×') + one('e3', '=') + one('x4', '×') + dv('gelu', 'rw-gelu', 'GELU', 40, T * ROW - 6);
     for (let i = 0; i < T; i++) h += cv('u' + i, L768) + cv('hp' + i, L768) + cv('ha' + i, L3072) + cv('f' + i, L768) + cv('bo' + i, L768);
     h += sym('pl2', '+', 22) + sym('eq2', '=', 22);
@@ -148,7 +149,8 @@
     h += hd('bhl', '', 288) + hd('bhr', '', 288) + sym('ba0', '→', 40) + dv('bal', 'rw-note', 'each block: + attention update + MLP update', 250);
     for (let bb = 1; bb <= 12; bb++) for (let i = 0; i < T; i++) h += cv(`bc${bb}_${i}`, L768);
     h += `<div class="rw-box2" id="${P}rk"><div class="rk-tt">After Block 12, this output vector for “the”…</div><canvas class="rw-v" id="${P}rkv" style="width:${L768}px;height:${BH}px"></canvas><div class="rk-tt">…ranks these tokens next (logits): <span class="tr-real">real GPT-2</span></div><div id="${P}rkt"></div><div class="tr-hint">The Output tab turns these scores into probabilities and picks one. <button class="btn small" id="${P}goOut">Output ›</button></div></div>`;
-    h += cv('fly', L768);
+    h += cv('fly', L768) + cv('catv', L768);
+    for (let i = 1; i < T; i++) h += cv('catv' + i, L768);
     return h;
   }
   const leftBlock = () => (st.room < 12 ? st.room : 11);
@@ -164,13 +166,14 @@
     role(E('qa'), Q[j], 'q', mq); role(E('ns'), hv('z', 0, j), 'v', mvv); role(E('nb'), hv('z', 0, j), 'v', mvv);
     for (let r = 0; r < T; r++) for (let c = 0; c <= r; c++) { const g = E(`g${r}_${c}`); if (g) g.style.setProperty('--gc', NT.viz.shareCol(att(r)[c])); }
     for (let k = 0; k < 12; k++) { const Z = all('z', k), m = share(Z); for (let i = 0; i < T; i++) { role(E(`hs${k}_${i}`), Z[i], 'v', m); if (k === 0) role(E('go' + i), Z[i], 'v', m); } }
+    for (let i = 0; i < T; i++) { const joined = Float32Array.from(Array.from({length:12}, (_,k) => Array.from(hv('z',k,i))).flat()); role(E(i ? 'catv'+i : 'catv'), joined, 'v'); }
     const O = Array.from({ length: T }, (_, i) => row(b.o, i)), U = Array.from({ length: T }, (_, i) => row(b.m, i)), mo = share(O), mu = share(U);
     const HP = Array.from({ length: T }, (_, i) => row(b.u, i)), HA = HP.map((u) => u.map(gelu)), F = Array.from({ length: T }, (_, i) => row(b.f, i)), BO = Array.from({ length: T }, (_, i) => vecIn(st.room, i));
     const mh = share(HP), ma = share(HA), mf = share(F), mb = share(BO);
-    for (let i = 0; i < T; i++) { role(E('ao' + i), O[i], 'v', mo); multi(E('up' + i), U[i], mu); multi(E('u' + i), U[i], mu); role(E('hp' + i), HP[i], 'a', mh); role(E('ha' + i), HA[i], 'a', ma); role(E('f' + i), F[i], 'a', mf); multi(E('bo' + i), BO[i], mb); }
+    for (let i = 0; i < T; i++) { role(E('ao' + i), O[i], 'o', mo); multi(E('up' + i), U[i], mu); multi(E('u' + i), U[i], mu); role(E('hp' + i), HP[i], 'a', mh); role(E('ha' + i), HA[i], 'a', ma); role(E('f' + i), F[i], 'a', mf); multi(E('bo' + i), BO[i], mb); }
     for (let bb = leftBlock(); bb <= 12; bb++) { const vs = Array.from({ length: T }, (_, i) => vecIn(bb, i)), m = share(vs); for (let i = 0; i < T; i++) multi(E(`bc${bb}_${i}`), vs[i], m); }
     multi(E('fly'), vecIn(12, T - 1)); multi(E('rkv'), vecIn(12, T - 1));
-    if (Wt) { matImg(E('wqc'), Wt.q, 'q'); matImg(E('wkc'), Wt.k, 'k'); matImg(E('wvc'), Wt.v, 'v'); matImg(E('woc'), Wt.o, 'v'); matImg(E('m1c'), Wt.m1, 'a'); matImg(E('m2c'), Wt.m2, 'a'); }
+    if (Wt) { matImg(E('wqc'), Wt.q, 'q'); matImg(E('wkc'), Wt.k, 'k'); matImg(E('wvc'), Wt.v, 'v'); matImg(E('woc'), Wt.o, 'o'); matImg(E('m1c'), Wt.m1, 'a'); matImg(E('m2c'), Wt.m2, 'a'); }
     const tp = R.top, pr = { ids: tp.ids, logits: tp.logits, p: tp.p, K: tp.ids.length };
     E('rkt').innerHTML = NT.viz.rankTable(pr, NT.ALL, { n: 5, prob: false, more: false, mark: (i) => (pr.ids[i] === 7850 ? 'tr-river' : '') });
   }
@@ -301,7 +304,7 @@
     if (s === 11) { // × W_O (the Lead Detective) = attention output; then + the Input Vector = the updated vector
       put('wo', { x: AX.wo, y: matY(L768) }); mv(A, 'wo', { o: 1 }, 600, 200);
       put('x2', { x: AX.cat + L768 + 8, y: midY - 14 }); put('e2', { x: AX.wo + L768 + 10, y: midY - 14 }); fade(A, ['x2', 'e2'], 1, 400, 300);
-      at(500, () => svg(linesTo(AX.cat + L768, AX.wo, L768, AX.out, 'v'), A));
+      at(500, () => svg(linesTo(AX.cat + L768, AX.wo, L768, AX.out, 'o'), A));
       put('hao', { x: AX.out, y: 14 }); mv(A, 'hao', { o: 1 }, 400, 900);
       for (let i = 0; i < T; i++) { put('ao' + i, { x: AX.out - (A ? 20 : 0), y: barY(i), w: L768 }); mv(A, 'ao' + i, { x: AX.out, o: 1 }, 600, 900 + i * 60); }
       const t1 = 900 + T * 60 + 1400;
@@ -340,6 +343,7 @@
       fade(A, ['m2', 'x4', 'hhid'], 0, 500, t1);
       for (let i = 0; i < T; i++) { mv(A, 'ha' + i, { w: L768 }, 1300, t1 + i * 30); put('f' + i, { x: 110, y: barY(i), w: L768 }); mv(A, 'f' + i, { o: 1 }, 600, t1 + 1000 + i * 30); mv(A, 'ha' + i, { o: 0 }, 500, t1 + 1300 + i * 30); }
       put('hf', { x: 110, y: 14 }); mv(A, 'hf', { o: 1 }, 400, t1 + 1200);
+      if (st.following && st.key === 'f1') return; // hold the MLP update before residual addition
       const t2 = t1 + 2200;
       put('pl2', { x: 404, y: rowY(0) }); mv(A, 'pl2', { o: 1 }, 400, t2);
       put('hu3', { x: 432, y: 14 }); mv(A, 'hu3', { o: 1 }, 400, t2);
@@ -350,30 +354,14 @@
       for (let i = 0; i < T; i++) { put('bo' + i, { x: 752 - (A ? 20 : 0), y: barY(i), w: L768 }); mv(A, 'bo' + i, { x: 752, o: 1 }, 600, t3 + 100 + i * 50); }
       return;
     }
-    if (s === 14) { // everything but the tokens and this block's output fades; it moves left; the later blocks' outputs fly in, one after another
-      const gone = ['hf', 'hu3', 'pl2', 'eq2', 'hbo']; for (let i = 0; i < T; i++) gone.push('f' + i, 'u' + i); fade(A, gone, 0, 500);
-      const L = leftBlock(), RX = 460, BX = 790; const bhl = E('bhl'), bhr = E('bhr');
-      if (bhl) bhl.innerHTML = `After Block ${L} <small>1 × 768</small>`;
-      if (st.room < 12) for (let i = 0; i < T; i++) { mv(A, 'bo' + i, { x: 110 }, 1000, 600); put(`bc${L}_${i}`, { x: 110, y: barY(i), w: L768 }); mv(A, `bc${L}_${i}`, { o: 1 }, 1, 1650); mv(A, 'bo' + i, { o: 0 }, 1, 1700); }
-      else for (let i = 0; i < T; i++) { mv(A, 'bo' + i, { x: RX }, 1000, 600); put(`bc11_${i}`, { x: 110, y: barY(i), w: L768 }); mv(A, `bc11_${i}`, { o: 1 }, 600, 1400); mv(A, 'bo' + i, { o: 0 }, 1, 1700); put(`bc12_${i}`, { x: RX, y: barY(i), w: L768 }); mv(A, `bc12_${i}`, { o: 1 }, 1, 1650); }
-      put('bhl', { x: 110, y: 22 }); mv(A, 'bhl', { o: 1 }, 400, 1000);
-      put('ba0', { x: 410, y: rowY(0) }); mv(A, 'ba0', { o: 1 }, 400, 1700); put('bal', { x: 318, y: TOP + T * ROW + 6 }); mv(A, 'bal', { o: 1 }, 400, 1700);
-      put('bhr', { x: RX, y: 22 }); mv(A, 'bhr', { o: 1 }, 400, 1900);
-      let dl = 1900;
-      for (let bb = L + 1; bb <= 12; bb++) { // each later block's output flies in from the right and replaces the one before
-        if (st.room === 12) break;
-        const prev = bb - 1, here = bb;
-        at(dl, () => { if (bhr) bhr.innerHTML = `After Block ${here} <small>1 × 768</small>`; });
-        for (let i = 0; i < T; i++) { put(`bc${here}_${i}`, { x: SW + 20, y: barY(i), w: L768 }); mv(A, `bc${here}_${i}`, { x: RX, o: 1 }, 700, dl + i * 12); if (prev > L) mv(A, `bc${prev}_${i}`, { o: 0 }, 300, dl + 500); }
-        dl += A ? 750 : 0;
-      }
-      if (st.room === 12 && bhr) bhr.innerHTML = 'After Block 12 <small>1 × 768</small>';
-      for (let i = 0; i < T; i++) E('t' + i).classList.toggle('tr-me', i === T - 1);
-      put('rk', { x: BX, y: TOP + 20 }); mv(A, 'rk', { o: 1 }, 500, dl + 400);
-      const rk = E('rk'); if (rk) rk.style.width = SW - BX - 20 + 'px';
-      put('fly', { x: RX, y: barY(T - 1), w: L768 }); if (A) later(dl + 900, () => put('fly', { o: 1 }));
-      mv(A, 'fly', { x: BX + 15, y: TOP + 20 + 37, o: 1 }, 1100, dl + 1000); mv(A, 'fly', { o: 0 }, 300, dl + 2300);
-      const go = E('goOut'); if (go) go.onclick = () => NT.goTab('pick');
+    if (s === 14) {
+      svg('', false);
+      Object.keys(cur).forEach(id => { if (!/^t\d+$/.test(id)) put(id, {o:0}); });
+      E('bhl').innerHTML = `After Block ${st.room}<small>1 × 768 (final Case File)</small>`;
+      put('bhl', {x:110, y:22, o:1});
+      for (let i=0;i<T;i++) { put('bo'+i,{x:110,y:barY(i),w:L768,o:1}); E('t'+i).classList.toggle('tr-me',i===T-1); }
+      if (st.room === 12) { put('rk',{x:460,y:TOP+20,o:1}); E('rk').style.width='480px'; const go=E('goOut'); if(go) go.onclick=()=>NT.goTab('pick'); }
+      return;
     }
   }
 
@@ -394,8 +382,49 @@
       ['The output projection W_O (the Lead Detective), then an addition.', 'W_O, a learned 768 × 768 matrix, mixes the 12 heads’ outputs; the result is added to the Input Vector.'],
       ['The MLP (the Forensics Expert) stretches each vector to 3,072 numbers.', '× a learned 768 × 3,072 matrix W1: four times as long. Then GELU keeps positive values and mostly silences negative ones.'],
       ['…then shrinks them back to 768 and adds the result.', `× a learned 3,072 × 768 matrix W2 gives the 1 × 768 MLP output, added to the updated vector: Block ${r}’s output.`],
-      ['Twelve blocks in sequence: each block’s output is the next block’s input.', 'Every block adds its own attention and MLP updates. After Block 12, the last token’s vector scores every token.'],
+      [`Block ${r} is complete: each token has an updated Case File.`, r < 12 ? 'The next block begins when the analogy advances to its next Investigation Room. Intermediate rankings above are diagnostic readouts.' : 'After Block 12, the final token’s Case File scores the vocabulary for the next-token prediction.'],
     ][s - 1];
+  }
+
+  const assemblyKeys = ['sup1','sup2','join','project','sup3','sup4'];
+  function assemblyCaption() {
+    if(st.key==='project') return ['Concatenated head outputs × W_O = Attention Output.', 'The Lead Detective’s Output is a 1 × 768 update; it has not yet been added to the Case File.'];
+    if(st.key==='sup3'||st.key==='sup4') return ['Input Vector + Attention Output = Updated Vector.', 'Residual addition produces the Lead Detective’s Summary, still 1 × 768.'];
+    return ['12 head outputs join end to end: 12 × 64 = 768.', st.key==='join' ? 'Concatenation preserves all 12 Notes. The output projection comes next.' : 'The ‖ symbols mean concatenate, not add.'];
+  }
+  function storyAssembly(A) {
+    const key=st.key, joined=key==='join', projected=key==='project', added=key==='sup3'||key==='sup4', moved=key==='sup4';
+    const place=(id,x,y,o=1)=>put(id,{x,y,o});
+    svg('',false);
+    place('hin2',108,44,moved?0:1);
+    for(let i=0;i<T;i++) { place('t'+i,18,rowY(i)); place('in2_'+i,108,barY(i),moved?0:1); }
+    if(!projected&&!added) {
+      place('hln',420,32,joined?0:1); place('hcat',420,44,joined?1:0);
+      for(let k=0;k<12;k++) {
+        place('lh'+k,420+k*40,56,joined?0:1);
+        for(let i=0;i<T;i++) {
+          const id=`hs${k}_${i}`, visible=key!=='sup1'||k===0;
+          place(id,420+k*40,barY(i),visible?1:0);
+          if(joined) { mv(A,id,{x:420+k*24},6000); mv(A,id,{o:0},3000,6000); }
+        }
+        if(k<11) place('cc'+k,447+k*40,rowY(0),key==='sup2'?1:0);
+      }
+      if(joined) for(let i=0;i<T;i++) { const id=i?'catv'+i:'catv';place(id,420,barY(i),A?0:1);mv(A,id,{o:1},3000,6000); }
+    } else {
+      place('hao',420,44,moved?0:1);
+      for(let i=0;i<T;i++) place('ao'+i,420,barY(i),moved?0:1);
+      if(projected) {
+        // Briefly show the actual projection, then settle beside the incoming Case File.
+        if(A) {
+          place('hin2',108,44,0); for(let i=0;i<T;i++) place('in2_'+i,108,barY(i),0);
+          place('wo',432,matY(L768));place('x2',406,midY-14);place('e2',730,midY-14);
+          place('hcat',110,14); place('hao',752,14);
+          for(let i=0;i<T;i++){place(i?'catv'+i:'catv',110,barY(i));place('ao'+i,752,barY(i));}
+          later(6500,()=>{ ['wo','x2','e2','hcat'].forEach(id=>put(id,{o:0}));for(let i=0;i<T;i++){put(i?'catv'+i:'catv',{o:0});place('in2_'+i,108,barY(i));put('ao'+i,{x:420},1500);}place('hin2',108,44);put('hao',{x:420,y:44},1500); });
+        }
+      }
+      if(added) {place('pl1',400,rowY(0),moved?0:1);place('eq1',718,rowY(0),moved?0:1);place('hup',moved?108:744,44);for(let i=0;i<T;i++)place('up'+i,moved?108:744,barY(i));}
+    }
   }
 
   // ---------- the panel ----------
@@ -410,31 +439,33 @@
     E('rew').onclick = () => { pause(); go(1, true); };
     E('back').onclick = () => { pause(); if (st.shown > 1) go(st.shown - 1, false); };
     E('next').onclick = () => { pause(); if (st.shown < N) go(st.shown + 1, true); };
-    E('rep').onclick = () => { pause(); show(true, true); };
+    E('rep').onclick = () => { pause(); st.following = false; show(true, true); };
     E('play').onclick = () => (st.playing ? pause() : play());
   }
-  const go = (s, animate) => { st.target = s; show(animate); };
+  const go = (s, animate) => { st.following = false; st.target = s; show(animate); };
   const DUR = [2000, 3400, 3400, 3400, 2600, 6000, 5200, 10500, 4800, 9200, 7400, 5800, 6400, 7000];
   function play() { st.playing = true; E('play').textContent = '⏸ Pause'; const tick = () => { st.timer = setTimeout(() => { if (!st.playing) return; if (st.shown < N) { go(st.shown + 1, true); tick(); } else pause(); }, DUR[st.shown - 1]); }; tick(); }
   function pause() { st.playing = false; clearTimeout(st.timer); const p = E('play'); if (p) p.textContent = '▶ Play'; }
 
   async function show(animate, replay) {
+    const request = ++st.request;
     const box = E('box'); if (!box || !st.open) return;
     if (!R) { box.innerHTML = NT.pendingHTML ? NT.pendingHTML('Getting GPT-2’s real numbers…') : 'Loading…'; box.style.height = ''; await load(); if (!R) { box.innerHTML = '<div class="emptynote">The real-number trace could not be loaded.</div>'; return; } }
     await loadW(st.room);
+    if (request !== st.request || !st.open || !E('box')) return;
     const s = st.target || st.list[0], key = `${st.room}|${st.q}`;
     st.tk++;
-    if (st.built !== key || replay || !animate || st.shown !== s - 1) { // draw the scene, jump through screens 1 … s−1, then play s
+    if (st.following || st.built !== key || replay || !animate || st.shown !== s - 1) { // draw the scene, jump through screens 1 … s−1, then play s
       box.innerHTML = `<div class="rw-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="rw-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>${build()}</div>`;
       Object.keys(cur).forEach((k) => delete cur[k]);
       box.querySelectorAll('.rw-scene > *:not(svg)').forEach((el) => { el.style.opacity = 0; });
       paint(); st.built = key; fit();
-      for (let t = 1; t < s; t++) run(t, false);
-      box.querySelectorAll('.rw-tok').forEach((el) => (el.onclick = () => { st.q = +el.dataset.i; show(true, true); }));
+      if (!(st.following && assemblyKeys.includes(st.key))) for (let t = 1; t < s; t++) run(t, false);
+      box.querySelectorAll('.rw-tok').forEach((el) => (el.onclick = () => { st.following = false; st.q = +el.dataset.i; show(true, true); }));
     }
-    run(s, !!animate);
+    if (st.following && assemblyKeys.includes(st.key)) storyAssembly(!!animate); else run(s, !!animate);
     st.shown = s;
-    const [t, d] = cap(s);
+    const [t, d] = st.following && assemblyKeys.includes(st.key) ? assemblyCaption() : st.following && st.key === 'f1' ? ['The MLP expands, transforms, and returns to 768 numbers.', 'The Forensics Expert’s output is ready; the second residual addition comes next.'] : cap(s);
     E('cap').innerHTML = `<div class="fl-ch"><b>${esc(t)}</b></div><div class="fl-cd">${esc(d)}</div>`;
     E('dots').innerHTML = Array.from({ length: N }, (_, k) => `<button class="rw-dot ${k + 1 === s ? 'on' : ''} ${st.list.includes(k + 1) ? 'mine' : ''}" data-s="${k + 1}" title="${k + 1}. ${NAMES[k]}">${k + 1}</button>`).join('') + '<span class="rw-dkey">tinted = this story step</span>';
     E('dots').querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { pause(); go(+b.dataset.s, true); }));
@@ -454,12 +485,12 @@
   NT.really = {
     mount(host) { if (!host) return; st.built = ''; st.shown = 0; shell(host); if (st.open) show(false); },
     // the detective story moved: follow its step, block and investigated token
-    sync(key, room, q) {
-      const changed = room !== st.room || q !== st.q || key !== st.key;
-      st.key = key; st.room = room; st.q = q; st.list = MAP[key] || [1];
-      if (!changed) return;
-      pause(); st.target = st.list[0];
-      if (st.open) show(true);
+    sync(key, room, q, speed = 1, animate = true) {
+      st.key = key; st.room = room; st.q = q; st.speed = speed; st.following = true;
+      st.list = MAP[key] || [1]; pause(); st.target = st.list[0];
+      st.tk++; st.request++;
+      if (st.open) show(animate);
+
     },
   };
 })();

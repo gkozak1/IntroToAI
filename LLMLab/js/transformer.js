@@ -86,17 +86,19 @@
     [1, 'start', 'Each token brings its Case File (Input Vector) to 12 Detectives.', 'The Case File is really the token\'s Embedding Vector + Position Vector = its 768-number Input Vector.'],
     [1, 'fadein', 'Each token brings its Case File (Input Vector) to 12 Detectives.', 'The Case File is really the token\'s Embedding Vector + Position Vector = its 768-number Input Vector.'],
     [2, 'room', 'Each Investigation Room (Transformer Block) updates every token’s Case File.', '12 heads work in parallel on the same incoming Case Files. Each later block needs the previous block’s output.'],
-    [2, 'focus', 'To make things simpler, we’ll only focus on one detective.', 'While all 12 work in parallel, we\'re just going to see what Detective 1 is up to, whose line of inquiry is: “{topic}”'],
-    [3, 'q', 'Detective 1 forms a Question (Query) to gain more understanding of each token’s Case File.', 'Q, K and V are separate learned transformations of each Case File. “{topic}” is our analogy.'],
-    [3, 'k', 'Each witness provides a Statement (Key) for comparison with the Question.', 'Statements and Evidence are prepared independently of the Question. Each represents 64 numbers.'],
-    [3, 's', 'Question–Statement matches determine Relevance (Attention Weights).', '“{q}” uses itself and earlier tokens. Future Evidence cannot contribute: 0%. Relevance is not truth.'],
+    [2, "focus", "We'll follow Detective 1, whose line of questioning is \"{topic}\".", "The other 11 Detectives work in parallel, each using its own learned methods."],
+    [3, "q", "Detective 1 follows the same line of questioning for every token in this room.", "It uses the same learned Q matrix for every Case File. Because the Case Files differ, the resulting 64-number Questions (Queries) can differ."],
+    [3, "k", "Each witness has its own Statement (Key), calculated from its Case File.", "The same learned K matrix is used for each token. Statements do not change in response to the selected Question."],
+    [3, "s", "For \"{q}\", the Detective compares one Question with every eligible witness's Statement.", "Only \"{q}\" and earlier tokens can serve as witnesses. Their relevance scores become attention percentages totaling 100%. Relevance does not mean truth."],
     [3, 'v', 'Evidence Packets (Values) are combined in proportion to Relevance.', 'Evidence is already prepared. Multiply each Value by its percentage, then add the weighted vectors: one 64-number Note.'],
     [3, 'n', 'The detective writes a short note about each token (a 64-element vector: 768 ÷ 12).', 'Detective 1 makes a separate 64-number note for every token, using its permitted witnesses.'],
     [3, 'nx', 'What the notes say.', 'The notes are really a vector of 64 numbers; these words are our analogy of what they hold.'],
     [4, 'sup1', 'All 12 detectives’ notes are assembled together.', 'Join 12 × 64 numbers end to end: 768 numbers. Joining is not adding.'],
     [4, 'sup2', 'All 12 detectives’ notes are assembled together.', 'Join 12 × 64 numbers end to end: 768 numbers. Joining is not adding.'],
+    [4, 'join', 'The 12 Notes join into one 768-number vector.', 'Concatenate means join end to end, not add. Each Note contributes 64 numbers.'],
+    [4, 'project', 'The Lead Detective transforms the joined Notes.', 'The learned output projection W_O mixes the 768 numbers before residual addition.'],
     [4, 'sup3', 'The Lead Detective summarizes the notes and adds the result to each Case File.', 'Join 12 Notes → transform the 768 numbers with W_O → add to the existing Case File.'],
-    [4, 'sup4', 'The Lead Detective’s summary is added to the existing Case File.', 'Each 768-number summarized note is added to its Case File. It is still 768 numbers long.'],
+    [4, "sup4", "The Lead Detective’s Summary is the updated Case File.", "The projected attention output has been added to the incoming Case File. The result still has 768 numbers."],
     [5, 'f1', 'The Forensics Expert (MLP) uses additional expertise to refine each Case File.', 'It expands each Case File to 3,072 numbers, transforms them with learned patterns, and condenses the result back to 768.'],
     [5, 'f2', 'The Final Case File.', 'Add the MLP output back: a second residual update. Each Case File stays 768 numbers.'],
     [5, 'f3', 'The Final Case Files pass to the next Investigation Room.', '{next}'],
@@ -172,12 +174,14 @@
     const head = (k, t, w = 140) => (h += `<div class="fl-h tr-h" id="${P}h-${k}" style="width:${w}px">${t}</div>`);
     head('tok', 'Token', 80); head('id', 'Token ID', 60); head('emb', 'Embedding <small>Embedding Vector: 768 Numbers</small>', 288); head('pos', 'Position <small>Position Vector: 768 Numbers</small>', 288); head('card', r === 1 ? 'Input vector' : `🪪 Case Files <small>from Room ${r - 1}</small>`, 150);
     const tp = topics(r); for (let k = 0; k < 12; k++) head('l' + k, `<span class="tr-topic" style="--ic:${ICOL[k]}">🎤${k + 1}<i>${esc(tp[k])}</i></span>`, 74);
-    head('lanes', 'Detective notes', 300); head('lanes2', 'Detective', 200);
+    head('joined', 'Concatenated Notes <small>Head Outputs: 768 Numbers</small>', 320); head('projected', 'Lead Detective’s Output <small>Attention Output: 768 Numbers</small>', 320); head('lanes', 'Detective notes', 300); head('lanes2', 'Detective', 200);
     head('q', '<span class="tr-qh">❓ Question <small>Q: 64 Numbers</small></span>', 175); head('k', '<span class="tr-kh">🏷️ Statement <small>K: 64 Numbers</small></span>', 175); head('s', 'Relevance', 60); head('v', '📨 Evidence <small>V: 64 Numbers</small>', 130); head('n', '<span class="tr-vh">📝 Note <small>Head Output: 64 Numbers</small></span>', 155); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
-    head('sum', '✍️ Lead’s summary <small>Hidden State: 768 Numbers</small>', 288); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 150);
+    head('sum', '✍️ Lead Detective’s Summary <small>Hidden State: 768 Numbers</small>', 288); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 150);
     head('f', '📚 Learned patterns <small>MLP Output: 768 Numbers</small>', 190); head('fx', 'Pattern examples <span class="tr-an">our analogy</span>', 220); head('fin', '🪪 Final Case File <small>Hidden State: 768 Numbers</small>', 288); head('fnx', 'Final file examples <span class="tr-an">our analogy</span>', 150);
     for (let i = 0; i < T; i++) {
       h += `<div class="tr-c tr-tok" id="${P}t${i}" data-i="${i}" style="--c:${COL[i]};width:84px;height:${ROW - 6}px">${esc(W[i])}</div>`;
+      h += cv('joined' + i, 288) + cv('projected' + i, 288);
+      for (let k = 0; k < 11; k++) h += `<div class="fl-op" id="${P}concat${k}_${i}" style="font-size:12px">‖</div>`;
       h += cell('id' + i, 'tr-id', NT.current().ids[i], 56);
       h += cv('emb' + i) + `<div class="fl-op" id="${P}p1${i}">+</div>` + cv('pos' + i) + `<div class="fl-op" id="${P}e1${i}">=</div>` + cv('card' + i, 140);
       for (let k = 0; k < 12; k++) h += `<div class="tr-lane empty" id="${P}lb${k}_${i}" style="--ic:${ICOL[k]};width:24px;height:20px"></div>`;
@@ -196,7 +200,11 @@
     for (let i = 0; i < T; i++) {
       const c0 = card(r - 1, i), s1 = add(c0, att(r, i));
       VZ.vec(E('emb' + i), emb(i)); VZ.vec(E('pos' + i), NT.posRow(i)); VZ.vec(E('card' + i), c0);
-      for (let k = 0; k < 12; k++) role(E('lc' + k + '_' + i), note(r, i, k), 'v');
+      const joined = Float32Array.from(Array.from({ length: 12 }, (_, k) => Array.from(note(r, i, k))).flat());
+      const joinedScale = VZ.p98(joined);
+      role(E('joined' + i), joined, 'v', joinedScale);
+      role(E('projected' + i), att(r, i), 'o');
+      for (let k = 0; k < 12; k++) role(E('lc' + k + '_' + i), note(r, i, k), 'v', joinedScale);
       role(E('n' + i), note(r, i, 0), 'v'); VZ.vec(E('sum' + i), s1); role(E('f' + i), mlp(r, i), 'a'); VZ.vec(E('fin' + i), card(r, i));
     }
     interview();
@@ -214,8 +222,9 @@
       role(v, weighted ? Float32Array.from(values[j], x => x * w[j]) : values[j], 'v', valueScale);
       v.classList.toggle('tr-masked-value', tr.beat >= B.s && j > q);
       v.title = j > q && tr.beat >= B.s ? 'Masked: future position contributes 0%' : (weighted ? 'Value × attention percentage' : 'Prepared Value: 64 illustrative numbers');
-      [E('t' + j), E('k' + j), E('q' + j)].forEach((el) => el && el.classList.toggle('tr-later', j > q));
+      [E('t' + j), E('k' + j)].forEach((el) => el && el.classList.toggle('tr-later', j > q));
       E('t' + j).classList.toggle('tr-me', j === q);
+      E('q' + j).classList.toggle('tr-active-query', j === q);
     }
     role(E('vsumc'), note(r, q, 0), 'v', valueScale); E('vsumw').textContent = `“${W[q]}”`;
     arcs();
@@ -226,7 +235,9 @@
     if (b === 3 && sub >= B.s && sub <= B.nx) { // from the interviewee's response to each witness's response, bulging to the right, beside the responses
       const q = tr.q, w = shares(q), x = X.k + 179, y0 = rowY(q) + ROW / 2 - 3;
       for (let j = 0; j < q; j++) { const y = rowY(j) + ROW / 2 - 3, bl = 8 + (q - j) * 5; g += `<path d="M${x} ${y0} C ${x + bl} ${y0}, ${x + bl} ${y}, ${x} ${y}" fill="none" stroke="${VZ.shareCol(w[j])}" stroke-width="${(0.5 + w[j] * 7).toFixed(1)}" stroke-linecap="round" opacity=".9"/>`; }
-      if (q > 0) g += `<circle cx="${x}" cy="${y0}" r="3" fill="#c2185b"/>`;
+      // Link the selected Query to the comparison fan through the gap below its Key cell.
+      const qx = X.q + 175, gapY = rowY(q) + ROW - 3;
+      g += `<path d="M${qx} ${y0} V${gapY} H${x} V${y0}" fill="none" stroke="#2877c5" stroke-width="1.5"/><circle cx="${qx}" cy="${y0}" r="2.5" fill="#2877c5"/><circle cx="${x}" cy="${y0}" r="2.5" fill="#2877c5"/>`;
     }
     if (b === 6) { const y = rowY(LAST) + ROW / 2 - 3; g += `<rect x="${X.card - 4}" y="${rowY(LAST) - 4}" width="296" height="${ROW - 6}" rx="4" fill="none" stroke="#5b38d1" stroke-width="2.5"/><path d="M${X.card + 298} ${y} C ${X.box - 60} ${y}, ${X.box - 70} ${TOP + 60}, ${X.box - 6} ${TOP + 40}" fill="none" stroke="#5b38d1" stroke-width="2" marker-end="url(#${P}ar)"/>`; }
     svg.innerHTML = `<defs><marker id="${P}ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#5b38d1"/></marker></defs>` + g;
@@ -237,14 +248,16 @@
     const L = {}, set = (id, o) => (L[id] = Object.assign({ x: 0, y: 0, o: 1 }, o)), hide = (id, x, y) => set(id, { x, y, o: 0 });
     const step = BEATS[bt][0], hy = TOP - 30;
     const cols = { id: 0, emb: 0, pos: 0, p1: 0, e1: 0, card: 0, lanes: 0, q: 0, k: 0, s: 0, v: 0, n: 0, nx: 0, sp: 0, lanefill: 0, se: 0, sum: 0, sx: 0, fp: 0, f: 0, fx: 0, fe: 0, fin: 0, fnx: 0 };
-    let cardX = X.card, laneW = 68, sumX = X.sum, finX = X.fin, cardO = 1;
+    let cardX = X.card, laneW = 68, sumX = X.sum, summaryExamplesX = X.sx, summaryEqualsX = X.se, finX = X.fin, cardO = 1;
     if (bt === B.start) Object.assign(cols, { id: 1, emb: 1, p1: 1, pos: 1, e1: 1, card: 1 }), (cardX = X.inp);
     if (bt === B.fadein) cols.card = 1;
     if (step === 2) Object.assign(cols, { card: 1, lanes: 1 });
     if (step === 3) { cols.card = 1; cols.q = 1; if (bt >= B.k) cols.k = 1; if (bt >= B.s) cols.s = 1; if (bt >= B.k) cols.v = 1; if (bt >= B.n) cols.n = 1; if (bt >= B.nx) cols.nx = 1; }
-    if (step === 4) { laneW = 30; Object.assign(cols, { card: 1, sp: 1, lanes: 1, lanefill: bt === B.sup1 ? 1 : 12 }); if (bt >= B.sup3) Object.assign(cols, { se: 1, sum: 1, sx: 1 }); if (bt === B.sup4) { Object.assign(cols, { sp: 0, lanes: 0, se: 0, sx: 0 }); sumX = X.card; cardO = 0; } }
+    if (step === 4) { laneW = bt >= B.join ? 24 : 40; sumX = 744; summaryExamplesX = 1044; summaryEqualsX = 720; Object.assign(cols, { card: 1, lanes: bt <= B.join ? 1 : 0, lanefill: bt === B.sup1 ? 1 : 12 }); if (bt >= B.sup3) Object.assign(cols, { sp: 1, se: 1, sum: 1, sx: 1 }); if (bt === B.sup4) { Object.assign(cols, { sp: 0, lanes: 0, se: 0, sx: 0 }); sumX = X.card; cardO = 0; } }
     if (step === 5) { Object.assign(cols, { sum: 1, fp: 1, f: 1, fx: 1 }); sumX = X.card; cardO = 0; cols.card = 1; if (bt >= B.f2) Object.assign(cols, { fe: 1, fin: 1, fnx: 1 }); if (bt === B.f3) { Object.assign(cols, { fp: 0, f: 0, fx: 0, fe: 0, fnx: 0, sum: 0 }); finX = X.card; } }
     if (step === 6) { Object.assign(cols, { fin: 1 }); finX = X.card; cardO = 0; cols.card = 1; }
+    set('h-joined', { x: 420, y: hy, o: bt === B.join ? 1 : 0 });
+    set('h-projected', { x: 420, y: hy, o: bt === B.project || bt === B.sup3 ? 1 : 0 });
     // headers
     set('h-tok', { x: X.tok, y: hy, o: 1 });
     [['id', X.id], ['emb', X.emb], ['pos', X.pos]].forEach(([k, x]) => set('h-' + k, { x, y: hy, o: cols[k] ? 1 : 0 }));
@@ -252,15 +265,18 @@
     // lane headers: each interviewer's line of questioning in the room (step 2); just its number under "Interviewer notes" (step 4).
     // On "focus", lanes 12 → 2 fade away one by one, leaving interviewer 1.
     const fadeDelay = (k) => (bt === B.focus && k > 0 ? (11 - k) * 260 : 0);
-    for (let k = 0; k < 12; k++) set('h-l' + k, { x: X.lane(k, laneW), y: step === 4 ? hy + 12 : hy - 10, o: (step === 2 && (bt === B.room || k === 0)) || (step === 4 && cols.lanes) ? 1 : 0, delay: fadeDelay(k), num: step === 4 });
-    set('h-lanes', { x: X.lane(0, laneW), y: hy - 12, o: step === 4 && cols.lanes ? 1 : 0 }); set('h-lanes2', { x: X.lane(0, laneW), y: hy - 22, o: 0 });
+    for (let k = 0; k < 12; k++) set('h-l' + k, { x: X.lane(k, laneW), y: step === 4 ? hy + 12 : hy - 10, o: (step === 2 && (bt === B.room || k === 0)) || (step === 4 && cols.lanes && bt !== B.join) ? 1 : 0, delay: fadeDelay(k), num: step === 4 });
+    set('h-lanes', { x: X.lane(0, laneW), y: hy - 12, o: step === 4 && cols.lanes && bt !== B.join ? 1 : 0 }); set('h-lanes2', { x: X.lane(0, laneW), y: hy - 22, o: 0 });
     [['q', X.q], ['k', X.k], ['s', X.s - 20], ['v', X.v], ['n', X.n], ['nx', X.nx]].forEach(([k, x]) => set('h-' + k, { x, y: hy, o: cols[k] ? 1 : 0 }));
-    set('h-sum', { x: sumX, y: hy, o: cols.sum ? 1 : 0 }); set('h-sx', { x: X.sx, y: hy, o: cols.sx ? 1 : 0 });
+    set('h-sum', { x: sumX, y: hy, o: cols.sum ? 1 : 0 }); set('h-sx', { x: summaryExamplesX, y: hy, o: cols.sx ? 1 : 0 });
     [['f', X.f], ['fx', X.fx], ['fnx', X.fnx]].forEach(([k, x]) => set('h-' + k, { x, y: hy, o: cols[k] ? 1 : 0 }));
     set('h-fin', { x: finX, y: hy, o: cols.fin ? 1 : 0 });
     const hdr = E('h-card'); if (hdr) { hdr.style.width = '288px'; hdr.innerHTML = '🪪 Case File<small>' + (tr.room === 1 ? 'Input Vector' : 'Hidden State') + ': 768 Numbers</small>'; }
     for (let i = 0; i < T; i++) {
       const y = rowY(i);
+      set('joined' + i, { x: 420, y: y + 4, o: bt === B.join ? 1 : 0, delay: bt === B.join ? 1100 : 0 });
+      set('projected' + i, { x: 420, y: y + 4, o: bt === B.project || bt === B.sup3 ? 1 : 0 });
+      for (let k = 0; k < 11; k++) set('concat' + k + '_' + i, { x: 420 + k * 40 + 27, y: y + 3, o: bt === B.sup2 ? 1 : 0 });
       set('t' + i, { x: X.tok, y });
       set('id' + i, { x: X.id, y, o: cols.id }); set('emb' + i, { x: X.emb, y: y + 4, o: cols.emb }); set('p1' + i, { x: X.p1, y: y + 2, o: cols.p1 }); set('pos' + i, { x: X.pos, y: y + 4, o: cols.pos }); set('e1' + i, { x: X.e1, y: y + 2, o: cols.e1 });
       set('card' + i, { x: cardX, y: y + 4, o: cols.card ? cardO : 0 });
@@ -268,15 +284,15 @@
         const filled = step === 4 && k < cols.lanefill, lx = X.lane(k, laneW) + (step === 4 ? 0 : 12); // the box sits centered under its interviewer's colored bar
         const on = cols.lanes && !(step === 2 && bt === B.focus && k > 0);
         // the dotted box stays put; the note's picture flies in on top of it
-        set('lb' + k + '_' + i, { x: lx, y: y + 4, o: on ? 1 : 0, delay: bt === B.focus ? fadeDelay(k) : 0 });
-        set('l' + k + '_' + i, { x: lx, y: y + 4, o: on && filled ? 1 : 0, cls: 'full', delay: bt === B.sup2 && k > 0 ? (k - 1) * 140 : 0,
+        set('lb' + k + '_' + i, { x: lx, y: y + 4, o: on && bt !== B.join ? 1 : 0, delay: bt === B.focus ? fadeDelay(k) : 0 });
+        set('l' + k + '_' + i, { x: lx, y: y + 4, o: on && filled && bt !== B.join ? 1 : 0, retireAfterMove: bt === B.join, cls: bt === B.join ? 'joined' : 'full', delay: bt === B.sup2 && k > 0 ? (k - 1) * 140 : 0,
           from: bt === B.sup1 && k === 0 ? { x: X.n, y: y + 4, o: 1 } : bt === B.sup2 && k > 0 ? { x: SW + 40, y: y + 4, o: 1 } : null });
       }
       set('q' + i, { x: X.q, y, o: cols.q }); set('k' + i, { x: X.k, y, o: cols.k }); set('s' + i, { x: X.s, y, o: cols.s });
       set('v' + i, { x: X.v, y: y + 4, o: cols.v ? 1 : 0 }); set('n' + i, { x: X.n, y: y + 4, o: cols.n, from: bt === B.n && i === tr.q ? { x: X.v + 120, y: rowY(T) + 6, o: 1 } : null, delay: bt === B.n && i !== tr.q ? 500 : 0 });
       set('nx' + i, { x: X.nx, y, o: cols.nx });
-      set('sp' + i, { x: X.sp, y: y + 2, o: cols.sp }); set('se' + i, { x: X.se, y: y + 2, o: cols.se });
-      set('sum' + i, { x: sumX, y: y + 4, o: cols.sum, delay: bt === B.sup3 ? 300 : 0 }); set('sx' + i, { x: X.sx, y, o: cols.sx, delay: bt === B.sup3 ? 700 : 0 });
+      set('sp' + i, { x: X.sp, y: y + 2, o: cols.sp }); set('se' + i, { x: summaryEqualsX, y: y + 2, o: cols.se });
+      set('sum' + i, { x: sumX, y: y + 4, o: cols.sum, delay: bt === B.sup3 ? 300 : 0 }); set('sx' + i, { x: summaryExamplesX, y, o: cols.sx, delay: bt === B.sup3 ? 700 : 0 });
       set('fp' + i, { x: X.fp, y: y + 2, o: cols.fp });
       const fromPanel = bt === B.f1 ? { x: X.panel, y: TOP + 40, o: 1 } : null;
       set('f' + i, { x: X.f, y: y + 4, o: cols.f, from: fromPanel, delay: bt === B.f1 ? i * 160 : 0 }); set('fx' + i, { x: X.fx, y, o: cols.fx, from: fromPanel, delay: bt === B.f1 ? i * 160 : 0 });
@@ -290,11 +306,11 @@
   function apply(L, dur) {
     Object.entries(L).forEach(([id, p]) => {
       const el = E(id); if (!el) return;
-      if (p.cls) { el.classList.toggle('full', p.cls === 'full'); el.classList.toggle('empty', p.cls === 'empty'); }
+      if (p.cls) { el.classList.toggle('full', p.cls === 'full' || p.cls === 'joined'); el.classList.toggle('empty', p.cls === 'empty'); }
       if (p.num !== undefined) el.classList.toggle('num', !!p.num);
       if (el._dl && !(dur && p.delay)) { el.style.transition = 'none'; el.style.opacity = getComputedStyle(el).opacity; void el.offsetWidth; } // cancel a long delayed fade from the last beat
       el._dl = dur ? p.delay || 0 : 0;
-      const put = (q, d, dl = 0) => { el.style.transition = d ? `transform ${d}ms cubic-bezier(.45,.05,.25,1) ${dl}ms, opacity ${Math.round(d * 0.6)}ms ${dl}ms` : 'none'; el.style.transform = `translate(${q.x}px,${q.y}px)`; if (q.o !== null && q.o !== undefined) el.style.opacity = q.o; };
+      const put = (q, d, dl = 0) => { el.style.transition = d ? `transform ${d}ms cubic-bezier(.45,.05,.25,1) ${dl}ms, opacity ${Math.round(d * 0.6)}ms ${p.retireAfterMove ? d : dl}ms` : 'none'; el.style.transform = `translate(${q.x}px,${q.y}px)`; if (q.o !== null && q.o !== undefined) el.style.opacity = q.o; };
       const tok = (el._tok = (el._tok || 0) + 1); // a newer beat always wins over an animation still waiting to start
       if (p.from && dur) { put(p.from, 0); void el.offsetWidth; requestAnimationFrame(() => { if (el._tok === tok) put(p, dur, p.delay || 0); }); } else put(p, dur, dur ? p.delay || 0 : 0);
     });
@@ -386,7 +402,7 @@
     apply(layout(bt), animate ? ms(bt === B.sup2 ? 900 : bt === B.focus ? 700 : 1100) : 0);
     interview(); // significance, contribution (only from its own beat on) and arcs
     arcs(); if (step === 6) knownBox();
-    const fill = (t) => t.replace(/\{r\}/g, tr.room).replace(/\{q\}/g, W[tr.q]).replace('{topic}', TH()[1][0]).replace('{next}', tr.room < 12 ? `They leave room ${tr.room} and become room ${tr.room + 1}’s starting Case Files.` : 'This was room 12, the last room.');
+    const fill = (t) => t.replace(/\{r\}/g, tr.room).replace(/\{q\}/g, W[tr.q]).replace('{topic}', TH()[0]).replace('{next}', tr.room < 12 ? `They leave room ${tr.room} and become room ${tr.room + 1}’s starting Case Files.` : 'This was room 12, the last room.');
     $('#trCap').innerHTML = `<div class="fl-ch"><b>${fill(BEATS[bt][2])}</b></div><div class="fl-cd">${fill(BEATS[bt][3])}</div>`;
     // the steps are the sub-tabs: chevrons right under the main tabs, then the block counter and a jump to the next block
     const subs = $('#subtabs');
@@ -397,7 +413,7 @@
       if ($('#trSkip')) $('#trSkip').onclick = () => { pause(); tr.room++; tr.beat = B.room; rebuild(true); };
     }
     if (step !== 1) NT.setWho(false); NT.whoToggle(); // "On this page" folds away after the first step, to save room
-    if (NT.really) NT.really.sync(BEATS[bt][1], tr.room, tr.q);
+    if (NT.really) NT.really.sync(BEATS[bt][1], tr.room, tr.q, spd(), animate);
     const b = $('#trBack'); if (b) b.disabled = tr.room === 1 && bt === B.start;
     const n = $('#trNext'); if (n) n.disabled = tr.room === 12 && bt === BEATS.length - 1;
     NT.setStatus(`Block ${tr.room} of 12 · ${STEPS[step - 1][2]}`);
