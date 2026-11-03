@@ -201,7 +201,7 @@
       g += `<circle class="tr-fanj" cx="${xm}" cy="${ry}" r="3.5" fill="#5b38d1"/><path class="tr-fanj" d="M${xm} ${ry} H${SK.x - 3}" stroke="#5b38d1" stroke-width="2.5" fill="none" marker-end="url(#${P}sar)"/>`;
       h += `<svg class="tr-stsvg" id="${P}stfan" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}">${g}</svg>`;
       let a = `<defs><marker id="${P}sar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#8b78d8"/></marker></defs>`;
-      for (let k = 1; k < 12; k++) a += `<path d="M${cx} ${skY(k) + SK.h + 1} V${skY(k + 1) - 2}" stroke="${k < r ? '#1e8a3a' : '#8b78d8'}" stroke-width="2" fill="none" marker-end="url(#${P}sar2)"/>`;
+      // Nov 3 (Greg): no room-to-room arrows; the Case Files are what move between rooms (the funnel arrow shows that)
       a += `<path d="M${cx} ${skY(12) + SK.h + 1} V${skY(12) + SK.h + 14}" stroke="#8b78d8" stroke-width="2" fill="none" marker-end="url(#${P}sar2)"/>`;
       h += `<svg class="tr-stsvg" id="${P}stsvg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}">${a}</svg>`;
       h += `<div class="tr-skout" id="${P}skout" style="width:220px">to Output: the next-token scores</div>`;
@@ -523,7 +523,7 @@
   function cardHeader(bt, animate) {
     const hdr = E('h-card'); if (!hdr) return;
     hdr.style.width = '288px';
-    const html = tr.room === 1 && bt === B.start ? 'Input Vector<small>(Case File)</small>' : '🪪 Case File<small>' + (tr.room === 1 ? 'Input Vector' : `Block ${tr.room - 1} Output`) + ': 768 Numbers</small>';
+    const html = tr.room === 1 && bt === B.start ? 'Input Vector<small>(Case File)</small>' : (tr.room === 1 ? '🪪 Case File<small>Input Vector' : `🪪 Revised Case File after Room ${tr.room - 1}<small>Block ${tr.room - 1} Output`) + ': 768 Numbers</small>';
     if (hdr.innerHTML === html) return;
     if (!animate) { hdr.innerHTML = html; return; }
     hdr.classList.add('tr-swap'); // fade out, swap the words while it slides, fade back in
