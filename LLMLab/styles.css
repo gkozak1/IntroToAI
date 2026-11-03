@@ -1831,3 +1831,17 @@ body.checks-off #chkTog { display: none; } body.checks-off .whotog.cu + .whotog 
 @media (max-width: 1440px) { .whotog .who-l { display: none; } #whoTog { padding: 3px 9px; } } /* narrow windows: About shrinks to ⓘ (tooltip keeps the name), so Check understanding fits on the row */ /* Pre-/Post-Training keep their player in this row: on narrow windows ⓘ alone */
 .whotog.cu .cu-short { display: none; } .whotog.cu.short .cu-long { display: none; } .whotog.cu.short .cu-short { display: inline; }
 .whotog.cu, #whoTog { flex-shrink: 0; }
+/* Nov 3 (Greg): checks tied to steps. Not opened yet = solid purple; opened = white "✔ Checked". Pills reach every question on the tab. */
+.whotog.cu { background: #5b38d1; border-color: #5b38d1; color: #fff; }
+.whotog.cu:hover { background: #4a2bb8; }
+.whotog.cu.seen { background: #fff; border-color: #d4d9e2; color: #687386; font-weight: 600; }
+.whotog.cu.seen:hover { border-color: #b9addf; color: #4528b3; }
+.whotog.cu small { display: inline-block; min-width: 16px; margin-left: 3px; padding: 0 4px; border-radius: 999px; background: rgba(255, 255, 255, .25); font-size: .72rem; line-height: 16px; text-align: center; }
+.whotog.cu.seen small { background: #eef0f4; }
+.chk-pill { min-width: 30px; }
+.chk-pill.here { border-color: #5b38d1; border-width: 2px; padding: 2px 10px; }
+.chk-pill.seen:not(.on) { background: #f1f2f5; border-color: #d4d9e2; color: #687386; }
+.chk-pill.seen.here:not(.on) { border-color: #5b38d1; }
+.chk-foot { margin-top: 10px; display: flex; justify-content: flex-end; }
+.chk-reset { font: inherit; font-size: .78rem; background: none; border: 0; color: #687386; text-decoration: underline; cursor: pointer; padding: 0; }
+.chk-reset:hover { color: #4528b3; } .chk-reset:disabled { text-decoration: none; cursor: default; color: #1e8a3a; }

@@ -43,7 +43,7 @@
     [3, 'topk', 'Top-K decides which tokens are allowed.', 'Only the K highest scores stay in the running; every other token is out. Move the Top-K slider at the top, or try a preset.{auto}'],
     [3, 'temp', 'Temperature reshapes the gaps between the scores.', 'Every allowed logit is divided by the Temperature. Below 1, the gaps stretch and the leader pulls ahead; above 1, they shrink and the scores bunch together.'],
     [4, 'soft', 'Scores into probabilities: each allowed token gets a slice of the spinner.', 'Softmax gives probabilities totaling 100%. Each slice shows selection probability, not factual correctness.'],
-    [5, 'pick', 'Select the next token: spin the wheel.', 'A random number r between 0 and 1 turns the needle. Whichever slice it stops in is the next token. Press 🎲 Spin.'],
+    [5, 'pick', 'Select the next token: spin the wheel.', 'A random number r between 0 and 1 turns the needle; whichever slice it stops in is the next token. A probability says how likely a token is to be picked, not whether the sentence is true. Press 🎲 Spin.'],
   ];
   const B = Object.fromEntries(BEATS.map((b, i) => [b[1], i]));
   const STEPS = [[1, 'From the Transformer'], [2, 'Score every token'], [3, 'Temperature & Top-K'], [4, 'Scores into probabilities'], [5, 'Select the next token']];

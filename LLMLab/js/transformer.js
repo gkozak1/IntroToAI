@@ -83,8 +83,8 @@
 
   // ---------- the beats (one room) ----------
   const BEATS = [
-    [1, 'start', 'Each token brings its Case File (Input Vector) to 12 Detectives.', 'The Case File is really the token’s Embedding Vector + Position Vector = its 768-number Input Vector.'],
-    [1, 'fadein', 'Each token brings its Case File (Input Vector) to 12 Detectives.', 'The Case File is really the token’s Embedding Vector + Position Vector = its 768-number Input Vector.'],
+    [1, 'start', 'Each token brings its Case File (Input Vector) to 12 Detectives.', 'The Case File is the token’s hidden state: it starts as Embedding Vector + Position Vector (768 numbers) and is updated in every block.'],
+    [1, 'fadein', 'Each token brings its Case File (Input Vector) to 12 Detectives.', 'The Case File is the token’s hidden state: it starts as Embedding Vector + Position Vector (768 numbers) and is updated in every block.'],
     [2, 'stack', 'Each token’s Case File passes through 12 Investigation Rooms (Transformer Blocks), one after another.', 'Each room updates every Case File and hands it to the next room, so the rooms work in order. Each room holds 12 Detectives (Attention Heads).'],
     [2, 'room', 'We will first look at just one Investigation Room (Transformer Block).', 'Within each Investigation Room are 12 Detectives who each have a specific line of questioning.'],
     [2, "focus", "We’ll follow Detective 1, whose line of questioning is “{topic}”.", "The other 11 Detectives work in parallel, each using its own learned methods."],

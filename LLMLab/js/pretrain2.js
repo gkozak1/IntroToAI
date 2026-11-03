@@ -146,7 +146,7 @@
   const PBEATS = [
     { ch: 0, t: 'Pre-training starts in a library.', d: 'GPT-2 learned from about 8 million web pages: picture an enormous bookshelf. We’ll take down one book.' },
     { ch: 0, t: 'Take down one book: A Tale of Two Cities.', d: 'Every sentence in it is a practice question, and the book itself is the answer key.', wait: 4200 },
-    { ch: 0, t: 'Hide the next word, and ask GPT-2 to guess it.', d: 'GPT-2 reads “It was the best of times, it was the”. The real next word, “worst”, is the answer key.' },
+    { ch: 0, t: 'Hide the next word, and ask GPT-2 to guess it.', d: 'GPT-2 reads “It was the best of times, it was the”. The text supplies the target: the real next word, “worst”. The goal is a likely next token, not a checked fact.' },
     { ch: 1, t: 'Cut the sentence into tokens.', d: 'Ten tokens (the comma is a token too), just as in the Input tab.' },
     { ch: 1, t: 'Look up each token’s embedding vector.', d: 'The embedding matrix holds a 768-number row for each of the 50,257 tokens: 38,597,376 parameters.' },
     { ch: 1, t: 'Add each token’s position vector.', d: 'The position matrix holds a 768-number row for each of 1,024 places: 786,432 more parameters.' },
