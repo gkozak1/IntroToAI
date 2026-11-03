@@ -211,7 +211,7 @@
   }
   // significance, contribution and the note sum for the interviewee q
   function interview() {
-    const q = tr.q, w = shares(q), r = tr.room;
+    const q = tr.q, w = shares(q), r = tr.room, attention = BEATS[tr.beat][0] === 3;
     const values = Array.from({ length: T }, (_, j) => illustrativeValue(r, j));
     const valueScale = VZ.sharedScale(values);
     const weighted = tr.beat >= B.v;
@@ -220,11 +220,13 @@
       const s = E('s' + j); s.textContent = j <= q ? Math.round(w[j] * 100) + '%' : '0%'; s.style.color = VZ.shareCol(w[j]);
       const v = E('v' + j);
       role(v, weighted ? Float32Array.from(values[j], x => x * w[j]) : values[j], 'v', valueScale);
-      v.classList.toggle('tr-masked-value', tr.beat >= B.s && j > q);
+      v.classList.toggle('tr-masked-value', attention && tr.beat >= B.s && j > q);
       v.title = j > q && tr.beat >= B.s ? 'Masked: future position contributes 0%' : (weighted ? 'Value × attention percentage' : 'Prepared Value: 64 illustrative numbers');
-      [E('t' + j), E('k' + j)].forEach((el) => el && el.classList.toggle('tr-later', j > q));
-      E('t' + j).classList.toggle('tr-me', j === q);
-      E('q' + j).classList.toggle('tr-active-query', j === q);
+      [E('t' + j), E('k' + j)].forEach((el) => el && el.classList.toggle('tr-later', attention && j > q));
+      E('t' + j).classList.toggle('tr-me', attention && j === q);
+      E('t' + j).style.cursor = attention ? 'pointer' : 'default';
+      E('t' + j).style.zIndex = '5';
+      E('q' + j).classList.toggle('tr-active-query', attention && j === q);
     }
     role(E('vsumc'), note(r, q, 0), 'v', valueScale); E('vsumw').textContent = `“${W[q]}”`;
     arcs();
@@ -351,6 +353,11 @@
     },
     onText() { if (NT.stations.tfroom.switching) return; NT.stations.tfroom.init(); },
     onTK() {},
+    selectAttentionToken(i, screen = null) {
+      const key = {2:'q',3:'k',4:'k',5:'k',6:'s',7:'s',8:'v',9:'n'}[screen];
+      if ((screen !== null && !key) || (screen === null && BEATS[tr.beat][0] !== 3)) return;
+      pause(); tr.q = i; go(key ? B[key] : tr.beat, false);
+    },
   };
   const spd = () => [0.5, 0.75, 1, 1.5, 2][tr.sp == null ? 2 : tr.sp];
   const ms = (x) => Math.round(x / spd());
@@ -388,7 +395,7 @@
     }
   }
   function wire() {
-    for (let i = 0; i < T; i++) E('t' + i).onclick = () => { if (BEATS[tr.beat][0] !== 3) return; tr.q = i; go(tr.beat, false); }; // redraw in place: shares, arcs, caption
+    for (let i = 0; i < T; i++) E('t' + i).onclick = () => NT.stations.tfroom.selectAttentionToken(i); // redraw in place: shares, arcs, caption
   }
   function fit() {
     const box = $('#trBox'), sc = E('sc'); if (!box || !sc) return;

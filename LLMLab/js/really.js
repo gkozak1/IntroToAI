@@ -1,6 +1,6 @@
 /* LLM Lab — Transformer tab: "How it really works" (v2, from Greg's 13 hand sketches + his notes on v1).
    A twisty under the detective story. Opened, it shows the real GPT-2 operations behind the story's current step, with its own
-   controls; Next always continues through all 14 screens. Every stripe, number and matrix picture is real GPT-2 small for the story
+   controls; Back/Next follow the story, while numbered screens allow independent inspection. Every stripe, number and matrix picture is real GPT-2 small for the story
    sentence (data/really-data.js and data/really-w/b{block}.js, built by build/build_really.py; biases and layer norms included).
    Head 1 = the story's Detective 1. Vectors are drawn to scale inside each screen: 768 numbers = 288 px, 64 numbers = 24 px
    (screens 12–14 are drawn at a third of that so 3,072 fits).
@@ -18,7 +18,7 @@
   const N = 14;
   const NAMES = ['Input vectors', 'Query', 'Key', 'Value', 'Q · K · V', 'Q × Kᵀ', 'Softmax', 'Weighted sum', 'Every token', '12 heads', 'W_O and add', 'MLP up', 'MLP down', '12 blocks'];
   // which screens belong to each detective step (the story's beat keys); the first one listed is where the panel opens
-  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [5, 3, 4], s: [7, 6, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], join: [10], project: [11], sup3: [11], sup4: [11], f1: [13, 12], f2: [13], f3: [14], known: [14] };
+  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [5, 3, 4], s: [7, 6, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], join: [10], project: [11], sup3: [11], sup4: [11], f1: [12, 13], f2: [13], f3: [14], known: [14] };
   // sizes: 768 numbers = 288 px, 64 = 24 px (screens 1–11); 768 = 96 px, 3,072 = 384 px (screens 12–14)
   const L768 = 288, L64 = 24, Z64 = L64, L3072 = 4 * L768; // every vector to one scale: 768 numbers = 288 px, 64 = 24 px, 3,072 = 1,152 px
 
@@ -437,8 +437,8 @@
     const tw = E('tw');
     tw.addEventListener('toggle', () => { st.open = tw.open; if (tw.open) { Promise.resolve(show(true)).then(() => requestAnimationFrame(() => { fit(); tw.scrollIntoView({ behavior: 'smooth', block: 'start' }); })); } else { pause(); st.tk++; } });
     E('rew').onclick = () => { pause(); go(1, true); };
-    E('back').onclick = () => { pause(); if (st.shown > 1) go(st.shown - 1, false); };
-    E('next').onclick = () => { pause(); if (st.shown < N) go(st.shown + 1, true); };
+    E('back').onclick = () => { pause(); document.getElementById('trBack')?.click(); };
+    E('next').onclick = () => { pause(); document.getElementById('trNext')?.click(); };
     E('rep').onclick = () => { pause(); st.following = false; show(true, true); };
     E('play').onclick = () => (st.playing ? pause() : play());
   }
@@ -461,16 +461,31 @@
       box.querySelectorAll('.rw-scene > *:not(svg)').forEach((el) => { el.style.opacity = 0; });
       paint(); st.built = key; fit();
       if (!(st.following && assemblyKeys.includes(st.key))) for (let t = 1; t < s; t++) run(t, false);
-      box.querySelectorAll('.rw-tok').forEach((el) => (el.onclick = () => { st.following = false; st.q = +el.dataset.i; show(true, true); }));
+      box.querySelectorAll('.rw-tok').forEach((el) => (el.onclick = () => {
+        if (st.shown < 2 || st.shown > 9) return;
+        const following = st.following, screen = st.shown;
+        pause(); NT.stations.tfroom.selectAttentionToken(+el.dataset.i, following ? null : screen);
+        if (!following) { st.following = false; st.target = screen; show(false); }
+      }));
     }
     if (st.following && assemblyKeys.includes(st.key)) storyAssembly(!!animate); else run(s, !!animate);
+    if (st.following && st.key === 'f1') {
+      // Play the expansion and GELU before showing the MLP output; hold before addition.
+      if (animate) later(8000, () => run(13, true)); else run(13, false);
+    }
+    box.querySelectorAll('.rw-tok').forEach(el => {
+      const attention = s >= 2 && s <= 9;
+      el.classList.toggle('tr-me', attention && +el.dataset.i === st.q);
+      el.style.cursor = attention ? 'pointer' : 'default';
+      el.style.zIndex = '5';
+    });
     st.shown = s;
-    const [t, d] = st.following && assemblyKeys.includes(st.key) ? assemblyCaption() : st.following && st.key === 'f1' ? ['The MLP expands, transforms, and returns to 768 numbers.', 'The Forensics Expert’s output is ready; the second residual addition comes next.'] : cap(s);
+    const [t, d] = st.following && assemblyKeys.includes(st.key) ? assemblyCaption() : st.following && st.key === 'f1' ? ['The MLP expands, transforms, and returns to 768 numbers.', 'After expansion and GELU, W2 returns to 768 numbers. The second residual addition comes next.'] : cap(s);
     E('cap').innerHTML = `<div class="fl-ch"><b>${esc(t)}</b></div><div class="fl-cd">${esc(d)}</div>`;
     E('dots').innerHTML = Array.from({ length: N }, (_, k) => `<button class="rw-dot ${k + 1 === s ? 'on' : ''} ${st.list.includes(k + 1) ? 'mine' : ''}" data-s="${k + 1}" title="${k + 1}. ${NAMES[k]}">${k + 1}</button>`).join('') + '<span class="rw-dkey">tinted = this story step</span>';
     E('dots').querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { pause(); go(+b.dataset.s, true); }));
     E('src').textContent = `Block ${st.room} · head 1 · ${NAMES[s - 1]}`;
-    E('back').disabled = s === 1; E('rew').disabled = s === 1; E('next').disabled = s === N;
+    E('back').disabled = !!document.getElementById('trBack')?.disabled; E('rew').disabled = s === 1; E('next').disabled = !!document.getElementById('trNext')?.disabled;
   }
   function fit() {
     const box = E('box'), sc = E('sc'); if (!box || !sc) return;
