@@ -13,7 +13,7 @@
         <select id="starter" aria-label="Example sentences"></select>
         <label class="ctl">Temperature <input type="range" id="tSlider" min="0" max="17" step="1" /><span class="v" id="tVal"></span></label>
         <label class="ctl">Top-K <input type="range" id="kSlider" min="1" max="51" step="1" /><span class="v" id="kVal"></span></label>
-        <span class="topgap"></span><span id="liveChip" class="livechip" hidden></span><button id="numBtn" class="btn numtoggle" aria-pressed="false" title="Show the live numbers behind this view (N)"><span class="sw"></span><span class="nt-l">Show the numbers</span></button></div>
+        <span class="topgap"></span><span id="liveChip" class="livechip" hidden></span><button id="numBtn" class="btn numtoggle" aria-pressed="false" title="Show the live numbers behind this view (N)"><span class="sw"></span><span class="nt-l">Show the numbers</span></button><button id="chkBtn" class="btn numtoggle chktoggle" aria-pressed="true" title="Show or hide the one-question Check on each tab"><span class="sw"></span><span class="nt-l">Checks</span></button></div>
       <section class="sentcard">
         <div class="sentwrap" id="sentWrap">
           <div class="sentback" id="sentBack" aria-hidden="true"></div>
@@ -55,7 +55,8 @@
   <script src="./js/pretrain.js"></script>
   <script src="./js/pretrain2.js"></script>
   <script src="./js/assist.js"></script>
-  <script src="./js/main.js"></script>
+  <script src="./js/checks.js"></script>
+    <script src="./js/main.js"></script>
   <script src="./js/numbers.js"></script>
 </body>
 </html>

@@ -81,7 +81,7 @@
   document.addEventListener('click', (e) => { const w = NT.whoEl; if (!w || w.hidden || whoOpenedAt === clickN) return; if (e.target.closest && e.target.closest('#whoTog')) return; setTimeout(() => NT.setWho(false), 0); }); // after the click has done its job, so nothing moves under the pointer
   NT.setWho = (open) => { const w = NT.whoEl; if (!w || !w.dataset.has || w.hidden === !open) return; w.hidden = !open; const b = $('#whoTog'); if (b) b.classList.toggle('on', open); window.dispatchEvent(new Event('resize')); }; // the pictures refit
   // the button that folds and unfolds "On this page"; pages that redraw the sub-tab row call it again
-  NT.whoToggle = () => { const subs = $('#subtabs'), w = NT.whoEl; if (!subs || !w || !w.dataset.has || $('#whoTog')) return; subs.insertAdjacentHTML('beforeend', `<button class="whotog ${w.hidden ? '' : 'on'}" id="whoTog" title="What is on this page">ⓘ About this page</button>`); $('#whoTog').onclick = () => NT.setWho(w.hidden); };
+  NT.whoToggle = () => { if (NT.checkBtn) NT.checkBtn(); const subs = $('#subtabs'), w = NT.whoEl; if (!subs || !w || !w.dataset.has || $('#whoTog')) return; subs.insertAdjacentHTML('beforeend', `<button class="whotog ${w.hidden ? '' : 'on'}" id="whoTog" title="What is on this page">ⓘ<span class="who-l"> About this page</span></button>`); $('#whoTog').onclick = () => NT.setWho(w.hidden); };
 
   // ---------- sentence (an ordinary textarea whose text is drawn, with bubbles, by the layer behind it) ----------
   const ta = $('#sentence'), back = $('#sentBack'), wrap = $('#sentWrap');
