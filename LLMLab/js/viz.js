@@ -30,7 +30,7 @@
   V.sharedScale = (vs) => { const a = vs.filter(Boolean).map(V.p98).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 1; };
   V.vecHTML = (id, cls = '') => `<canvas class="vz-vec ${cls}" id="${id}"></canvas>`;
 
-  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [40, 92] };
+  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [56, 75] } /* MLP: mustard/olive (Nov 3), clearly apart from Key orange */;
   const p98 = V.p98;
   function px(hu, sa, t) {
     t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
@@ -83,7 +83,8 @@
 
   // ---------- the spinner ----------
   // box: the element to fill. o: { pr, K, r (null = not spun yet), hit, spin (animate the needle), dur (ms), idp (id prefix),
-  //   button (show 🎲 Spin), onSpin (click handler), n (slices, 15), size (px, 330), done (called when the needle stops), keepNeedle }
+  //   button (show 🎲 Spin), onSpin (click handler), n (slices, 15), size (px, 330), done (called when the needle stops), keepNeedle,
+  //   from (an earlier r: the needle turns straight from there to r) }
   V.wheel = (box, o) => {
     if (!box) return; const pr = o.pr; if (!pr) { box.innerHTML = ''; return; }
     const P = o.idp ?? 'vz', K = o.K >= NT.ALL ? NT.ALL : o.K, n = Math.min(o.n || 15, pr.K), R = 140, C = 175; let a = 0, g = '';
@@ -101,7 +102,9 @@
     const nd = document.getElementById(P + 'fNeedle') || { style: {} }, rr = document.getElementById(P + 'fR');
     if (o.spin && r != null) {
       const d = o.dur || 2000;
-      requestAnimationFrame(() => { nd.style.transition = `transform ${d}ms cubic-bezier(.15,.7,.2,1)`; nd.style.transform = `rotate(${rot}deg)`; });
+      // o.from: the needle starts where an earlier r left it and turns straight to r (no extra turns): used when a token is chosen by hand
+      if (o.from != null) nd.style.transform = `rotate(${o.from * 360 + 360 * 4}deg)`;
+      requestAnimationFrame(() => requestAnimationFrame(() => { nd.style.transition = `transform ${d}ms cubic-bezier(${o.from != null ? '.45,.05,.25,1' : '.15,.7,.2,1'})`; nd.style.transform = `rotate(${rot}deg)`; }));
       setTimeout(() => { if (!rr.isConnected) return; if (!o.stillHere || o.stillHere()) rr.textContent = `r = ${r.toFixed(3)} → “${word}”`; if (o.done) o.done(); }, d);
     } else if (r != null) nd.style.transform = `rotate(${rot}deg)`;
     const sb = document.getElementById(P + 'fSpinBtn'); if (sb && o.onSpin) sb.onclick = o.onSpin;

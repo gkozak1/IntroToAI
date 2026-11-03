@@ -155,7 +155,7 @@
       html += `<div style="display:grid;grid-template-columns:110px 1fr 18px 1fr 18px 1fr;gap:6px;align-items:center;margin:4px 0"><span class="tok" style="${NT.tokStyle(i, n)};justify-self:end">${show(NT.tokText(id))}${dup !== null ? `<span class="badge">= row of #${dup + 1}</span>` : ''}</span>${NT.stripHTML('et' + i)}<span class="op">+</span>${NT.stripHTML('ep' + i)}<span class="op">=</span>${NT.stripHTML('es' + i)}</div>`;
     }
     box.innerHTML = html;
-    NT.setStatus(`${shown} of ${n} tokens → a ${shown} × 768 input`);
+    NT.setStatus(`${shown} of ${n} tokens → ${shown} input vectors of 768 numbers`);
     NT.stepperState('#embStepper', shown > 1, shown < n);
     for (let i = 0; i < shown; i++) {
       const tok = await NT.row(cur.ids[i]); if (tk !== embTok) return;

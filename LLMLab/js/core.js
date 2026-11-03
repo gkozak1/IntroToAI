@@ -110,7 +110,7 @@ const NT = (window.NT = {});
   NT.EX = EX;
   NT.LAB = L;
   // [key, text, label]: the story sentence, then the other stories GPT-2's numbers are stored for (one sentence everywhere: Greg, Oct 13)
-  NT.STARTERS = [['story', 'The story: …sat on the left bank of the…'], ['umbrella', 'Umbrella: …it was starting to…'], ['trophy', 'Trophy: …because it was too…'], ['annie', 'Annie’s picnic: …pack a…'], ['river', 'The whole banker sentence']].map(([k, l]) => [k, EX[k].text, l]);
+  NT.STARTERS = [['story', 'The story: …left bank of the…'], ['umbrella', 'Umbrella: …it was starting to…'], ['trophy', 'Trophy: …because it was too…'], ['annie', 'Annie’s picnic: …pack a…'], ['river', 'The whole banker sentence']].map(([k, l]) => [k, EX[k].text, l]);
   NT.STORY = 'story';
   NT.attn = (ex, b, h, i, j) => ex.attn[((b * 12 + h) * ex.T + i) * ex.T + j] / 255;
   NT.attnAvg = (ex, b, i, j) => { let s = 0; for (let h = 0; h < 12; h++) s += NT.attn(ex, b, h, i, j); return s / 12; };
@@ -160,6 +160,11 @@ const NT = (window.NT = {});
     if (rank > K) return `${pre}Not allowed at Top-K ${NT.int(K)} (GPT-2 rank ${NT.int(rank)}) · 0% sampling probability`;
     return `${pre}rank ${NT.int(rank)} of ${K >= NT.ALL ? NT.int(NT.ALL) + ' (All)' : NT.int(K) + ' allowed'} · ${pctTip(p)} probability · T ${T <= 1 ? Number(T).toFixed(1) : T}`;
   };
+  // Nov 3 (Greg, token rows option B): repeated words longer than 3 letters get superscripts (left¹ left², bank¹ bank²), the same rule everywhere
+  NT.repMarks = (words) => { const key = (w) => String(w).trim().toLowerCase(), n = {}, seen = {}, SUP = ['', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+    words.forEach((w) => { const k = key(w); if (/^[a-z]{4,}$/.test(k)) n[k] = (n[k] || 0) + 1; });
+    return words.map((w) => { const k = key(w); if (!(n[k] > 1)) return ''; seen[k] = (seen[k] || 0) + 1; return SUP[seen[k]] || ''; }); };
+  NT.TOKGRAY = '#9aa3b2'; NT.TOKLAST = '#c2185b'; // token rows: gray bars, the last token (the one GPT-2 predicts from) crimson
   NT.makeMark = (info, gen) => ({ band: NT.rankBand(info.rank, info.K), tip: NT.pickTip(info), gen });
   function shiftMarks(oldT, newT) {
     if (oldT === newT) return;
@@ -172,7 +177,7 @@ const NT = (window.NT = {});
   NT.drawBack = () => {
     const el = document.getElementById('sentBack'); if (!el) return;
     const t = backText, ms = S.marks.slice().sort((a, b) => a.s - b.s); let h = '', i = 0;
-    ms.forEach((k, j) => { if (k.s < i || k.e > t.length) return; h += NT.esc(t.slice(i, k.s)); const b = NT.BANDS[k.band]; h += `<mark class="bub" data-m="${S.marks.indexOf(k)}" style="background:${b.bg};color:${b.fg};box-shadow:0 0 0 2px ${b.bg}">${NT.esc(t.slice(k.s, k.e))}</mark>`; i = k.e; });
+    ms.forEach((k, j) => { if (k.s < i || k.e > t.length) return; h += NT.esc(t.slice(i, k.s)); const b = NT.BANDS[k.band]; h += `<mark class="bub${k.tent ? ' tent' : ''}" data-m="${S.marks.indexOf(k)}" style="background:${b.bg};color:${b.fg};box-shadow:0 0 0 2px ${b.bg}">${NT.esc(t.slice(k.s, k.e))}</mark>`; i = k.e; });
     h += NT.esc(t.slice(i)) + (t.endsWith('\n') ? ' ' : '');
     el.innerHTML = h;
     const ta = document.getElementById('sentence'); if (ta) el.scrollTop = ta.scrollTop;

@@ -43,10 +43,10 @@
     [3, 'topk', 'Top-K decides which tokens are allowed.', 'Only the K highest scores stay in the running; every other token is out. Move the Top-K slider at the top, or try a preset.{auto}'],
     [3, 'temp', 'Temperature reshapes the gaps between the scores.', 'Every allowed logit is divided by the Temperature. Below 1, the gaps stretch and the leader pulls ahead; above 1, they shrink and the scores bunch together.'],
     [4, 'soft', 'Scores into probabilities: each allowed token gets a slice of the spinner.', 'Softmax gives probabilities totaling 100%. Each slice shows selection probability, not factual correctness.'],
-    [5, 'pick', 'Pick with r: spin the wheel.', 'A random number r between 0 and 1 turns the needle. Whichever slice it stops in is the next token. Press 🎲 Spin.'],
+    [5, 'pick', 'Select the next token: spin the wheel.', 'A random number r between 0 and 1 turns the needle. Whichever slice it stops in is the next token. Press 🎲 Spin.'],
   ];
   const B = Object.fromEntries(BEATS.map((b, i) => [b[1], i]));
-  const STEPS = [[1, 'From the Transformer'], [2, 'Score every token'], [3, 'Temperature & Top-K'], [4, 'Scores into probabilities'], [5, 'Pick with r']];
+  const STEPS = [[1, 'From the Transformer'], [2, 'Score every token'], [3, 'Temperature & Top-K'], [4, 'Scores into probabilities'], [5, 'Select the next token']];
 
   // ---------- data ----------
   let C = null; // { text, d, ex, T, W, cards(i) | null, last }
@@ -94,9 +94,9 @@
     G = geom();
     const { T, ROW, TOP, H } = G, hy = TOP - 30;
     let h = `<div class="fl-scene pk-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="fl-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>`;
-    h += `<div class="fl-h" style="left:18px;top:${hy}px;width:80px">Token</div><div class="fl-h pk-fade" id="${P}hc" style="left:108px;top:${hy}px;width:160px">🪪 Case File <small>after block 12</small></div>`;
+    h += `<div class="fl-h" style="left:18px;top:${hy}px;width:80px">Token</div><div class="fl-h pk-fade" id="${P}hc" style="left:108px;top:${hy}px;width:160px">🪪 Final Case File <small>Block 12 Output: 768 Numbers</small></div>`;
     for (let i = 0; i < T; i++) {
-      h += `<div class="tr-c tr-tok ${i === T - 1 ? 'tr-me' : ''}" style="left:18px;top:${G.rowY(i)}px;--c:${i === T - 1 ? '#c2185b' : '#9aa3b2'};width:84px;height:${ROW - 6}px">${esc(C.W[i])}</div>`;
+      h += `<div class="tr-c tr-tok ${i === T - 1 ? 'tr-me' : ''}" style="left:18px;top:${G.rowY(i)}px;--c:${i === T - 1 ? '#c2185b' : '#9aa3b2'};width:84px;height:${ROW - 6}px">${esc(C.W[i])}${NT.repMarks(C.W)[i]}</div>`;
       h += `<canvas class="fl-strip pk-fade" id="${P}c${i}" style="left:108px;top:${G.rowY(i) + 4}px;width:140px;height:${Math.max(8, ROW - 14)}px"></canvas>`;
     }
     h += `<div class="pk-q" id="${P}q" style="left:62px;top:${G.rowY(T)}px">?</div>`;
@@ -144,6 +144,7 @@
     if (step >= 4) {
       const hit = pk.r == null ? -1 : NT.pickIndex(pr.p, pk.r);
       E('tab').innerHTML = VZ.rankCard(pr, K, { n: 10, hit: pk.spun ? hit : -1, range: step === 5, vecId: vec ? P + 'tv' : null, vecTitle: `The output vector for “${esc(C.last)}”…`, title: `Next-token ranking · Temperature ${S.T <= 1 ? S.T.toFixed(1) : S.T} · Top-K ${NT.kLabel(S.K)}` });
+      if (step >= 4) E('tab').insertAdjacentHTML('beforeend', `<div class="pk-leg">${NT.legendHTML(S.K)}</div>`); // Nov 3 color key for the bars and the wheel
     }
     if (vec && E('tv')) VZ.vec(E('tv'), vec);
     if (step >= 4) wheel(pr, pk.spinning && pk.fresh); pk.fresh = false;

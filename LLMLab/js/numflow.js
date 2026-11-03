@@ -54,10 +54,10 @@
       let x = 30; G.sx = widths.map((w) => { const a = x; x += w + 8; return a; }); G.fs = fs; G.cs = Math.min(1, 17 / fs) * (ROW < 24 ? 0.8 : 1);
       const sh = Math.max(6, ROW - 10), vfs = Math.max(8, Math.min(11, ROW * 0.42));
       let h = `<div class="fl-scene nv-scene" id="${P}sc" style="width:${W}px;height:${H}px"><svg class="fl-svg" id="${P}svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"></svg>`;
-      [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding vector'], ['vals', X.vals, 'Element values (the first 10 of 768)'], ['pos', X.pos, 'Position vector'], ['inp', X.inp, 'Input vector']].forEach(([k, hx, t]) => (h += `<div class="fl-h" id="${P}h-${k}" style="left:${hx}px;top:${top - 34}px">${t}</div>`));
+      [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding <small>Embedding Vector: 768 Numbers</small>'], ['vals', X.vals, 'Element values <small>the first 10 of 768</small>'], ['pos', X.pos, 'Position <small>Position Vector: 768 Numbers</small>'], ['inp', X.inp, 'Input Vector <small>(Case File)</small>']].forEach(([k, hx, t]) => (h += `<div class="fl-h" id="${P}h-${k}" style="left:${hx}px;top:${top - 34}px">${t}</div>`));
       const sp = (w) => esc(w).replace(/^ /, '<span class="sp">·</span>');
       for (let i = 0; i < T; i++) {
-        h += `<div class="fl-tok" id="${P}t${i}" style="font-size:${fs}px">${sp(D.raw[i])}</div>`;
+        h += `<div class="fl-tok" id="${P}t${i}" style="font-size:${fs}px">${sp(D.raw[i])}<span class="rep">${NT.repMarks(D.raw)[i]}</span></div>`;
         if (i) h += `<div class="fl-div" id="${P}d${i}" style="left:${G.sx[i] - 4}px;top:10px;height:${fs + 10}px"></div>`;
         h += `<div class="fl-id" id="${P}i${i}">${D.ids[i]}</div>`;
         ['e', 'p', 'n'].forEach((c) => (h += `<canvas class="fl-strip" id="${P}${c}${i}" style="width:${STRIPW}px;height:${sh}px"></canvas>`));
@@ -190,7 +190,7 @@
       if (!G) return; const s = cur(); if (mode === 'all') s.phaseC = N.k >= 4 + N.data.T;
       const dur = animate ? ms(act ? 1100 : 1400) : 0;
       apply(layout(s, act), dur); overlay(s, animate ? act : null); caption(s, act); detail(s);
-      E('sc').querySelectorAll('.fl-tok .sp').forEach((e) => (e.style.display = s.stage <= 1 ? '' : 'none')); // the leading space shows only while the sentence is being cut (as in the flow)
+      E('sc').querySelectorAll('.fl-tok .sp').forEach((e) => (e.style.display = s.stage <= 1 ? '' : 'none')); E('sc').querySelectorAll('.fl-tok').forEach((e) => e.classList.toggle('row', s.stage > 1)); // the leading space shows only while the sentence is being cut (as in the flow)
       if (act && animate && act.kind === 'pos') { const el = E('n' + act.i); if (el) { el.classList.remove('flash'); void el.offsetWidth; setTimeout(() => el.classList.add('flash'), Math.round(dur * 0.9)); } }
       syncButtons(s);
       if (opts.onSelect) { const i = N.sel >= 0 ? N.sel : act ? act.i : -1; if (i >= 0) opts.onSelect(N.data.ids[i], i); }
@@ -249,7 +249,7 @@
     const ctl = mode === 'all' ? btn('rew', '⏮', '', 'Start over') + btn('back', '◀ Back', '', 'Back one step') + btn('next', 'Next ▶', 'primary') + btn('play', '▶ Play')
       : mode === 'ids' ? btn('rew', '⏮', '', 'Start over') + btn('back', '◀ Back', '', 'Back one step') + btn('next', 'Next ▶', 'primary') + btn('one', 'Look up next ID’s embedding vector') + btn('all', 'Look up all token IDs') + btn('play', '▶ Play')
       : btn('rew', '⏮', '', 'Start over') + btn('back', '◀ Back', '', 'Take the last one back') + btn('one', 'Get the next position vector', 'primary') + btn('all', 'Get all position vectors');
-    host.innerHTML = `<section class="panel fl-panel nv-panel"><div class="fl-head"><div class="fl-ctl">${ctl}<label class="delay">Speed <input type="range" id="${P}speed" min="0" max="${SPEEDS.length - 1}" value="${speedIx}"><b id="${P}spv">×${SPEEDS[speedIx]}</b></label>${opts.more ? `<button class="btn ghost" id="${P}more" hidden>${opts.more[0]}</button>` : ''}</div></div>
+    host.innerHTML = `<section class="panel fl-panel nv-panel"><div class="fl-head"><div class="fl-ctl">${ctl}<label class="delay" hidden>Speed <input type="range" id="${P}speed" min="0" max="${SPEEDS.length - 1}" value="${speedIx}"><b id="${P}spv">×${SPEEDS[speedIx]}</b></label>${opts.more ? `<button class="btn ghost" id="${P}more" hidden>${opts.more[0]}</button>` : ''}</div></div>
       <div class="fl-cap fixed" id="${P}cap"></div>${mode === 'pos' ? `<div class="nv-body"><div class="fl-box nv-box" id="${P}box"></div><div class="nv-det side" id="${P}det"></div></div><div class="nv-note" id="${P}qa"></div>` : `<div class="fl-box nv-box" id="${P}box"></div><div class="nv-det" id="${P}det" hidden></div>`}</section>`;
     NT.guideRow(host.querySelector('.nv-panel')); // the player beside the caption, as on every other page
     const on = (id, fn) => { const e = E(id); if (e) e.onclick = fn; };

@@ -54,7 +54,7 @@
       box.querySelectorAll('.as-choices').forEach((g) => g.querySelectorAll('.as-ch').forEach((b) => (b.onclick = () => { P.picks[g.dataset.k] = +b.dataset.i; draw(); })));
       gate();
       $('#asBack').disabled = P.beat === 0; $('#asRew').disabled = P.beat === 0;
-      NT.setStatus(`Step ${P.beat + 1} of ${P.steps.length}: ${P.steps[P.beat].chev.replace(/^\S+\s/, '')}`);
+      NT.setStatus(`Step ${P.beat + 1} of ${P.steps.length} · ${P.steps[P.beat].chev.replace(/^\S+\s/, '')}`);
       requestAnimationFrame(() => NT.fitZoom(box, 0.7));
     };
     const gate = () => { const s = P.steps[P.beat], ok = !s.gate || s.gate(P); $('#asNext').disabled = P.beat >= P.steps.length - 1 || !ok; $('#asNext').title = ok ? '' : 'Make your prediction first'; return ok; };

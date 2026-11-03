@@ -274,6 +274,7 @@ body.proj { zoom: 1.25; }
 .topline h1 { font-size: 1.45rem; font-weight: 800; }
 .livechip s { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #1f8a4c; text-decoration: none; }
 .numtoggle, .gentog { display: inline-flex; align-items: center; gap: 8px; }
+.numtoggle[hidden], .gentog[hidden] { display: none; } /* Nov 3: the switch hides on pages that have no numbers layer */
 .sw { width: 30px; height: 17px; border-radius: 999px; background: #c8d0db; position: relative; display: inline-block; flex: none; transition: background .15s; }
 .sw::after { content: ""; position: absolute; left: 2px; top: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; transition: left .15s; }
 .numtoggle.on .sw, .gentog.on .sw { background: var(--accent); }
@@ -290,6 +291,12 @@ body.proj { zoom: 1.25; }
 .sentback { position: absolute; inset: 0; color: var(--ink); overflow: hidden; pointer-events: none; scrollbar-gutter: stable; }
 #sentence { scrollbar-gutter: stable; }
 .sentback mark.bub { border-radius: 5px; padding: 0; }
+/* Overview: the tentative GPT-2 token (not yet locked in) — dashed outline, lighter fill */
+.sentback mark.bub.tent { outline: 2px dashed #5b3cc4; outline-offset: -1px; } /* Nov 3: drawn inside its own bubble, so it never covers the token before it */
+table.gt tr.tent td { font-style: italic; background: repeating-linear-gradient(135deg, #f6f3ff, #f6f3ff 6px, #fff 6px, #fff 12px); }
+table.gt tr.tent td .tentlbl { font-size: 11px; color: #5b3cc4; font-style: normal; margin-left: 4px; }
+.rnote .tentlbl { color: #5b3cc4; font-weight: 600; }
+
 .sentwrap.onbub #sentence { cursor: pointer; }
 .bubtip { position: absolute; z-index: 50; background: #1d2634; color: #fff; font-size: .82rem; font-weight: 600; padding: 6px 9px; border-radius: 7px; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.18); max-width: 520px; }
 .ctlrow { align-items: center; margin-top: 10px; gap: 28px; }
@@ -1027,7 +1034,11 @@ table.rk tr.out .mbar { visibility: hidden; }
 .exrk table.rk td .mini { white-space: nowrap; }
 .expick { display: flex; gap: 10px; align-items: flex-start; }
 .expick .exrk { flex: 1 1 auto; min-width: 0; }
-.exwheel { flex: 0 0 196px; text-align: center; font-size: .8rem; }
+.exwheel { flex: 1 1 150px; min-width: 150px; max-width: 290px; text-align: center; font-size: .8rem; } /* Nov 3: the wheel takes the room the list leaves (150–290 px); if even 150 won't fit, it moves below the list */
+.exwheel svg { width: 100%; height: auto; max-width: 280px; display: block; margin: 0 auto; }
+.expick { flex-wrap: wrap; justify-content: space-between; } .expick .exrk { flex: 0 0 auto; } .expick .exrk table.rk { width: auto; }
+.exwin { margin-top: 10px; } .exwin .wt { font-size: 1.6rem; }
+#genPick table.rk tr.addable { cursor: pointer; } #genPick table.rk tr.addable:hover td { background: #f3f0ff; }
 .exwheel .fl-rr { font-size: .85rem; }
 @media (max-width: 1100px) { .expick { flex-wrap: wrap; } }
 /* Language into Numbers: the hands-on flow (js/numflow.js) */
@@ -1163,7 +1174,7 @@ td.tr-lane, th.tr-lane { width: 150px; }
 .tr-id { font-family: ui-monospace, Menlo, monospace; font-weight: 700; color: #4528b3; }
 .tr-tx { font-style: italic; color: #33455a; background: #fffaf0; border-radius: 5px; padding: 0 6px; }
 .tr-tag { background: #fff7d6; }
-.tr-fact { background: #eef8f0; }
+.tr-fact { background: #f8f6d8; } /* Nov 3: MLP examples amber, like the MLP strips */
 .tr-pc { font-weight: 800; justify-content: flex-end; }
 .tr-h { font-size: 10.5px; line-height: 1.15; } .tr-h small { display: block; text-transform: none; letter-spacing: 0; font-weight: 600; }
 .tr-h .tr-an { font-size: 9px; vertical-align: 1px; }
@@ -1172,7 +1183,7 @@ td.tr-lane, th.tr-lane { width: 150px; }
 .tr-lc { border: 0 !important; }
 .tr-total { font-weight: 800; justify-content: flex-end; height: 24px; }
 .tr-sumrow { gap: 6px; font-size: 11.5px; color: #4528b3; justify-content: flex-end; height: 26px; border-top: 2px solid #5b38d1; }
-.tr-panel2 { width: 220px; background: #fff; border: 1px solid #e3e8f0; border-left: 4px solid #1e8a3a; border-radius: 10px; padding: 6px 10px; font-size: 12px; transition: opacity .6s; }
+.tr-panel2 { width: 220px; background: #fff; border: 1px solid #e3e8f0; border-left: 4px solid #8a8200; border-radius: 10px; padding: 6px 10px; font-size: 12px; transition: opacity .6s; }
 .tr-fl { margin: 3px 0; }
 .tr-box { width: 470px; background: #fff; border: 2px solid #5b38d1; border-radius: 12px; padding: 8px 12px; transition: opacity .6s; }
 .tr-legend { font-size: .78rem; color: #687386; margin-top: 4px; }
@@ -1434,11 +1445,11 @@ table.ws tr.gd td:first-child, table.ws tr.gd td:nth-child(2) { background: #501
 .pt2-shelf.out .pt2-tale { transform: translate(260px, -40px) rotate(-8deg) scale(1.25); }
 .pt2-tok { height: 28px; line-height: 28px; }
 .pt2-rn { display: flex; align-items: center; gap: 3px; height: 22px; z-index: 1; }
-.pt2-rn b { font-size: 11px; color: #5b38d1; width: 14px; text-align: right; } .pt2-rn span { font-size: 6.5px; line-height: 7.3px; font-weight: 800; color: #c2185b; }
+.pt2-rn b { font-size: 11px; color: #5b38d1; width: 14px; text-align: right; } .pt2-rn span { font-size: 6.5px; line-height: 7.3px; font-weight: 800; color: #5b38d1; }
 .pt2-tf { left: 358px; top: 18px; width: 548px; height: 478px; }
-.pt2-col { font-size: 12px; font-weight: 800; color: #2d2366; z-index: 1; display: flex; align-items: center; gap: 5px; } .pt2-col i { width: 12px; height: 10px; border-radius: 2px; display: inline-block; } .pt2-col.hd i { background: #c2185b; } .pt2-col.fc i { background: #1e8a3a; }
+.pt2-col { font-size: 12px; font-weight: 800; color: #2d2366; z-index: 1; display: flex; align-items: center; gap: 5px; } .pt2-col i { width: 12px; height: 10px; border-radius: 2px; display: inline-block; } .pt2-col.hd i { background: #5b38d1; } .pt2-col.fc i { background: #8a8200; } /* Nov 3: Detective = Detective 1's purple, MLP = amber, as in the Transformer and HIRW */
 .pt2-co { height: auto; padding: 6px 10px; }
-#pb_coA, .pt2-co.hd { border: 2px solid #c2185b !important; } #pb_coF, .pt2-co.fc { border: 2px solid #1e8a3a !important; }
+#pb_coA, .pt2-co.hd { border: 2px solid #5b38d1 !important; } #pb_coF, .pt2-co.fc { border: 2px solid #8a8200 !important; }
 .pt2-co .cr { margin: 2px 0; }
 .pt2-pop { left: 470px; top: 210px; padding: 12px 22px; background: #501549; color: #fff; font-weight: 800; font-size: 18px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; transform: scale(.85); pointer-events: none; z-index: 5; transition: opacity .35s, transform .35s; }
 .pt2-pop.on { opacity: 1; transform: scale(1); }
@@ -1555,7 +1566,7 @@ body[data-st="mlbook"] .subtabs, body[data-st="rlhf"] .subtabs { flex-wrap: nowr
 .rw-v { height: 20px; border-radius: 3px; border: 1px solid #d5d9e0; image-rendering: pixelated; background: #fff; }
 .rw-h { font-size: 11.5px; line-height: 1.15; }
 .rw-h small { display: block; font-weight: 600; text-transform: none; letter-spacing: 0; color: #8a94a6; }
-.rw-cq { color: #1f5fd1; } .rw-ck { color: #d9730d; } .rw-cv { color: #7b3fc6; } .rw-ca { color: #b07800; }
+.rw-cq { color: #1f5fd1; } .rw-ck { color: #d9730d; } .rw-cv { color: #7b3fc6; } .rw-ca { color: #8a8200; }
 .rw-ph { border: 1.5px dashed #d5d9e0; border-radius: 4px; background: #fafbfd; }
 .rw-mat { border: 2px dashed; border-radius: 9px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; font-weight: 800; line-height: 1.25; background: repeating-linear-gradient(0deg, transparent 0 7px, rgba(0,0,0,.035) 7px 8px); }
 .rw-mat small { font-weight: 600; }
@@ -1737,3 +1748,65 @@ body.nums-on .as-clip .as-bt { max-height: none; -webkit-mask-image: none; mask-
 
 /* Column subtitles use explicit lines and smaller type. */
 .tr-scene .tr-h small, .rw-scene .rw-h small { font-size: 0.8em; line-height: 1.15; display: block; }
+
+/* Selected Query: no change to cell size or position. */
+.tr-scene .tr-qcol { color: #526c8b; }
+.tr-scene .tr-qcol.tr-active-query { color: #124f94; background: #dcecff; box-shadow: inset 0 0 0 2px #2877c5; font-weight: 700; }
+.rw-co { color: #087f75; }
+.rw-mo canvas { border-color: #239c90; } .rw-mo .rw-matl { color: #087f75; }
+.rw-lno { stroke: #239c90; }
+
+/* ---------- Transformer: the 12-room stack and the zoom into one room (Nov 3) ---------- */
+.tr-rm { position: absolute; left: 0; top: 0; border: 2px solid #b9addf; border-radius: 10px; pointer-events: none; box-sizing: border-box; }
+.tr-rm::before { content: ''; position: absolute; inset: 0; border-radius: 8px; background: rgba(246, 243, 255, .55); transition: opacity .9s ease; } /* the tint lives here so it can fade on its own */
+.tr-rm.done { border-color: #1e8a3a; } .tr-rm.done::before { background: rgba(232, 246, 236, .6); }
+.tr-rm.now { border: 3px solid #5b38d1; box-shadow: 0 0 0 4px rgba(91, 56, 209, .12); } .tr-rm.now::before { background: rgba(240, 235, 255, .6); }
+.tr-rm.white::before { opacity: 0; } /* zoom: once the questions are in, the room's purple background fades to white */
+.tr-rml { position: absolute; left: 0; top: 0; font-size: 12.5px; font-weight: 700; color: #4a3a8c; white-space: nowrap; }
+.tr-rml small { font-weight: 600; color: #7a8699; font-size: 10.5px; margin-left: 3px; }
+.tr-rml.done { color: #1e6b33; } .tr-rml.next { color: #7a6fb0; }
+.tr-rc { position: absolute; left: 0; top: 0; text-align: center; font-size: 11.5px; white-space: nowrap; } .tr-rc b { font-weight: 800; }
+/* the funnel into the current room draws itself, token by token */
+.tr-stsvg .tr-fan { stroke-dasharray: 260; stroke-dashoffset: 0; }
+.tr-stsvg.draw .tr-fan { animation: trfan .9s cubic-bezier(.45,.05,.25,1) both; animation-delay: calc(var(--i) * 45ms); }
+.tr-stsvg.draw .tr-fanj { animation: trfanj .4s both; animation-delay: 1.3s; }
+@keyframes trfan { from { stroke-dashoffset: 260; } to { stroke-dashoffset: 0; } }
+@keyframes trfanj { from { opacity: 0; } to { opacity: 1; } }
+.tr-stsvg { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.tr-skout { position: absolute; left: 0; top: 0; font-size: 11px; color: #7a6fb0; font-weight: 600; }
+.tr-h.tr-swap { opacity: 0 !important; transition: opacity .3s !important; }
+
+/* HIRW: the 12-block stack (story beat "stack", Nov 3) */
+.rw-skb { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 8px; padding: 0 10px; box-sizing: border-box; border: 2px solid #b9addf; border-radius: 9px; background: #faf8ff; font-size: 11.5px; color: #4a3a8c; white-space: nowrap; }
+.rw-skb.done { border-color: #1e8a3a; background: #f1faf3; } .rw-skb.now { border: 3px solid #5b38d1; box-shadow: 0 0 0 4px rgba(91,56,209,.12); }
+.rw-skl { font-weight: 800; width: 66px; } .rw-skb.done .rw-skl { color: #1e6b33; }
+.rw-skh { display: inline-flex; gap: 2px; } .rw-skh i { font-style: normal; width: 17px; height: 17px; line-height: 17px; text-align: center; font-size: 9.5px; font-weight: 700; border-radius: 3px; background: hsl(268 62% 88%); color: #4b2a8a; }
+.rw-sko { color: #33455a; font-weight: 700; } .rw-skm { padding: 1px 6px; border-radius: 4px; background: hsl(60 70% 84%); color: #5e5900; font-weight: 800; }
+
+.rw-h .rw-tokcase, .tr-h .rw-tokcase { text-transform: none; letter-spacing: 0; } /* a token keeps its own case inside an all-caps header */
+/* Nov 3: every column header's subtitle reads the same way (Name: 768 Numbers in the analogy, 1 × 768 in How it really works) */
+.fl-h small { display: block; text-transform: none; letter-spacing: 0; font-weight: 600; font-size: .8em; line-height: 1.15; color: #8a94a6; }
+label.delay[hidden] { display: none; } /* Nov 3: Speed only where tokens are selected (Overview, Whole Process) */
+/* Nov 3: in the highlighted (picked) row, the bar keeps a white track and outline so it still shows on its own color */
+table.rk tr.hit .mbar { background: rgba(255, 255, 255, .55); box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .95); }
+table.rk tr.hit .mbar i { box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .25); }
+/* Nov 3: one badge look — the same pill everywhere; green = real model output, pink = our analogy / illustrative */
+.tr-real { background: #e8f6ee; color: #1f6b40; border: 1px solid #b9e0c8; text-transform: none; letter-spacing: 0; }
+.tr-an { border: 1px solid #f6c3d8; }
+.tag.real { text-transform: none; letter-spacing: 0; font-size: .65rem; font-weight: 800; padding: 0 6px; }
+/* Nov 3: Post-Training small items — thumbnails wrap inside their cards; the RLHF label uses the app's font */
+.pt2-doc.mid .dl, .pt2-doc.tiny .dl { white-space: normal; overflow-wrap: break-word; }
+.pt2-doc.mid .dl { font-size: 10px; line-height: 1.3; } .pt2-doc.tiny .dl { font-size: 6px; line-height: 1.25; }
+.pt2-sig { font-family: Inter, system-ui, sans-serif; font-style: normal; font-size: 13px; font-weight: 800; letter-spacing: .06em; }
+.tr-rx { position: absolute; left: 0; top: 0; font-size: 12px; white-space: nowrap; }
+.tr-zcrew { position: absolute; left: 0; top: 0; display: flex; gap: 26px; font-size: 12px; color: #4a3a8c; white-space: nowrap; } .tr-zcrew b { font-weight: 800; }
+.winner[hidden] { display: none; } .exspin .wt { background: #eef1f6; color: #687386; }
+/* Nov 3 token rows (option B): the same look wherever tokens stand in a column */
+.fl-tok .rep { display: none; } .fl-tok.row .rep { display: inline; }
+.fl-tok.row { border-left: 4px solid #9aa3b2; padding: 4px 0 4px 7px; margin-top: -4px; }
+.fl-tok.row.last { border-left-color: #c2185b; color: #c2185b; font-weight: 700; }
+.pt2-tok.last { border-left-color: #c2185b; color: #c2185b; font-weight: 700; background: #fdf0f5; }
+/* Nov 3 color keys */
+.tr-akey { position: absolute; left: 0; top: 0; font-size: 10.5px; color: #5b6577; line-height: 1.5; white-space: nowrap; }
+.tr-akey i, .pk-akey i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; margin: 0 2px 0 4px; }
+.pk-leg { margin-top: 6px; font-size: .78rem; color: #5b6577; }

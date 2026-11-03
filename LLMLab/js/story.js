@@ -14,7 +14,7 @@
 
   // the dropdown on this tab: the story, then the other stories with stored room-by-room numbers
   const STORY = 'story';
-  NT.CTX_EXAMPLES = [['The story: …sat on the left bank of the…', 'story'], ['Umbrella: …it was starting to…', 'umbrella'], ['Trophy: …because it was too…', 'trophy'], ['Annie’s picnic: …pack a…', 'annie']];
+  NT.CTX_EXAMPLES = [['The story: …left bank of the…', 'story'], ['Umbrella: …it was starting to…', 'umbrella'], ['Trophy: …because it was too…', 'trophy'], ['Annie’s picnic: …pack a…', 'annie']];
   const STORED = new Set(['story', 'umbrella', 'trophy', 'annie']);
 
   // ---------- the story sentence, scripted: "The banker left the bank and sat on the left bank of the" ----------

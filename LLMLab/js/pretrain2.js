@@ -87,8 +87,8 @@
       e.style.transform = 'none'; e.style.opacity = 1; });
   }
   const tfLines = (fly) => { const bx = bxOf(HB);
-    return `<g ${later(fly ? 500 : 0)}><rect x="${bx - 2}" y="${ryOf(HR) - 2}" width="32" height="${RH + 1}" fill="none" stroke="#c2185b" stroke-width="2" rx="3"/></g><g ${later(fly ? FLY[0] + 900 : 0)}><path d="M${bx + 14} ${ryOf(HR) + RH - 1} C ${bx + 14} ${COY - 50}, ${GX + 116} ${COY - 40}, ${GX + 116} ${COY - 26}" fill="none" stroke="#c2185b" stroke-width="1.6" stroke-dasharray="4 3"/></g>
-      <g ${later(fly ? FLY[0] + 900 : 0)}><rect x="${bx + 28}" y="${GY - 2}" width="13" height="${12 * RH + 1}" fill="none" stroke="#1e8a3a" stroke-width="2" rx="3"/></g><g ${later(fly ? FLY[1] + 900 : 0)}><path d="M${bx + 35} ${ryOf(HR) + RH / 2} C ${bx + 70} ${ryOf(HR) + 60}, 776 ${COY - 60}, 776 ${COY - 26}" fill="none" stroke="#1e8a3a" stroke-width="1.6" stroke-dasharray="4 3"/></g>`; };
+    return `<g ${later(fly ? 500 : 0)}><rect x="${bx - 2}" y="${ryOf(HR) - 2}" width="32" height="${RH + 1}" fill="none" stroke="#5b38d1" stroke-width="2" rx="3"/></g><g ${later(fly ? FLY[0] + 900 : 0)}><path d="M${bx + 14} ${ryOf(HR) + RH - 1} C ${bx + 14} ${COY - 50}, ${GX + 116} ${COY - 40}, ${GX + 116} ${COY - 26}" fill="none" stroke="#5b38d1" stroke-width="1.6" stroke-dasharray="4 3"/></g>
+      <g ${later(fly ? FLY[0] + 900 : 0)}><rect x="${bx + 28}" y="${GY - 2}" width="13" height="${12 * RH + 1}" fill="none" stroke="#8a8200" stroke-width="2" rx="3"/></g><g ${later(fly ? FLY[1] + 900 : 0)}><path d="M${bx + 35} ${ryOf(HR) + RH / 2} C ${bx + 70} ${ryOf(HR) + 60}, 776 ${COY - 60}, 776 ${COY - 26}" fill="none" stroke="#8a8200" stroke-width="1.6" stroke-dasharray="4 3"/></g>`; };
   const BR_L = TFX - 26, BR_R = TFX + TFW + 24; // braces sit a few pixels clear of the transformer's frame
 
   // ---------- the page shell: controls, stage chevrons and ⓘ About in the sub-tab row; a two-line caption; the scene ----------
@@ -114,7 +114,7 @@
       $('#pbSteps').innerHTML = CH.map(([ic, l], i) => `<button class="tr-st ${i === B.ch ? 'on' : i < B.ch ? 'done' : ''}" data-c="${i}">${ic} ${l}</button>`).join('');
       $('#pbSteps').querySelectorAll('[data-c]').forEach((x) => (x.onclick = () => { M.pause(); M.go(BEATS.findIndex((q) => q.ch === +x.dataset.c), true); }));
       $('#pbBack').disabled = b === 0; $('#pbNext').disabled = b === BEATS.length - 1;
-      NT.setStatus(`Step ${b + 1} of ${BEATS.length}: ${CH[B.ch][1]}`); if (b > 0) NT.setWho(false);
+      NT.setStatus(`Step ${b + 1} of ${BEATS.length} · ${CH[B.ch][1]}`); if (b > 0) NT.setWho(false);
       E('pop').classList.remove('on'); E('end').classList.remove('on'); cancelAnimationFrame(gdRaf);
       run(b, animate, M); fit(); setTimeout(fit, 60);
     };
@@ -167,7 +167,7 @@
     h += `<div class="pt2-shelf" id="${P}shelf" style="left:${SHX}px;top:${SHY}px">${SPINES.map(([w, ht, c], i) => (i === BOOK ? `<div class="pt2-gap" style="width:38px"></div>` : `<div class="pt2-spine" style="width:${w}px;height:${ht}px;background:${c}"></div>`)).join('')}<div class="pt2-board"></div></div><div class="pt2-shcap" id="${P}shcap" style="left:${SHX}px;top:${SHY + 268}px">A bookshelf of all the world’s digitized knowledge</div>`;
     h += `<div class="pt2-spine pt2-tale" id="${P}tale" style="left:${taleX0}px;top:${SHY + 22}px;height:228px"><span>A Tale of Two Cities</span></div>`;
     h += `<div class="pt2-book" id="${P}book"><div class="pg l"><div class="bt">A TALE OF TWO CITIES</div><div class="ba">Charles Dickens · 1859</div><div class="bc">Book the First<br>Recalled to Life</div><div class="bc">Chapter I<br>The Period</div></div><div class="pg r"><p><span class="hl">It was the best of times, it was the</span> <b class="wr">worst</b> of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity…</p></div></div>`;
-    IDS.forEach((id, i) => { const t = NT.tokText(id); h += `<div class="pt2-tok" id="${P}t${i}">${esc(t.trim() || t)}</div>`; });
+    const RM = NT.repMarks(IDS.map((id) => NT.tokText(id))); IDS.forEach((id, i) => { const t = NT.tokText(id); h += `<div class="pt2-tok${i === IDS.length - 1 ? ' last' : ''}" id="${P}t${i}">${esc(t.trim() || t)}${RM[i]}</div>`; });
     h += `<div class="pt2-mh" id="${P}evh" style="left:95px;top:8px">Embedding vectors</div><div class="pt2-mh" id="${P}pvh" style="left:236px;top:8px">Position vectors</div>`;
     for (let i = 0; i < 10; i++) h += `<canvas class="fx" data-x="150" id="${P}e${i}" style="left:95px;top:${ROWY(i) + 2}px;width:110px;height:22px"></canvas><div class="pt2-plus" id="${P}pl${i}" style="left:210px;top:${ROWY(i) + 2}px">+</div><canvas class="fx" data-x="260" id="${P}p${i}" style="left:228px;top:${ROWY(i) + 2}px;width:98px;height:22px"></canvas>`;
     // the batch shelf (left) and the stylized vocabulary output (right)

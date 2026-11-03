@@ -6,19 +6,21 @@
    (screens 12–14 are drawn at a third of that so 3,072 fits).
    Screens:  1 input vectors · 2 × W_Q = Q · 3 × W_K = K · 4 × W_V = V · 5 Q K V ready · 6 Kᵀ and Q × Kᵀ · 7 ÷8, mask, Softmax ·
              8 weights × Values, added → head 1's output for one token · 9 every token (attention grid) · 10 12 heads concatenated ·
-             11 W_O and the first addition · 12 MLP up + GELU · 13 MLP down and the second addition · 14 twelve blocks → ranked tokens. */
+             11 W_O and the first addition · 12 MLP up + GELU · 13 MLP down and the second addition · 14 twelve blocks → ranked tokens.
+   Nov 3: the story's new "stack" beat (12 Investigation Rooms) shows a story-only view: the input vectors, then Blocks 1–12 in order, each
+   block's real output vector for “the”, the current block outlined (storyStack). The "room" beat (zoom into one room) returns to screen 1. */
 'use strict';
 (() => {
   const { $, esc } = NT;
   const T = 13, SW = 1290, TOP = 70, ROW = 34, BH = 20, H = TOP + T * ROW + 70;
   const W = ['The', 'banker', 'left¹', 'the', 'bank¹', 'and', 'sat', 'on', 'the', 'left²', 'bank²', 'of', 'the'];
-  const COL = ['#9aa3b2', '#2b5aa8', '#d9730d', '#9aa3b2', '#1e8a3a', '#8e44ad', '#16a085', '#9aa3b2', '#9aa3b2', '#d9730d', '#1e8a3a', '#9aa3b2', '#c2185b'];
+  const COL = Array.from({ length: 13 }, (_, i) => (i === 12 ? '#c2185b' : '#9aa3b2')); // Nov 3 (Greg, option B): gray token bars, the last token crimson
   const P = 'rw_', E = (id) => document.getElementById(P + id);
   const rowY = (i) => TOP + i * ROW, barY = (i) => rowY(i) + 4, midY = TOP + (T * ROW) / 2;
   const N = 14;
   const NAMES = ['Input vectors', 'Query', 'Key', 'Value', 'Q · K · V', 'Q × Kᵀ', 'Softmax', 'Weighted sum', 'Every token', '12 heads', 'W_O and add', 'MLP up', 'MLP down', '12 blocks'];
   // which screens belong to each detective step (the story's beat keys); the first one listed is where the panel opens
-  const MAP = { start: [1], fadein: [1], room: [1], focus: [1], q: [2], k: [5, 3, 4], s: [7, 6, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], join: [10], project: [11], sup3: [11], sup4: [11], f1: [12, 13], f2: [13], f3: [14], known: [14] };
+  const MAP = { start: [1], fadein: [1], stack: [0], room: [1], focus: [1], q: [2], k: [5, 3, 4], s: [7, 6, 5], v: [8, 4], n: [9, 8], nx: [9], sup1: [10], sup2: [10], join: [10], project: [11], sup3: [11], sup4: [11], f1: [12, 13], f2: [13], f3: [14], known: [14] };
   // sizes: 768 numbers = 288 px, 64 = 24 px (screens 1–11); 768 = 96 px, 3,072 = 384 px (screens 12–14)
   const L768 = 288, L64 = 24, Z64 = L64, L3072 = 4 * L768; // every vector to one scale: 768 numbers = 288 px, 64 = 24 px, 3,072 = 1,152 px
 
@@ -38,7 +40,7 @@
 
   // ---------- pictures: input/output vectors keep the app's multicolor stripes; Q blue, K orange, V violet, MLP amber.
   //            Near 0 is pale; a large positive value is the role color, a large negative one a gray of the same hue. ----------
-  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [40, 92] };
+  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [56, 75] } /* MLP: mustard/olive (Nov 3), clearly apart from Key orange */;
   const p98 = NT.viz.p98, share = (vs) => NT.viz.sharedScale(vs);
   function px(hu, sa, t) {
     t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
@@ -100,6 +102,7 @@
   const GX = (i) => 112 + i * 32, GOUT = 560;                       // screen 9: the grid and head 1's outputs
   const LX = (k) => 112 + k * 46;                                    // screen 10: the 12 lanes
   const AX = { cat: 110, wo: 432, out: 752, in: 432, upd: 752 };     // screen 11
+  const SKX = 440, SKW = 520, SKH = 30, SKY = (b) => 24 + (b - 1) * 45, SKO = SKX + SKW + 14; // the 12-block stack
   const MX = { upd: 110, m1: 236, hid: 664, act: 110, m2: 528, f: 664, plus: 766, upd2: 792, eq: 896, bo: 920 }; // screens 12–13
 
   // ---------- the scene ----------
@@ -149,6 +152,13 @@
     h += hd('bhl', '', 288) + hd('bhr', '', 288) + sym('ba0', '→', 40) + dv('bal', 'rw-note', 'each block: + attention update + MLP update', 250);
     for (let bb = 1; bb <= 12; bb++) for (let i = 0; i < T; i++) h += cv(`bc${bb}_${i}`, L768);
     h += `<div class="rw-box2" id="${P}rk"><div class="rk-tt">After Block 12, this output vector for “the”…</div><canvas class="rw-v" id="${P}rkv" style="width:${L768}px;height:${BH}px"></canvas><div class="rk-tt">…ranks these tokens next (logits): <span class="tr-real">real GPT-2</span></div><div id="${P}rkt"></div><div class="tr-hint">The Output tab turns these scores into probabilities and picks one. <button class="btn small" id="${P}goOut">Output ›</button></div></div>`;
+    // the 12-block stack (story beat "stack"): one row per block, its real output vector for “the” on the right
+    h += hd('skh', 'Output vector for <span class="rw-tokcase">“the”</span> after each block <small>1 × 768 (its Case File leaving that room)</small>', 300);
+    for (let bb = 1; bb <= 12; bb++) {
+      const cls = bb < st.room ? 'done' : bb === st.room ? 'now' : 'next';
+      h += dv('skb' + bb, 'rw-skb ' + cls, `<span class="rw-skl">${bb < st.room ? '✓ ' : ''}Block ${bb}</span><span class="rw-skh">${Array.from({ length: 12 }, (_, k) => `<i>${k + 1}</i>`).join('')}</span><span class="rw-sko">‖ × W<sub>O</sub> +</span><span class="rw-skm">MLP</span><span class="rw-sko">+ =</span>`, SKW, SKH);
+      h += cv('sko' + bb, L768);
+    }
     h += cv('fly', L768) + cv('catv', L768);
     for (let i = 1; i < T; i++) h += cv('catv' + i, L768);
     return h;
@@ -172,6 +182,7 @@
     const mh = share(HP), ma = share(HA), mf = share(F), mb = share(BO);
     for (let i = 0; i < T; i++) { role(E('ao' + i), O[i], 'o', mo); multi(E('up' + i), U[i], mu); multi(E('u' + i), U[i], mu); role(E('hp' + i), HP[i], 'a', mh); role(E('ha' + i), HA[i], 'a', ma); role(E('f' + i), F[i], 'a', mf); multi(E('bo' + i), BO[i], mb); }
     for (let bb = leftBlock(); bb <= 12; bb++) { const vs = Array.from({ length: T }, (_, i) => vecIn(bb, i)), m = share(vs); for (let i = 0; i < T; i++) multi(E(`bc${bb}_${i}`), vs[i], m); }
+    { const vs = Array.from({ length: 12 }, (_, bb) => vecIn(bb + 1, T - 1)), m = share(vs); vs.forEach((v, bb) => multi(E('sko' + (bb + 1)), v, m)); }
     multi(E('fly'), vecIn(12, T - 1)); multi(E('rkv'), vecIn(12, T - 1));
     if (Wt) { matImg(E('wqc'), Wt.q, 'q'); matImg(E('wkc'), Wt.k, 'k'); matImg(E('wvc'), Wt.v, 'v'); matImg(E('woc'), Wt.o, 'o'); matImg(E('m1c'), Wt.m1, 'a'); matImg(E('m2c'), Wt.m2, 'a'); }
     const tp = R.top, pr = { ids: tp.ids, logits: tp.logits, p: tp.p, K: tp.ids.length };
@@ -357,7 +368,7 @@
     if (s === 14) {
       svg('', false);
       Object.keys(cur).forEach(id => { if (!/^t\d+$/.test(id)) put(id, {o:0}); });
-      E('bhl').innerHTML = `After Block ${st.room}<small>1 × 768 (final Case File)</small>`;
+      E('bhl').innerHTML = `Block ${st.room} output <small>1 × 768 (Final Case File)</small>`;
       put('bhl', {x:110, y:22, o:1});
       for (let i=0;i<T;i++) { put('bo'+i,{x:110,y:barY(i),w:L768,o:1}); E('t'+i).classList.toggle('tr-me',i===T-1); }
       if (st.room === 12) { put('rk',{x:460,y:TOP+20,o:1}); E('rk').style.width='480px'; const go=E('goOut'); if(go) go.onclick=()=>NT.goTab('pick'); }
@@ -427,24 +438,48 @@
     }
   }
 
+  // the story's stack beat: input vectors on the left, then Blocks 1–12 in order (real GPT-2 outputs for “the”), the current block outlined
+  const stackCaption = () => st.room === 1
+    ? ['The input vectors pass through GPT-2’s 12 transformer blocks, one after another.', 'Each block: 12 attention heads, joined (‖), × W_O and added; then the MLP, added. Each block’s 1 × 768 outputs are the next block’s inputs.']
+    : [`Blocks 1–${st.room - 1} are done. Block ${st.room} takes Block ${st.room - 1}’s outputs as its input vectors.`, 'The blocks must run in order: each one needs the previous block’s 1 × 768 outputs. Strips on the right: “the” after each block (real GPT-2).'];
+  function storyStack(A) {
+    run(1, A); // tokens and this block's input vectors, as on screen 1
+    E('hin').innerHTML = st.room === 1 ? 'Input Vector <small>1 × 768 · (Case File)</small>' : `Block ${st.room - 1} outputs <small>1 × 768 · Block ${st.room}’s input vectors</small>`;
+    put('skh', { x: SKO, y: 0, o: 0 }); mv(A, 'skh', { o: 1 }, 400, 300);
+    const cx = SKX + SKW / 2, ry = SKY(st.room) + SKH / 2;
+    let g = arrowDefs;
+    for (let bb = 1; bb < 12; bb++) g += `<path d="M${cx} ${SKY(bb) + SKH + 1} V${SKY(bb + 1) - 3}" class="rw-ln" marker-end="url(#${P}ar)"/>`;
+    g += `<path d="M${X.in + L768 + 6} ${midY} C ${X.in + L768 + 30} ${midY}, ${SKX - 30} ${ry}, ${SKX - 4} ${ry}" class="rw-ln" style="stroke:#5b38d1;stroke-width:2" marker-end="url(#${P}ar)"/>`;
+    for (let bb = 1; bb <= 12; bb++) g += `<path d="M${SKX + SKW + 2} ${SKY(bb) + SKH / 2} H${SKO - 4}" class="rw-ln" marker-end="url(#${P}ar)"/>`;
+    at0(A, 300, () => svg(g, A));
+    for (let bb = 1; bb <= 12; bb++) {
+      const o = bb <= st.room ? 1 : 0.4;
+      put('skb' + bb, { x: SKX, y: SKY(bb), o: 0 }); mv(A, 'skb' + bb, { o: bb <= st.room ? 1 : 0.6 }, 400, 200 + bb * 70);
+      put('sko' + bb, { x: SKO, y: SKY(bb) + (SKH - BH) / 2, w: L768, o: 0 }); mv(A, 'sko' + bb, { o }, 400, 300 + bb * 70);
+    }
+  }
+  const at0 = (A, ms, fn) => (A ? later(ms, fn) : fn());
+
   // ---------- the panel ----------
   function shell(host) {
     host.innerHTML = `<details class="rw-tw" id="${P}tw"${st.open ? ' open' : ''}><summary>How it really works</summary>
       <div class="rw-panel"><div class="guide rw-guide"><div class="fl-ctl"><button class="btn" id="${P}rew" title="First screen">⏮</button><button class="btn" id="${P}back">◀ Back</button><button class="btn primary" id="${P}next">Next ▶</button><button class="btn" id="${P}play">▶ Play</button><button class="btn" id="${P}rep" title="Replay this screen">↻</button></div><div class="fl-cap fixed" id="${P}cap"></div></div>
       <div class="rw-bar"><span class="rw-dots" id="${P}dots"></span><span class="rw-src" id="${P}src"></span></div>
       <div class="fl-box rw-box" id="${P}box"></div>
-      <div class="tr-legend" id="${P}leg">Every stripe, number and matrix picture here is <span class="tr-real">real GPT-2</span> for the story sentence; head 1 is the story’s Detective 1. Pale = near 0; strong color = large positive; gray = large negative. Matrix pictures show every 4th–8th row and column. GPT-2 also rescales each vector before its matrices (included in the numbers, not drawn).</div></div></details>`;
+      <div class="tr-legend" id="${P}leg">Every stripe, number and matrix picture here is <span class="tr-real">real GPT-2</span> for the story sentence; head 1 is the story’s Detective 1. Case File stripes: green = positive, yellow = near 0, red = negative. Query / Key / Value / MLP strips: strong color = large positive, gray = large negative. Softmax and attention-grid colors = share of attention (green = large, red = small). Matrix pictures show every 4th–8th row and column. GPT-2 also rescales each vector before its matrices (included in the numbers, not drawn).</div></div></details>`;
     const tw = E('tw');
     tw.addEventListener('toggle', () => { st.open = tw.open; if (tw.open) { Promise.resolve(show(true)).then(() => requestAnimationFrame(() => { fit(); tw.scrollIntoView({ behavior: 'smooth', block: 'start' }); })); } else { pause(); st.tk++; } });
     E('rew').onclick = () => { pause(); go(1, true); };
-    E('back').onclick = () => { pause(); document.getElementById('trBack')?.click(); };
-    E('next').onclick = () => { pause(); document.getElementById('trNext')?.click(); };
-    E('rep').onclick = () => { pause(); st.following = false; show(true, true); };
+    // Back / Next follow the story; once a numbered screen has been chosen (inspecting on its own), they step through the screens instead
+    // Back / Next step through these screens; the story moves to the matching beat (NT.stations.tfroom.hirwStep). Nov 3: always in sync.
+    E('back').onclick = () => { pause(); NT.stations.tfroom.hirwStep(-1); };
+    E('next').onclick = () => { pause(); NT.stations.tfroom.hirwStep(1); };
+    E('rep').onclick = () => { pause(); show(true, true); };
     E('play').onclick = () => (st.playing ? pause() : play());
   }
-  const go = (s, animate) => { st.following = false; st.target = s; show(animate); };
+  const go = (s) => NT.stations.tfroom.followHirw(s); // a dot or ⏮: the story follows to the matching beat
   const DUR = [2000, 3400, 3400, 3400, 2600, 6000, 5200, 10500, 4800, 9200, 7400, 5800, 6400, 7000];
-  function play() { st.playing = true; E('play').textContent = '⏸ Pause'; const tick = () => { st.timer = setTimeout(() => { if (!st.playing) return; if (st.shown < N) { go(st.shown + 1, true); tick(); } else pause(); }, DUR[st.shown - 1]); }; tick(); }
+  function play() { st.playing = true; E('play').textContent = '⏸ Pause'; const tick = () => { st.timer = setTimeout(() => { if (!st.playing) return; const p = st.playing; if (st.shown < N && NT.stations.tfroom.hirwStep(1)) { st.playing = p; E('play').textContent = '⏸ Pause'; tick(); } else pause(); }, st.shown ? DUR[st.shown - 1] : 3000); }; tick(); }
   function pause() { st.playing = false; clearTimeout(st.timer); const p = E('play'); if (p) p.textContent = '▶ Play'; }
 
   async function show(animate, replay) {
@@ -453,23 +488,25 @@
     if (!R) { box.innerHTML = NT.pendingHTML ? NT.pendingHTML('Getting GPT-2’s real numbers…') : 'Loading…'; box.style.height = ''; await load(); if (!R) { box.innerHTML = '<div class="emptynote">The real-number trace could not be loaded.</div>'; return; } }
     await loadW(st.room);
     if (request !== st.request || !st.open || !E('box')) return;
-    const s = st.target || st.list[0], key = `${st.room}|${st.q}`;
+    const s = st.target ?? st.list[0], key = `${st.room}|${st.q}`;
     st.tk++;
-    if (st.following || st.built !== key || replay || !animate || st.shown !== s - 1) { // draw the scene, jump through screens 1 … s−1, then play s
+    const rebuilt = st.following || st.built !== key || replay || !animate || st.shown !== s - 1 || st.lastMode !== 'run'; // only a plain numbered screen can be continued in place
+    if (rebuilt) { // draw the scene, jump through screens 1 … s−1, then play s
       box.innerHTML = `<div class="rw-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="rw-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>${build()}</div>`;
       Object.keys(cur).forEach((k) => delete cur[k]);
       box.querySelectorAll('.rw-scene > *:not(svg)').forEach((el) => { el.style.opacity = 0; });
       paint(); st.built = key; fit();
-      if (!(st.following && assemblyKeys.includes(st.key))) for (let t = 1; t < s; t++) run(t, false);
+      if (!(st.following && (assemblyKeys.includes(st.key) || st.key === 'stack'))) for (let t = 1; t < s; t++) run(t, false);
       box.querySelectorAll('.rw-tok').forEach((el) => (el.onclick = () => {
         if (st.shown < 2 || st.shown > 9) return;
-        const following = st.following, screen = st.shown;
-        pause(); NT.stations.tfroom.selectAttentionToken(+el.dataset.i, following ? null : screen);
-        if (!following) { st.following = false; st.target = screen; show(false); }
+        pause(); NT.stations.tfroom.selectAttentionToken(+el.dataset.i, st.shown, !st.following); // the story follows the investigated token
       }));
     }
-    if (st.following && assemblyKeys.includes(st.key)) storyAssembly(!!animate); else run(s, !!animate);
-    if (st.following && st.key === 'f1') {
+    if (!rebuilt && st.shown >= 1 && st.shown === s - 1) run(st.shown, false); // Nov 3: finish the previous screen first, so a quick Next or dot click never draws two screens on top of each other
+    const stackView = s === 0;
+    if (stackView) storyStack(!!animate); else if (st.following && assemblyKeys.includes(st.key)) storyAssembly(!!animate); else run(s, !!animate);
+    st.lastMode = stackView || (st.following && (assemblyKeys.includes(st.key) || st.key === 'f1')) ? 'story' : 'run';
+    if (st.following && st.key === 'f1' && s === 12) {
       // Play the expansion and GELU before showing the MLP output; hold before addition.
       if (animate) later(8000, () => run(13, true)); else run(13, false);
     }
@@ -480,12 +517,12 @@
       el.style.zIndex = '5';
     });
     st.shown = s;
-    const [t, d] = st.following && assemblyKeys.includes(st.key) ? assemblyCaption() : st.following && st.key === 'f1' ? ['The MLP expands, transforms, and returns to 768 numbers.', 'After expansion and GELU, W2 returns to 768 numbers. The second residual addition comes next.'] : cap(s);
+    const [t, d] = stackView ? stackCaption() : st.following && assemblyKeys.includes(st.key) ? assemblyCaption() : st.following && st.key === 'f1' ? ['The MLP expands, transforms, and returns to 768 numbers.', 'After expansion and GELU, W2 returns to 768 numbers. The second residual addition comes next.'] : cap(s);
     E('cap').innerHTML = `<div class="fl-ch"><b>${esc(t)}</b></div><div class="fl-cd">${esc(d)}</div>`;
-    E('dots').innerHTML = Array.from({ length: N }, (_, k) => `<button class="rw-dot ${k + 1 === s ? 'on' : ''} ${st.list.includes(k + 1) ? 'mine' : ''}" data-s="${k + 1}" title="${k + 1}. ${NAMES[k]}">${k + 1}</button>`).join('') + '<span class="rw-dkey">tinted = this story step</span>';
+    E('dots').innerHTML = Array.from({ length: N }, (_, k) => `<button class="rw-dot ${k + 1 === s && !stackView ? 'on' : ''} ${st.list.includes(k + 1) ? 'mine' : ''}" data-s="${k + 1}" title="${k + 1}. ${NAMES[k]}">${k + 1}</button>`).join('') + '<span class="rw-dkey">tinted = this story step</span>';
     E('dots').querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { pause(); go(+b.dataset.s, true); }));
-    E('src').textContent = `Block ${st.room} · head 1 · ${NAMES[s - 1]}`;
-    E('back').disabled = !!document.getElementById('trBack')?.disabled; E('rew').disabled = s === 1; E('next').disabled = !!document.getElementById('trNext')?.disabled;
+    E('src').textContent = stackView ? `All 12 blocks · now: Block ${st.room}` : `Block ${st.room} · head 1 · ${NAMES[s - 1]}`;
+    E('back').disabled = !NT.stations.tfroom.hirwCan(-1); E('rew').disabled = s === 1; E('next').disabled = !NT.stations.tfroom.hirwCan(1);
   }
   function fit() {
     const box = E('box'), sc = E('sc'); if (!box || !sc) return;
@@ -500,9 +537,15 @@
   NT.really = {
     mount(host) { if (!host) return; st.built = ''; st.shown = 0; shell(host); if (st.open) show(false); },
     // the detective story moved: follow its step, block and investigated token
-    sync(key, room, q, speed = 1, animate = true) {
-      st.key = key; st.room = room; st.q = q; st.speed = speed; st.following = true;
-      st.list = MAP[key] || [1]; pause(); st.target = st.list[0];
+    MAP,
+    state: () => ({ shown: st.shown, key: st.key, room: st.room, q: st.q, following: st.following, src: (E('src') || {}).textContent }), // for checks
+    shown: () => (st.open ? st.shown : st.target != null ? st.target : st.list[0]),
+    // the story moved (fromHirw: because HIRW asked it to, showing screen): follow its step, block and investigated token
+    sync(key, room, q, speed = 1, animate = true, screen = null, fromHirw = false) {
+      const playing = st.playing;
+      st.key = key; st.room = room; st.q = q; st.speed = speed; st.following = !fromHirw;
+      st.list = MAP[key] || [1]; pause(); st.target = screen != null && st.list.includes(screen) ? screen : st.list[0];
+      if (fromHirw && playing) st.playing = true;
       st.tk++; st.request++;
       if (st.open) show(animate);
 

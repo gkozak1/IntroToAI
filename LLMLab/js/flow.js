@@ -37,7 +37,7 @@
     { id: 'final', title: 'The output vector', base: 1800 },
     { id: 'vocab', title: 'Score every token', base: 2600 },
     { id: 'rank', title: 'Next-token ranking', base: 2600 },
-    { id: 'spin', title: 'Selection: spin', base: 3400 },
+    { id: 'spin', title: 'Select the next token', base: 3400 },
     { id: 'add', title: 'Add the token, repeat', base: 3400 },
     // Pre-Training: the same scene, run backwards (only shown when a flow is given opts.learn)
     { id: 'truth', title: 'The right answer', base: 2400 },
@@ -104,11 +104,11 @@
       const stripH = VZ.vectorSize(768, STRIPW).height;
       let h = `<div class="fl-scene" id="flScene" style="width:${W}px;height:${H}px">`;
       h += `<svg class="fl-svg" id="flSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"></svg>`;
-      const heads = [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding vector'], ['pos', X.pos, 'Position vector'], ['inp', X.inp, 'Input vector'], ['bin', XB.in, `Into block ${DB}`], ['notes', XB.notes, '+ Notes'], ['facts', XB.facts, '+ Patterns'], ['bout', XB.out, `= After block ${DB}`]];
-      heads.forEach(([k, hx, t]) => (h += `<div class="fl-h" id="fh-${k}" style="left:${hx}px;top:${top - 34}px">${t}</div>`));
+      const heads = [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding <small>Embedding Vector: 768 Numbers</small>'], ['pos', X.pos, 'Position <small>Position Vector: 768 Numbers</small>'], ['inp', X.inp, 'Input Vector <small>(Case File)</small>'], ['bin', XB.in, `🪪 Case File <small>Into Block ${DB}: 768 Numbers</small>`], ['notes', XB.notes, '+ Lead Detective’s Output <small>Attention Output: 768 Numbers</small>'], ['facts', XB.facts, '+ Learned Patterns <small>MLP Output: 768 Numbers</small>'], ['bout', XB.out, `= Final Case File <small>Block ${DB} Output: 768 Numbers</small>`]];
+      heads.forEach(([k, hx, t]) => { const blk = ['bin', 'notes', 'facts', 'bout'].includes(k); h += `<div class="fl-h" id="fh-${k}" style="left:${hx}px;top:${top - (blk ? 46 : 34)}px${blk ? ';width:146px;height:44px;white-space:normal;display:flex;flex-direction:column;justify-content:flex-end' : ''}">${t}</div>`; }); // Nov 3: block headers may wrap to two lines
       const sp = (w) => esc(w).replace(/^ /, '<span class="sp">·</span>');
       for (let i = 0; i < T; i++) {
-        h += `<div class="fl-tok" id="ft${i}" style="font-size:${fs}px">${sp(Dt.raw[i])}</div>`;
+        h += `<div class="fl-tok${i === T - 1 ? ' last' : ''}" id="ft${i}" style="font-size:${fs}px">${sp(Dt.raw[i])}<span class="rep">${NT.repMarks(Dt.raw)[i]}</span></div>`;
         if (i) h += `<div class="fl-div" id="fd${i}" style="left:${G.sx[i] - 4}px;top:${10}px;height:${fs + 10}px"></div>`;
         h += `<div class="fl-id" id="fi${i}">${Dt.cur.ids[i]}</div>`;
         ['fe', 'fp', 'fn', 'fa', 'fm', 'fo'].forEach((c) => (h += `<canvas class="fl-strip" id="${c}${i}" style="width:${STRIPW}px;height:${stripH}px"></canvas>`));
@@ -157,7 +157,7 @@
         const m = Math.max(vin ? p98(vin) : 0, vout ? p98(vout) : 0) || 1; F.rowM = F.rowM || []; F.rowM[i] = m;
         [['fn', vin], ['fa', va], ['fm', vm], ['fo', vout]].forEach(([c, v]) => { const el = E(c + i); if (v) { if (c === 'fa') VZ.role(el, v, 'v', m); else if (c === 'fm') VZ.role(el, v, 'a', m); else drawG(el, v, m); } else grayStrip(el); });
       }
-      const fh = E('fh-bout'); if (fh) fh.textContent = `= After block ${b}`; const bi = E('fh-bin'); if (bi) bi.textContent = `Into block ${b}`;
+      const fh = E('fh-bout'); if (fh) fh.innerHTML = `= Final Case File <small>Block ${b} Output: 768 Numbers</small>`; const bi = E('fh-bin'); if (bi) bi.innerHTML = `🪪 Case File <small>Into Block ${b}: 768 Numbers</small>`;
       const bt = E('fBlockT'); if (bt) bt.textContent = `Block ${b}`;
     }
     const drawG = VZ.vec, grayStrip = VZ.gray;
@@ -192,7 +192,7 @@
       set('fh-emb', { o: k >= SI.emb && k < SI.attn ? 1 : 0 }); set('fh-pos', { o: k >= SI.pos && k < SI.attn ? 1 : 0 }); set('fh-inp', { o: k >= SI.inp && k < SI.attn ? 1 : 0 });
       set('fh-bin', { o: inBlock ? 1 : 0 }); set('fh-notes', { o: inBlock && stepIn >= 1 ? 1 : 0 }); set('fh-facts', { o: inBlock && stepIn >= 2 ? 1 : 0 }); set('fh-bout', { o: (inBlock && stepIn >= 3) || k === SI.final ? 1 : 0 });
             set('fmE', { x: X.mat, y: G.top, o: k === SI.ids || k === SI.emb ? 1 : 0 }); set('fmP', { x: X.mat, y: G.top, o: k === SI.pos ? 1 : 0 }); set('fmV', { x: 900, y: G.top, o: k === SI.vocab ? 1 : 0 });
-      set('fBlock', { x: XB.in, y: G.top - 74, o: inBlock ? 1 : 0 });
+      set('fBlock', { x: XB.in, y: G.top - 88, o: inBlock ? 1 : 0 }); // Nov 3: a little higher, so two-line column headers fit under it
       const mOn = (k >= SI.out1 && k <= SI.final) && (k !== SI.loop || part >= 5); G.mY = rowY(0) - 10;
       set('fMeter', { x: XB.meter, y: G.mY, o: mOn ? 1 : 0 });
       const onRow = { x: XB.out, y: rowY(last), s: SBS };
@@ -331,7 +331,7 @@
         ['The output vector.', `After block 12, the last token’s Case File supplies the output vector used to score possible next tokens.`, 'The rescaling changes the colors a little: it evens out the overall size and applies 768 learned weights. The other rows did their job as witnesses.'],
         ['Score every token.', `The output vector is compared with every row of the token vocab matrix, all 50,257. Each comparison gives a score, called a logit. GPT-2 works with token IDs, not words.`, 'Compare = multiply the 768 pairs of numbers and add them up (a dot product). GPT-2 reuses its embedding matrix here; many newer models keep a separate one.'],
         ['Next-token ranking.', 'Which token goes in the “?” row? Sort the scores; SoftMax turns them into probabilities, laid end to end from 0 to 1.', 'Only the gaps between scores matter, not whether they are negative. Temperature and Top-K at the top apply here.'],
-        ['Selection: spin.', `A random number r between 0 and 1 picks the winner: whichever range the needle stops in.${PK() ? '' : ' Press 🎲 Spin to try again.'}`, `Bigger slices are more likely, but any allowed token can win.${others > 0.5 ? ` Here thousands of tiny slices together hold ${(others * 100).toFixed(0)}%; a smaller Top-K keeps GPT-2 to its best guesses.` : ''}`],
+        ['Select the next token: spin the wheel.', `A random number r between 0 and 1 picks the winner: whichever range the needle stops in.${PK() ? '' : ' Press 🎲 Spin to try again.'}`, `Bigger slices are more likely, but any allowed token can win.${others > 0.5 ? ` Here thousands of tiny slices together hold ${(others * 100).toFixed(0)}%; a smaller Top-K keeps GPT-2 to its best guesses.` : ''}`],
         ['Add the token, and repeat.', `${win} joins the context. Calculated vectors change on the next pass; learned parameters stay fixed.${opts.main ? ' Press ⏮ to start over, or ◀ to step back.' : ''}`, `GPT-2 works only with token IDs${F.hit >= 0 && pr ? ` (${pr.ids[F.hit]})` : ''}; the ID becomes text only when it is added to the sentence. Real systems save the earlier rows’ work instead of redoing it; the result is the same.`],
       ];
       const Ln = LN();
@@ -351,7 +351,7 @@
       E('flDots').querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => { pause(); goStage(+b.dataset.k, false); }));
       if (opts.loop && S.flowFF && F.pass > 5 && F.playing && k >= SI.rank && k <= SI.add) E('flCap').querySelector('.fl-cd').insertAdjacentHTML('afterbegin', '<span class="fl-ff">⏩ Fast-forward: all 17 steps still happen; only the pick is shown.</span> ');
       if (opts.fitHeight) fit();
-      if (opts.main) NT.setStatus(`Pass ${F.pass} · ${STAGES[k].title}${k === SI.loop ? ' · block ' + sub : ''} · speed ×${eff().toFixed(2)}`);
+      if (opts.main) NT.setStatus(`Pass ${F.pass} · ${STAGES[k].title}${k === SI.loop ? ' · Block ' + sub : ''} · Speed ×${+eff().toFixed(2)}`);
     }
 
     // ---------- moving between stages ----------
@@ -379,6 +379,7 @@
       const dur = animate ? ms(STAGES[k].base * 0.75) : 0;
       const chips = (bs) => { [0, 1, 2].forEach((j) => { const e = E('fbs' + j); if (e) e.className = j === bs ? 'on' : j < bs ? 'done' : ''; }); };
       host.querySelectorAll('.fl-tok .sp').forEach((e) => (e.style.display = k <= 1 ? '' : 'none')); // the leading space shows only while the sentence is being cut
+      host.querySelectorAll('.fl-tok').forEach((e) => e.classList.toggle('row', k > 1)); // as rows: the shared token-row look (gray bar, superscripts, last token crimson)
       (E('fB12') ? E('fB12').querySelectorAll('i') : []).forEach((e) => (e.className = +e.dataset.b < b ? 'done' : +e.dataset.b === b ? 'on' : ''));
       if (k === SI.loop && animate) {
         // one block, in turn: the last block's output slides back in (the other columns fade) → the interviews' arcs → the notes → the facts → the new column, whose last vector travels into the meter

@@ -8,7 +8,7 @@
   // ---------- tokenization examples (the dropdown on this tab) ----------
   // [label, text, why] — every claim in `why` was checked against GPT-2's real tokenizer
   NT.TOK_EXAMPLES = [
-    ['The story: …sat on the left bank of the…', 'The banker left the bank and sat on the left bank of the', 'Every word here is common, so each one is a single token. The space goes with the word after it: “·bank”, not “bank·”. The two “·bank”s are the same token, and so are the two “·left”s; capital “The” is a different token from “·the”. Try the next three sentences to see words break apart.'],
+    ['The story: …left bank of the…', 'The banker left the bank and sat on the left bank of the', 'Every word here is common, so each one is a single token. The space goes with the word after it: “·bank”, not “bank·”. The two “·bank”s are the same token, and so are the two “·left”s; capital “The” is a different token from “·the”. Try the next three sentences to see words break apart.'],
     ['One long word', 'unbelievable', 'A simple start: GPT-2 cuts “unbelievable” into un · bel · iev · able. The pieces are chunks of letters that showed up together often in its training text, not syllables or dictionary parts. The next three sentences show the same thing inside real sentences.'],
     ['Unfriendliest classmates', 'My unfriendliest classmates were overthinking the homework.', 'A person would cut “unfriendliest” into un + friend + li + est. GPT-2 cuts it into “·unf” + “riend” + “liest”: chunks of letters that were common in its training text, not word parts. “·overthinking” becomes “·over” + “thinking”, while “·classmates” and “·homework” are common enough to stay whole. 7 words, 11 tokens.'],
     ['The skateboarder’s TikTok', 'The skateboarder\'s TikTok went viral overnight.', '“·skateboarder” becomes “·skate” + “board” + “er”, and “’s” is a token of its own. “TikTok” barely existed in GPT-2’s 2019 web text, so it splits into “·Tik” + “Tok”. Everyday words like “·viral” and “·overnight” are one token each. 6 words, 11 tokens.'],
@@ -126,7 +126,7 @@
     if (!sp.revealed) {
       R.innerHTML = `<div class="ph"><h2>GPT-2’s tokens</h2></div><div class="hiddenbox"><span>GPT-2’s split stays hidden until the class has made its cuts.</span><button class="btn primary" id="spReveal">Reveal</button></div>`;
       $('#spReveal').onclick = () => { sp.revealed = true; draw(); };
-      NT.setStatus(`${cuts.size + 1} pieces so far`); return;
+      NT.setStatus(`${cuts.size + 1} piece${cuts.size ? "s" : ""} so far`); return;
     }
     const words = sp.text.split(/\s+/).filter(Boolean).length;
     const rows = A.toks.map((x, i) => {
