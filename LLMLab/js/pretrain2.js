@@ -121,6 +121,7 @@
     M.next = () => { if (M.beat < BEATS.length - 1) { M.go(M.beat + 1, true); return true; } return false; };
     M.play = () => { M.playing = true; $('#pbPlay').textContent = '⏸ Pause'; const tick = () => { M.timer = setTimeout(() => { if (!M.playing || S.station !== station) return; if (M.next()) tick(); else M.pause(); }, BEATS[M.beat].wait || 3600); }; tick(); };
     M.pause = () => { M.playing = false; clearTimeout(M.timer); const p = $('#pbPlay'); if (p) p.textContent = '▶ Play'; };
+    M.scene = { beats: () => BEATS, now: () => M.beat, ready: () => S.station === station && !!E('sc'), seek(i) { if (S.station !== station || !E('sc')) return false; M.pause(); M.go(i, false); return true; } }; // Nov 4: for the checks only
     return M;
   }
   const at = (M, ms, fn) => { const tk = M.tk; setTimeout(() => { if (M.tk === tk && M.alive()) fn(); }, ms); }; // a timer from an earlier step never fires into a later one
@@ -251,7 +252,7 @@
       if (NT.current().text !== TEXT) { S.bookSaved = S.bookSaved ?? S.text; this.switching = true; NT.setText(TEXT, 'edit'); this.switching = false; }
       shell(PRE); $('#pbBox').innerHTML = preBuild(); PRE.go(PRE.beat, true);
     },
-    onText() {}, onTK() {},
+    onText() {}, onTK() {}, scene: PRE.scene,
   };
 
   // =====================================================================================
@@ -321,6 +322,6 @@
   const POST = engine('rlhf', QCH, QBEATS, postRun);
   NT.stations.rlhf = {
     init() { POST.pause(); shell(POST); $('#pbBox').innerHTML = postBuild(); POST.go(POST.beat, true); },
-    onText() {}, onTK() {},
+    onText() {}, onTK() {}, scene: POST.scene,
   };
 })();

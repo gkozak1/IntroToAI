@@ -174,6 +174,10 @@
     if (S.station !== 'mlbook' && S.bookSaved != null) { const t0 = S.bookSaved; S.bookSaved = null; S.quietText = true; NT.setText(t0, 'edit'); S.quietText = false; } // leaving Learn one example: the sentence comes back
     $('#toolbar').innerHTML = ''; $('#stage').innerHTML = '';
     document.body.dataset.top = S.top; document.body.dataset.st = S.station; fillStarter(); autosize();
+    { // Nov 4 (Greg): the example dropdown only where choosing a sentence changes the page. Transformer always tells the story; Pre-/Post-Training, Assistant and Think & Act use their own fixed text
+      const fixed = ['tfroom', 'mlbook', 'rlhf', ...(NT.ASSIST_STATIONS || [])].includes(S.station); starter.style.display = fixed ? 'none' : '';
+      let lab = $('#starterFix'); if (!lab) { starter.insertAdjacentHTML('afterend', '<span id="starterFix" class="starterfix" title="The Transformer tab always follows the story sentence">The story: …left bank of the…</span>'); lab = $('#starterFix'); }
+      lab.style.display = S.station === 'tfroom' ? '' : 'none'; }
     { const as = (NT.ASSIST_STATIONS || []).includes(S.station); document.body.classList.toggle('asst', as); const nl = document.querySelector('#numBtn .nt-l'); if (nl) nl.textContent = as ? 'Show the tokens' : 'Show the numbers';
       if (!as && NT.resumeHeavy) NT.resumeHeavy(); } // Oct 19: tabs 8 and 9 don't need GPT-2 or the 23 MB embedding file, so their background downloads wait until another tab opens
     { const lock = S.station === 'flow' || S.station === 'mlbook'; ta.readOnly = lock; ta.title = S.station === 'mlbook' ? 'This page always uses one sentence from A Tale of Two Cities.' : lock ? 'The Animated flow uses stored GPT-2 numbers, so this sentence can’t be typed here. Choose a story in the dropdown; the flow adds each picked token itself.' : ''; }

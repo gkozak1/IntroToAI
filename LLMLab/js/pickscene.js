@@ -256,6 +256,7 @@
       rebuild();
     },
     onText(how) { C = null; if (how !== 'append') { pk.added = 0; pk.beat = 0; } pk.r = null; pk.spun = false; NT.stations.pkscene.init(); },
+    scene: { beats: () => BEATS, now: () => pk.beat, ready: () => !!E('sc'), seek(i) { if (!E('sc')) return false; pause(); go(i); return true; } }, // Nov 4: for the checks only
     onTK() { if (!C || !E('sc')) return; if (BEATS[pk.beat][0] === 5) { pk.r = null; pk.spun = false; pk.spinning = false; winBox(); } paintLive(); cap(); },
   };
   function rebuild() {

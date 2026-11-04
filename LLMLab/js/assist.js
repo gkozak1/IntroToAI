@@ -68,7 +68,7 @@
     $('#asBack').onclick = () => { stop(); if (P.beat > 0) { P.beat--; draw(); } };
     $('#asNext').onclick = () => { stop(); next(); };
     $('#asPlay').onclick = () => { if (timer) return stop(); $('#asPlay').textContent = '❚❚ Pause'; timer = setInterval(() => { if (!next()) stop(); }, 7000); };
-    P.redraw = draw; P.regate = gate;
+    P.redraw = draw; P.regate = gate; P.stop = stop;
     draw();
   }
   const station = (id, build) => {
@@ -81,6 +81,8 @@
       },
       onText() {}, onTK() {},
       onNums() { const P = PAGES[id]; if (P && P.redraw) P.redraw(); },
+      // Nov 4: for the checks only (js/checks.js)
+      scene: { beats: () => (PAGES[id] ? PAGES[id].steps : []), now: () => (PAGES[id] ? PAGES[id].beat : -1), ready: () => S.station === id && !!(PAGES[id] && PAGES[id].redraw && $('#asBox')), seek(i) { const P = PAGES[id]; if (S.station !== id || !P || !P.redraw || !$('#asBox')) return false; if (P.stop) P.stop(); P.beat = i; P.redraw(); return true; } },
     };
   };
   const PAGES = {};

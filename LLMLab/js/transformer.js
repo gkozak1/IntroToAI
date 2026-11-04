@@ -413,6 +413,8 @@
     },
     onText() { if (NT.stations.tfroom.switching) return; NT.stations.tfroom.init(); },
     onTK() {},
+    // Nov 4: used only by the checks (js/checks.js) to know the current scene and to jump to one
+    scene: { beats: () => BEATS, now: () => tr.beat, ready: () => !!E('sc'), seek(i) { if (!E('sc')) return false; pause(); tr.room = 1; tr.beat = i; tr.q = LAST; rebuild(false); return true; } },
     // a token clicked in the story, or in How it really works (screen = the HIRW screen showing, fromHirw = HIRW is leading)
     selectAttentionToken(i, screen = null, fromHirw = false) {
       if (screen == null) { if (BEATS[tr.beat][0] !== 3) return; pause(); tr.q = i; go(tr.beat, false); return; }

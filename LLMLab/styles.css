@@ -1812,8 +1812,6 @@ table.rk tr.hit .mbar i { box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .25); }
 .pk-leg { margin-top: 6px; font-size: .78rem; color: #5b6577; }
 /* Nov 3: one-question checks (js/checks.js) */
 .whotog.cu { margin-left: auto; } .whotog.cu + .whotog { margin-left: 8px; } .subtabs .tr-blk + .whotog.cu { margin-left: 12px; }
-body.checks-off #chkTog { display: none; } body.checks-off .whotog.cu + .whotog { margin-left: auto; }
-.chktoggle { margin-left: 8px; }
 .chk-back { position: fixed; inset: 0; background: rgba(29, 38, 52, .35); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
 .chk-box { background: #fff; border-radius: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .25); max-width: 640px; width: 100%; padding: 16px 18px; }
 .chk-h { display: flex; justify-content: space-between; align-items: center; font-weight: 800; color: #4528b3; }
@@ -1845,3 +1843,25 @@ body.checks-off #chkTog { display: none; } body.checks-off .whotog.cu + .whotog 
 .chk-foot { margin-top: 10px; display: flex; justify-content: flex-end; }
 .chk-reset { font: inherit; font-size: .78rem; background: none; border: 0; color: #687386; text-decoration: underline; cursor: pointer; padding: 0; }
 .chk-reset:hover { color: #4528b3; } .chk-reset:disabled { text-decoration: none; cursor: default; color: #1e8a3a; }
+/* Nov 4 (Greg): checks per scene. The card docks at the bottom right (no backdrop) so the scene stays in view; the "✔ Checks ▾" menu runs tours. */
+.chk-card { position: fixed; right: 16px; bottom: 16px; width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 110px); overflow: auto; z-index: 1000; background: #fff; border: 2px solid #d9d0fb; border-radius: 14px; box-shadow: 0 12px 36px rgba(29, 38, 52, .28); padding: 12px 14px; }
+.chk-card .chk-h { font-size: .88rem; gap: 8px; } .chk-card .chk-h .btn { padding: 2px 8px; }
+.chk-card .chk-q { font-size: 1rem; margin: 8px 0 10px; }
+.chk-card .chk-o { font-size: .9rem; padding: 7px 10px; }
+.chk-card .chk-f { margin-top: 10px; } .chk-card .chk-why { font-size: .88rem; }
+.chk-tour { font-size: .75rem; font-weight: 700; color: #687386; margin-top: 4px; text-transform: uppercase; letter-spacing: .03em; }
+.chk-ptab { font-size: .78rem; font-weight: 800; color: #4528b3; margin-right: 2px; align-self: center; }
+.chk-card .chk-pills { margin-top: 6px; }
+.chk-nav { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.chk-sent { margin-top: 8px; font-size: .75rem; color: #687386; }
+.chk-strip { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.chk-tok { font-family: Georgia, serif; font-size: .85rem; color: #1d2634; background: #f1f2f5; border-radius: 4px; padding: 1px 5px; }
+.chk-tok.f { background: #efe4fb; color: #4528b3; font-weight: 700; box-shadow: inset 0 0 0 1px #b9addf; }
+.chkmenu { position: relative; margin-left: 8px; }
+.chkmbtn { white-space: nowrap; }
+.chkmenu-l { position: absolute; right: 0; top: calc(100% + 6px); z-index: 1001; background: #fff; border: 1px solid #d9d0fb; border-radius: 10px; box-shadow: 0 8px 24px rgba(29, 38, 52, .2); padding: 6px; min-width: 260px; display: flex; flex-direction: column; }
+.chkmenu-l[hidden] { display: none; }
+.chkmenu-l button { font: inherit; font-size: .88rem; text-align: left; background: none; border: 0; border-radius: 6px; padding: 7px 10px; cursor: pointer; color: #1d2634; }
+.chkmenu-l button:hover { background: #f1edff; } .chkmenu-l hr { border: 0; border-top: 1px solid #e3e8f0; margin: 4px 0; }
+.chkmenu-l .chk-mreset { color: #687386; font-size: .8rem; } .chkmenu-l button:disabled { color: #1e8a3a; cursor: default; background: none; }
+.starterfix { font-size: .88rem; font-weight: 600; color: #33455a; border: 1px solid #e3e8f0; border-radius: 8px; padding: 5px 10px; background: #f6f7fa; white-space: nowrap; }
