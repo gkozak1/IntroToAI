@@ -257,9 +257,13 @@
       const s = E('s' + j); s.textContent = j <= q ? Math.round(w[j] * 100) + '%' : '0%'; s.style.color = VZ.shareCol(w[j]);
       const v = E('v' + j);
       role(v, weighted ? Float32Array.from(values[j], x => x * w[j]) : values[j], 'v', valueScale);
-      v.classList.toggle('tr-masked-value', attention && tr.beat >= B.s && j > q);
       v.title = j > q && tr.beat >= B.s ? 'Masked: future position contributes 0%' : (weighted ? 'Value × attention percentage' : 'Prepared Value: 64 illustrative numbers');
-      [E('t' + j), E('k' + j)].forEach((el) => el && el.classList.toggle('tr-later', attention && j > q));
+      // Keep every column in a future token's row grey, using the same causal selection.
+      const rowIds = ['t', 'id', 'emb', 'p1', 'pos', 'e1', 'card', 'q', 'k', 's', 'v', 'n', 'nx',
+        'joined', 'projected', 'sp', 'se', 'sum', 'sx', 'fp', 'fe', 'f', 'fx', 'fin', 'fnx'].map(k => k + j);
+      for (let k = 0; k < 12; k++) rowIds.push('lb' + k + '_' + j, 'l' + k + '_' + j);
+      for (let k = 0; k < 11; k++) rowIds.push('concat' + k + '_' + j);
+      rowIds.forEach(id => { const el = E(id); if (el) el.classList.toggle('tr-later', attention && j > q); });
       E('t' + j).classList.toggle('tr-me', attention && j === q);
       E('t' + j).style.cursor = attention ? 'pointer' : 'default';
       E('t' + j).style.zIndex = '5';

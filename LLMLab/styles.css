@@ -1738,7 +1738,7 @@ body.nums-on .as-clip .as-bt { max-height: none; -webkit-mask-image: none; mask-
 .tr-scene .tr-tag { color: #914606; background: #fff3e7; border-left: 3px solid #ed7b13; }
 .tr-scene .tr-kh { color: #b65709; }
 .tr-scene .tr-vh { color: #7932a9; }
-.tr-scene canvas.tr-masked-value { filter: grayscale(1); }
+.tr-scene .tr-later { filter: grayscale(1); }
 
 /* Each assembly slot has the same footprint as its 64-number head output. */
 .tr-scene .tr-lane { box-sizing: border-box; width: 24px; height: 20px; }
