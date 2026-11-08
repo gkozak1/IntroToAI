@@ -78,13 +78,13 @@
   }
 
   // ---------- scene geometry ----------
-  const SW = 1290;
+  const SW = 1290, CARDW = 288; // Same full-size Case File as Transformer.
   let G = null; // per sentence
   function geom() {
     const T = C.T, ROW = Math.max(18, Math.min(34, Math.floor(470 / (T + 1)))), TOP = 74;
     const H = Math.max(TOP + (T + 1) * ROW + 70, 560);
     const MX = 780, MY = TOP, MW = 120, MH = Math.max(T * ROW, 420);
-    return { T, ROW, TOP, H, rowY: (i) => TOP + i * ROW, OVX: 330, OVY: TOP + 150, OVW: 300, MX, MY, MW, MH, BOX: 330, TAB: 660, TK: 300, WH: 250 };
+    return { T, ROW, TOP, H, rowY: (i) => TOP + i * ROW, OVX: 330, OVY: TOP + 150, OVW: 300, MX, MY, MW, MH, BOX: 500, TAB: 660, TK: 300, WH: 250 };
   }
   const rowOf = (id) => G.MY + (id / 50257) * G.MH;
   // where each label sits: next to its row, nudged apart so they never overlap (a short leader line joins them)
@@ -94,10 +94,10 @@
     G = geom();
     const { T, ROW, TOP, H } = G, hy = TOP - 30;
     let h = `<div class="fl-scene pk-scene" id="${P}sc" style="width:${SW}px;height:${H}px"><svg class="fl-svg" id="${P}svg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}"></svg>`;
-    h += `<div class="fl-h" style="left:18px;top:${hy}px;width:80px">Token</div><div class="fl-h pk-fade" id="${P}hc" style="left:108px;top:${hy}px;width:160px">🪪 Final Case File <small>Block 12 Output: 768 Numbers</small></div>`;
+    h += `<div class="fl-h" style="left:18px;top:${hy}px;width:80px">Token</div><div class="fl-h pk-fade" id="${P}hc" style="left:108px;top:${hy}px;width:${CARDW}px">🪪 Final Case File <small>Block 12 Output: 768 Numbers</small></div>`;
     for (let i = 0; i < T; i++) {
       h += `<div class="tr-c tr-tok ${i === T - 1 ? 'tr-me' : ''}" style="left:18px;top:${G.rowY(i)}px;--c:${i === T - 1 ? '#c2185b' : '#9aa3b2'};width:84px;height:${ROW - 6}px">${esc(C.W[i])}${NT.repMarks(C.W)[i]}</div>`;
-      h += `<canvas class="fl-strip pk-fade" id="${P}c${i}" style="left:108px;top:${G.rowY(i) + 4}px;width:140px;height:${Math.max(8, ROW - 14)}px"></canvas>`;
+      h += `<canvas class="fl-strip pk-fade" id="${P}c${i}" style="left:108px;top:${G.rowY(i) + 4}px;width:${CARDW}px;height:${VZ.vectorSize(768, CARDW).height}px"></canvas>`;
     }
     h += `<div class="pk-q" id="${P}q" style="left:62px;top:${G.rowY(T)}px">?</div>`;
     // the output vector (it starts as the last card and moves) and the dot-product panel
@@ -209,7 +209,7 @@
     Object.entries(o).forEach(([id, v]) => { const el = E(id); if (el) el.style.opacity = v; });
     // the output vector: sits on the last card at first; at "out" it moves over and up; from "rank" on, the table carries its own copy
     const ov = E('ov'), last = G.rowY(C.T - 1) + 4;
-    const atCard = { left: 108, top: last, width: 140, h: Math.max(8, G.ROW - 14) }, atOut = { left: G.OVX, top: G.OVY, width: G.OVW, h: 24 };
+    const atCard = { left: 108, top: last, width: CARDW, h: VZ.vectorSize(768, CARDW).height }, atOut = { left: G.OVX, top: G.OVY, width: G.OVW, h: VZ.vectorSize(768, G.OVW).height };
     const p = bt < B.out ? atCard : atOut;
     Object.assign(ov.style, { left: p.left + 'px', top: p.top + 'px', width: p.width + 'px', opacity: bt < B.out || bt >= B.rank ? 0 : 1 });
     E('ovc').style.height = p.h + 'px'; E('ovl').style.opacity = bt >= B.out ? 1 : 0;
@@ -220,7 +220,7 @@
     const svg = E('svg'); if (!svg) return; const bt = pk.beat, step = BEATS[bt][0];
     let g = '';
     const lastY = G.rowY(C.T - 1) + G.ROW / 2 - 3;
-    if (bt === B.start) g += `<rect x="104" y="${G.rowY(C.T - 1)}" width="148" height="${G.ROW - 6}" rx="4" fill="none" stroke="#5b38d1" stroke-width="2.5"/><path d="M254 ${lastY} C ${G.BOX - 50} ${lastY}, ${G.BOX - 60} ${G.TOP + 60}, ${G.BOX - 6} ${G.TOP + 40}" fill="none" stroke="#5b38d1" stroke-width="2" marker-end="url(#${P}ar)"/>`;
+    if (bt === B.start) g += `<rect x="104" y="${G.rowY(C.T - 1)}" width="${CARDW + 8}" height="${Math.max(G.ROW - 6, VZ.vectorSize(768, CARDW).height + 8)}" rx="4" fill="none" stroke="#5b38d1" stroke-width="2.5"/><path d="M${108 + CARDW + 6} ${lastY} C ${G.BOX - 50} ${lastY}, ${G.BOX - 60} ${G.TOP + 60}, ${G.BOX - 6} ${G.TOP + 40}" fill="none" stroke="#5b38d1" stroke-width="2" marker-end="url(#${P}ar)"/>`;
     if (step === 2 && bt < B.rank) {
       const x0 = G.OVX + G.OVW + 4, y0 = G.OVY + 12;
       if (bt === B.all) { let s = 3; for (let k = 0; k < 70; k++) { s = (s * 16807) % 2147483647; const y = G.MY + (s / 2147483647) * G.MH; g += `<line x1="${x0}" y1="${y0}" x2="${G.MX}" y2="${y.toFixed(1)}" stroke="#b6bfcc" stroke-width=".7" opacity=".8"/>`; } }

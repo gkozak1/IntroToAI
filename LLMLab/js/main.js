@@ -33,11 +33,11 @@
       { id: 'step', label: 'Learn one example', st: 'mlbook', notodo: true, who: 'Training order: <b>forward propagation → loss → backpropagation → gradient descent</b>. Text supplies the target; low target probability means high loss. Backpropagation calculates gradients; gradient descent updates parameters using a learning rate. Varied text supports generalization. Five passes to 100% are idealized; arrows show prediction error.' },
     ] },
     { id: 'post', label: 'Post-Training', subs: [
-      { id: 'rlhf', label: 'RLHF', st: 'rlhf', notodo: true, who: '<b>Post-training</b> improves instruction-following and helpfulness. In this simplified <b>RLHF</b> example, people rate complete responses to train a reward model. An objective and backpropagation yield gradients; an optimizer updates parameters. People do not choose individual weights. This is later assistant training, not original GPT-2; grades and progress are illustrative.' },
+      { id: 'rlhf', label: 'RLHF', st: 'rlhf', notodo: true, who: '<b>Post-training</b> improves instruction-following and helpfulness. In this simplified <b>RLHF</b> example, people compare complete responses to train a reward model. An objective and backpropagation yield gradients; an optimizer updates parameters. People do not choose individual weights. This is later assistant training, not original GPT-2; grades and progress are illustrative.' },
     ] },
     { id: 'assist', label: 'Assistant', subs: [
       { id: 'before', label: 'Before & After', cap: 'what post-training changes', st: 'asbefore', notodo: true, who: 'Both versions predict next tokens. <b>Post-training</b> changes parameters to improve instruction-following; role labels alone are not enough. Compare real recordings from two versions of SmolLM2-135M.' },
-      { id: 'conv', label: 'Inside a Conversation', cap: 'the Case Log', st: 'asconv', notodo: true, who: 'The <b>Case Log</b> supplies instructions, role labels, history, and saved memory as context. These and calculated vectors can change during chat; learned embeddings and Q/K/V matrices stay fixed. Compare real Qwen3-0.6B recordings. <b>Show the tokens</b> reveals message tokens.' },
+      { id: 'conv', label: 'Context & Conversation', cap: 'the context window and Case Log', st: 'asconv', notodo: true, who: 'The <b>Case Log</b> supplies instructions, role labels, history, and saved memory as context. These and calculated vectors can change during chat; learned embeddings and Q/K/V matrices stay fixed. Compare real Qwen3-0.6B recordings. <b>Show the tokens</b> reveals message tokens.' },
     ] },
     { id: 'think', label: 'Think &amp; Act', subs: [
       { id: 'tools', label: 'Think & Use Tools', cap: 'reasoning and tools', st: 'astools', notodo: true, who: 'Extra reasoning can help without guaranteeing correctness. A <b>tool</b> runs outside the model; its result enters context. An <b>agent</b> can repeat actions, observe results, and decide what comes next. Real Qwen3-0.6B recordings.' },
@@ -124,7 +124,7 @@
   const short = (t) => (t.length > 54 ? t.slice(0, 52) + '…' : t);
   function fillStarter() {
     const kind = S.top === 'numbers' ? 'tok' : S.station === 'flow' ? 'flow' : 'start'; if (starterFor === kind) return; starterFor = kind;
-    starterList = kind === 'flow' ? NT.CTX_EXAMPLES.filter(([, k]) => ['story', 'umbrella', 'trophy'].includes(k)).map(([l, k]) => [NT.EX[k].text, l]) : kind === 'tok' ? NT.TOK_EXAMPLES.map(([l, t]) => [t, l]) : kind === 'ctx' ? NT.CTX_EXAMPLES.map(([l, k]) => [NT.EX[k].text, l]) : NT.STARTERS.map(([, t, l]) => [t, l || short(t)]);
+    starterList = kind === 'flow' ? NT.CTX_EXAMPLES.filter(([, k]) => ['story', 'umbrella', 'trophy', 'annie'].includes(k)).map(([l, k]) => [NT.EX[k].text, l]) : kind === 'tok' ? NT.TOK_EXAMPLES.map(([l, t]) => [t, l]) : kind === 'ctx' ? NT.CTX_EXAMPLES.map(([l, k]) => [NT.EX[k].text, l]) : NT.STARTERS.map(([, t, l]) => [t, l || short(t)]);
     starter.innerHTML = `<option value="" disabled>${kind === 'flow' ? 'The story, with tokens added' : 'Your own sentence'}</option>` + starterList.map(([, l], i) => `<option value="${i}">${esc(l)}</option>`).join('');
     syncStarter();
   }
