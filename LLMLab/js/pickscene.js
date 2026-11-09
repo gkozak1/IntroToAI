@@ -40,9 +40,9 @@
     [2, 'five', 'Tokens whose embedding rows match the output vector get high scores.', 'Each line is one score. Its color shows the rank, from dark green (best) to red. GPT-2 works with token IDs, not words.'],
     [2, 'all', 'All 50,257 tokens are scored at once.', 'That’s 50,257 dot products of 768 numbers each, one for every embedding row of the token vocab matrix.'],
     [2, 'rank', 'Line the scores up from best to worst.', 'The logits here are large negative numbers, but that doesn’t matter: only the gaps between them count, as the next steps show.'],
-    [3, 'topk', 'Top-K decides which tokens are allowed.', 'Only the K highest scores stay in the running; every other token is out. Move the Top-K slider at the top, or try a preset.{auto}'],
-    [3, 'temp', 'Temperature reshapes the gaps between the scores.', 'Every allowed logit is divided by the Temperature. Below 1, the gaps stretch and the leader pulls ahead; above 1, they shrink and the scores bunch together.'],
-    [4, 'soft', 'Scores into probabilities: each allowed token gets a slice of the spinner.', 'Softmax gives probabilities totaling 100%. Each slice shows selection probability, not factual correctness.'],
+    [3, 'topk', 'Top-K decides which tokens are allowed.', 'Only the K highest scores stay in the running; every other token is out. Move the Top-K slider at the top, or try a preset.{auto}<br><strong>A = {i : rank(logitᵢ) ≤ K}; masked logitᵢ = logitᵢ if i ∈ A, otherwise −∞.</strong> Here A is the set of allowed tokens; excluded tokens get probability 0.'],
+    [3, 'temp', 'Temperature reshapes the gaps between the scores.', 'Every allowed logit is divided by the Temperature. Below 1, the gaps stretch and the leader pulls ahead; above 1, they shrink and the scores bunch together.<br><strong>Adjusted scoreᵢ = logitᵢ / T (T &gt; 0); adjusted gap = original gap / T.</strong>'],
+    [4, 'soft', 'Scores into probabilities: each allowed token gets a slice of the spinner.', 'Softmax gives probabilities totaling 100%. Each slice shows selection probability, not factual correctness.<br><strong>P(i) = exp(logitᵢ / T) / ∑<sub>j ∈ A</sub> exp(logitⱼ / T)</strong> for i ∈ A; otherwise P(i) = 0. A contains the Top-K allowed tokens; exp(x) = e<sup>x</sup>.'],
     [5, 'pick', 'Select the next token: spin the wheel.', 'A random number r between 0 and 1 turns the needle; whichever slice it stops in is the next token. A probability says how likely a token is to be picked, not whether the sentence is true. Press 🎲 Spin.'],
   ];
   const B = Object.fromEntries(BEATS.map((b, i) => [b[1], i]));
@@ -143,7 +143,7 @@
     if (step === 3) E('tk').innerHTML = tkTable(base);
     if (step >= 4) {
       const hit = pk.r == null ? -1 : NT.pickIndex(pr.p, pk.r);
-      E('tab').innerHTML = VZ.rankCard(pr, K, { n: 10, hit: pk.spun ? hit : -1, range: step === 5, vecId: vec ? P + 'tv' : null, vecTitle: `The output vector for “${esc(C.last)}”…`, title: `Next-token ranking · Temperature ${S.T <= 1 ? S.T.toFixed(1) : S.T} · Top-K ${NT.kLabel(S.K)}` });
+      E('tab').innerHTML = VZ.rankCard(pr, K, { n: 10, hit: pk.spun ? hit : -1, range: step === 5, temperature: step === 4 ? S.T : null, vecId: vec ? P + 'tv' : null, vecTitle: `The output vector for “${esc(C.last)}”…`, title: `Next-token ranking · Temperature ${S.T <= 1 ? S.T.toFixed(1) : S.T} · Top-K ${NT.kLabel(S.K)}` });
       if (step >= 4) E('tab').insertAdjacentHTML('beforeend', `<div class="pk-leg">${NT.legendHTML(S.K)}</div>`); // Nov 3 color key for the bars and the wheel
     }
     if (vec && E('tv')) VZ.vec(E('tv'), vec);
@@ -186,11 +186,14 @@
   }
   // the winner flies up into the sentence, then joins it
   function addToken(id, info) {
-    const from = st().querySelector('.pk-tab tr.hit') || E('wh'), to = $('#sentWrap');
-    const a = from.getBoundingClientRect(), b = to.getBoundingClientRect(), bd = NT.BANDS[NT.rankBand(info.rank, info.K)];
-    const fly = document.createElement('div'); fly.className = 'pk-fly'; fly.textContent = tt(id).trim(); fly.style.cssText = `left:${a.left + 20}px;top:${a.top}px;background:${bd.bg};color:${bd.fg}`;
+    const from = st().querySelector('.pk-tab tr.hit td.w') || E('wh'), to = $('#sentBack');
+    if ($('#pkAdd')) $('#pkAdd').disabled = true;
+    const marker = document.createElement('span'); marker.textContent = '\u200b';
+    to.appendChild(marker); const target = marker.getBoundingClientRect(); marker.remove();
+    const a = from.getBoundingClientRect(), bd = NT.BANDS[NT.rankBand(info.rank, info.K)];
+    const fly = document.createElement('div'); fly.className = 'pk-fly'; fly.textContent = tt(id).trim(); fly.style.cssText = `left:${a.left}px;top:${a.top}px;background:${bd.bg};color:${bd.fg}`;
     document.body.appendChild(fly);
-    requestAnimationFrame(() => { fly.style.transform = `translate(${b.right - 120 - a.left}px,${b.top + 12 - a.top}px)`; });
+    requestAnimationFrame(() => { fly.style.transform = `translate(${target.left - a.left}px,${target.top - a.top}px)`; });
     setTimeout(() => { fly.remove(); pk.added++; pk.r = null; pk.spun = false; NT.setText(NT.current().text + tt(id), 'append', NT.makeMark(info)); }, 900);
   }
 

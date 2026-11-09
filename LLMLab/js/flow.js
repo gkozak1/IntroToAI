@@ -106,7 +106,7 @@
       G.text = Dt.cur.tokens.join('').replace(/\n/g, ' '); G.textW = cv.measureText(G.text).width; G.colScale = Math.min(1, 17 / fs) * (ROW < 24 ? 0.8 : 1);
       const stripH = G.stripH;
       let h = `<div class="fl-scene" id="flScene" style="width:${W}px;height:${H}px">`;
-      h += `<div class="tr-rm now fl-room-frame" id="fRoomFrame" style="width:700px;height:${T * ROW + 94}px"></div><div class="fl-room-crew" id="fRoomCrew">${Array.from({length:12}, (_, d) => `<span style="color:${DETECTIVE_COLORS[d]}">🎤<b>${d + 1}</b></span>`).join('')}<small>12 Detectives · attention heads</small></div>`;
+      h += `<div class="tr-rm now fl-room-frame" id="fRoomFrame" style="width:700px;height:${T * ROW + 94}px"></div>`;
       h += `<svg class="fl-svg" id="flSvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"></svg>`;
       const heads = [['tok', X.tok, 'Token'], ['id', X.id, 'Token ID'], ['emb', X.emb, 'Embedding <small>Embedding Vector: 768 Numbers</small>'], ['pos', X.pos, 'Position <small>Position Vector: 768 Numbers</small>'], ['inp', X.inp, 'Input Vector <small>(Case File)</small>'], ['bin', XB.in, `🪪 Case File <small>Into Block ${DB}: 768 Numbers</small>`], ['notes', XB.notes, '+ Lead Detective’s Output <small>Attention Output: 768 Numbers</small>'], ['facts', XB.facts, '+ Learned Patterns <small>MLP Output: 768 Numbers</small>'], ['bout', XB.out, `= Final Case File <small>Block ${DB} Output: 768 Numbers</small>`]];
       heads.forEach(([k, hx, t]) => { const blk = ['bin', 'notes', 'facts', 'bout'].includes(k); h += `<div class="fl-h" id="fh-${k}" style="left:${hx}px;top:${top - (blk ? 46 : 34)}px${blk ? ';width:146px;height:44px;white-space:normal;display:flex;flex-direction:column;justify-content:flex-end' : ''}">${t}</div>`; }); // Nov 3: block headers may wrap to two lines
@@ -202,7 +202,6 @@
       set('fh-bin', { o: inBlock ? 1 : 0 }); set('fh-notes', { o: inBlock && stepIn >= 1 ? 1 : 0 }); set('fh-facts', { o: inBlock && stepIn >= 2 ? 1 : 0 }); set('fh-bout', { o: (inBlock && stepIn >= 3) || k === SI.final ? 1 : 0 });
             set('fmE', { x: X.mat, y: G.top, o: k === SI.ids || k === SI.emb ? 1 : 0 }); set('fmP', { x: X.mat, y: G.top, o: k === SI.pos ? 1 : 0 }); set('fmV', { x: 900, y: G.top, o: k === SI.vocab ? 1 : 0 });
       set('fRoomFrame', { x: XB.in - 10, y: G.top - 98, o: inBlock ? 1 : 0 });
-      set('fRoomCrew', { x: XB.in + 8, y: G.top - 49, o: inBlock ? 1 : 0 });
       set('fBlock', { x: XB.in, y: G.top - 88, o: inBlock ? 1 : 0 }); // Nov 3: a little higher, so two-line column headers fit under it
       const mOn = (k >= SI.out1 && k <= SI.final) && (k !== SI.loop || part >= 5); G.mY = rowY(0) - 10;
       set('fMeter', { x: XB.meter, y: G.mY, o: mOn ? 1 : 0 });

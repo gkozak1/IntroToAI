@@ -53,7 +53,7 @@
   //    after (extra row indices shown after a "…" row, e.g. ordinary words near the bottom) · more ("… N more allowed tokens" row, true) ·
   //    base (a second NT.probs result, usually Temperature 1 · Top-K All: gray ghost bars plus a "Plain" column; rows outside Top-K say "not allowed") ·
   //    mark (row index → extra class)
-  V.rankCols = (o = {}) => 4 + (o.prob !== false ? 1 : 0) + (o.base ? 1 : 0) + (o.prob !== false && o.range !== false ? 1 : 0);
+  V.rankCols = (o = {}) => 4 + (o.temperature != null ? 1 : 0) + (o.prob !== false ? 1 : 0) + (o.base ? 1 : 0) + (o.prob !== false && o.range !== false ? 1 : 0);
   V.rankBody = (pr, K, o = {}) => {
     const prob = o.prob !== false, range = prob && o.range !== false, base = o.base || null, hit = o.hit == null ? -1 : o.hit;
     const N = base ? base.K : pr.K, n = Math.min(o.n || 10, N), cols = V.rankCols(o);
@@ -67,16 +67,16 @@
       const bars = base ? `<span class="mbar two"><i class="ghost" style="width:${(100 * base.p[i] / mx).toFixed(0)}%"></i><i style="width:${(100 * p / mx).toFixed(0)}%;background:${col}"></i></span>` : `<span class="mbar"><i style="width:${(100 * p / mx).toFixed(0)}%;background:${col}"></i></span>`;
       return `<td>${bars} ${ok ? V.cp(p) : 'not allowed'}</td>`; };
     const row = (i, bar = true) => { const cl = [i === hit ? 'hit' : '', base && i >= pr.K ? 'out' : '', o.mark ? o.mark(i) || '' : ''].join(' ').trim(), id = src.ids[i];
-      return `<tr${cl ? ` class="${cl}"` : ''}${i === hit ? ` style="background:${b.bg};color:${b.fg}"` : ''}><td>${NT.int(i + 1)}</td><td class="tid">${id}</td><td class="w">${NT.show(NT.tokText(id))}</td><td>${Number.isFinite(src.logits[i]) ? src.logits[i].toFixed(1) : '—'}</td>${pc(i, bar)}${base ? `<td>${V.cp(base.p[i])}</td>` : ''}${rg(i)}</tr>`; };
+      return `<tr${cl ? ` class="${cl}"` : ''}${i === hit ? ` style="background:${b.bg};color:${b.fg}"` : ''}><td>${NT.int(i + 1)}</td><td class="tid">${id}</td><td class="w">${NT.show(NT.tokText(id))}</td><td>${Number.isFinite(src.logits[i]) ? src.logits[i].toFixed(1) : '—'}</td>${o.temperature != null ? `<td>${i < pr.K && Number.isFinite(src.logits[i]) ? (src.logits[i] / o.temperature).toFixed(1) : '—'}</td>` : ''}${pc(i, bar)}${base ? `<td>${V.cp(base.p[i])}</td>` : ''}${rg(i)}</tr>`; };
     let body = ''; for (let i = 0; i < n; i++) body += row(i);
     const dots = (t = '…') => `<tr><td colspan="${cols}" class="muted">${t}</td></tr>`;
     if (hit >= n) body += dots() + row(hit, false);
     else if (o.after && o.after.length) body += dots(o.afterLabel || '…') + o.after.map((i) => row(i, false)).join('');
     else if (o.more !== false && prob && pr.K > n) { const rest = 1 - cum[n];
-      body += `<tr class="rk-more"><td colspan="4" class="muted">… ${NT.int(pr.K - n)} more ${Kb >= NT.ALL ? 'tokens' : 'allowed tokens'}</td><td>${(rest * 100).toFixed(1)}%</td>${base ? `<td>${V.cp(1 - Array.from(base.p.slice(0, n)).reduce((a, x) => a + x, 0))}</td>` : ''}${range ? `<td>${cum[n].toFixed(3)}–1.000</td>` : ''}</tr>`; }
+      body += `<tr class="rk-more"><td colspan="${4 + (o.temperature != null ? 1 : 0)}" class="muted">… ${NT.int(pr.K - n)} more ${Kb >= NT.ALL ? 'tokens' : 'allowed tokens'}</td><td>${(rest * 100).toFixed(1)}%</td>${base ? `<td>${V.cp(1 - Array.from(base.p.slice(0, n)).reduce((a, x) => a + x, 0))}</td>` : ''}${range ? `<td>${cum[n].toFixed(3)}–1.000</td>` : ''}</tr>`; }
     return body;
   };
-  V.rankHead = (o = {}) => { if (typeof o === 'boolean') o = { range: o }; const prob = o.prob !== false; return `<tr><th>#</th><th>Token ID</th><th>Token</th><th>Logit</th>${prob ? `<th>${o.base ? 'Now' : 'Probability'}</th>` : ''}${o.base ? '<th>Plain</th>' : ''}${prob && o.range !== false ? '<th>Range</th>' : ''}</tr>`; };
+  V.rankHead = (o = {}) => { if (typeof o === 'boolean') o = { range: o }; const prob = o.prob !== false; return `<tr><th>#</th><th>Token ID</th><th>Token</th><th>Logit</th>${o.temperature != null ? '<th>Logit / T</th>' : ''}${prob ? `<th>${o.base ? 'Now' : 'Probability'}</th>` : ''}${o.base ? '<th>Plain</th>' : ''}${prob && o.range !== false ? '<th>Range</th>' : ''}</tr>`; };
   V.rankTable = (pr, K, o = {}) => `<table class="gt rk${o.cls ? ' ' + o.cls : ''}">${V.rankHead(o)}${V.rankBody(pr, K, o)}</table>`;
   // the whole card: optional output vector on top (o.vecId; draw it with V.vec after inserting), a title, the table
   V.rankCard = (pr, K, o = {}) => `<div class="rk-card">${o.vecId ? `${o.vecTitle ? `<div class="rk-tt">${o.vecTitle}</div>` : ''}${V.vecHTML(o.vecId, 'rk-vec')}` : ''}${o.title ? `<div class="rk-tt">${o.title}</div>` : ''}${V.rankTable(pr, K, o)}</div>`;
