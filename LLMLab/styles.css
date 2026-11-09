@@ -2006,9 +2006,12 @@ table.rk tr.hit .mbar i { box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .25); }
 .cx-role-key { display:flex; flex-direction:column; gap:8px; margin:18px 0; }
 .cx-role-key span { border-left:4px solid #64748b; padding-left:8px; }
 .cx-absent { padding:16px; border:2px dashed #a5b2c3; border-radius:8px; color:#687386; margin-bottom:15px; }
-.cx-memory-source { display:flex; gap:12px; align-items:center; margin-bottom:14px; padding:10px; border:1px dashed #a5b2c3; border-radius:8px; }
-.cx-memory-source>.as-b { flex:1; }
-.cx-memory-source>b,.cx-copy { max-width:180px; font-size:12px; }
+.cx-memory-source { display:grid; grid-template-columns:160px minmax(240px,1fr) minmax(280px,2fr) 150px; gap:16px; align-items:center; margin-bottom:14px; padding:12px; border:1px dashed #a5b2c3; border-radius:8px; }
+.cx-memory-source>* { min-width:0; }
+.cx-memory-source>.as-b { margin:0; }
+.cx-memory-source>p { margin:0; line-height:1.45; }
+.cx-memory-source>b,.cx-copy { font-size:12px; }
+@media(max-width:1100px) { .cx-memory-source { grid-template-columns:minmax(0,1fr) minmax(0,2fr); } }
 .cx-note-enter { animation:cx-note-in .6s ease-out; }
 @keyframes cx-note-in { from { opacity:.2; transform:translateY(-16px); } to { opacity:1; transform:none; } }
 .cx-trim-layout { display:grid; grid-template-columns:minmax(200px,.65fr) minmax(0,1.35fr); gap:22px; }
@@ -2018,7 +2021,7 @@ table.rk tr.hit .mbar i { box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, .25); }
 .cx-removed { animation:cx-note-in .45s ease-out; }
 .cx-window-note { font-size:12px; color:#526077; }
 .cx-final-model { display:flex; gap:16px; align-items:center; margin-bottom:14px; }
-@media(max-width:800px) { .cx-intro,.cx-compare,.cx-trim-layout { grid-template-columns:1fr; } .cx-memory-source { flex-direction:column; align-items:stretch; } }
+@media(max-width:800px) { .cx-intro,.cx-compare,.cx-trim-layout { grid-template-columns:1fr; } .cx-memory-source { grid-template-columns:1fr; align-items:stretch; } }
 @media(prefers-reduced-motion:reduce) { .cx-note-enter,.cx-removed { animation:none; } }
 /* Assistant and Think & Act: shared context/model visuals and explicit evidence comparisons. */
 .ax-shared-input,.ax-down,.ax-loop-caption { padding:9px; text-align:center; font-size:12px; font-weight:700; color:#526077; }
