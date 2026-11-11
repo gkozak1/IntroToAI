@@ -17,7 +17,7 @@
     ] },
     // Oct 14: the old Use Context tab was removed; its story lives on in Transformer (old #context links open it)
     { id: 'transformer', label: 'Transformer', subs: [
-      { id: 'room', label: 'Investigation Room', cap: 'the story, step by step', st: 'tfroom', notodo: true, who: 'The case: <b>what comes next?</b> Each token carries a <b>Case File</b> through 12 <b>Investigation Rooms (Transformer Blocks)</b>. Each has 12 <b>Detectives (Attention Heads)</b>, a Lead Detective for assembly, and a Forensics Expert (MLP). Their patterns emerged in pre-training, our “Detective Academy”; the example specialties are illustrative, not programmed human jobs. Transformers arrived in 2017, with attention central to their success.', todo: 'Press Next to follow the story one step at a time. Click any token to investigate it instead.' },
+      { id: 'room', label: 'Investigation Room', cap: 'the story, step by step', st: 'tfroom', notodo: true, who: 'The case: <b>what comes next?</b> Each token carries a <b>Case File</b> through 12 <b>Investigation Rooms (Transformer Blocks)</b>. Each has 12 <b>Detectives (Attention Heads)</b>, a Sketch Artist for assembly, and a Forensics Expert (MLP). Their patterns emerged in pre-training, our “Detective Academy”; the example specialties are illustrative, not programmed human jobs. Transformers arrived in 2017, with attention central to their success.', todo: 'Press Next to follow the story one step at a time. Click any token to investigate it instead.' },
     ] },
     // rebuilt Oct 14 (js/pickscene.js): one scene like Whole Process, continuing from the Transformer; its steps are the chevrons
     { id: 'pick', label: 'Output', subs: [

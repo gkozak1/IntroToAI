@@ -18,7 +18,7 @@
   const VZ = NT.viz;
   const st = () => $('#stage');
   const STORY = 'story', RIVER = 7850, T = 13, LAST = 12;
-  const tr = { beat: 0, room: 1, q: LAST, ctx: null, fv: null, playing: false, timer: null };
+  const tr = { beat: 0, room: 1, q: 0, ctx: null, fv: null, playing: false, timer: null };
   const W = ['The', 'banker', 'left¹', 'the', 'bank¹', 'and', 'sat', 'on', 'the', 'left²', 'bank²', 'of', 'the'];
   const COL = Array.from({ length: 13 }, (_, i) => (i === 12 ? '#c2185b' : '#9aa3b2')); // Nov 3 (Greg, option B): gray token bars, the last token crimson
   // ---------- our analogy, room 1 (from the old Use Context pages, as Greg's notes A–H ask) ----------
@@ -89,17 +89,17 @@
     [2, 'room', 'We will first look at just one Investigation Room (Transformer Block).', 'Within each Investigation Room are 12 Detectives who each have a specific line of questioning.'],
     [2, "focus", "We’ll follow Detective 1, whose line of questioning is “{topic}”.", "The other 11 Detectives work in parallel, each using its own learned methods."],
     [3, "q", "Detective 1 follows the same line of questioning for every token in this room.", "It uses the same learned Q matrix for every Case File. Because the Case Files differ, the resulting 64-number Questions (Queries) can differ."],
-    [3, "k", "Each witness has its own Statement (Key), calculated from its Case File.", "The same learned K matrix is used for each token. Statements do not change in response to the selected Question."],
+    [3, "k", "Each witness offers a Statement and a Verbal Sketch from its Case File.", "Statement: Here is what I can offer about this line of inquiry. Verbal Sketch: Here is my verbal sketch of that information."],
     [3, "s", "For “{q}”, the Detective compares one Question with every eligible witness’s Statement.", "Only “{q}” and earlier tokens can serve as witnesses. Their relevance scores become attention percentages totaling 100%. Relevance does not mean truth."],
-    [3, 'v', 'Evidence Packets (Values) are combined in proportion to Relevance.', 'Evidence is already prepared. Multiply each Value by its percentage, then add the weighted vectors: one 64-number Note.'],
+    [3, 'v', 'Verbal Sketches (Values) are combined in proportion to Relevance.', 'Verbal Sketch is already prepared. Multiply each Value by its percentage, then add the weighted vectors: one 64-number Note.'],
     [3, 'n', 'The detective writes a short note about each token (a 64-element vector: 768 ÷ 12).', 'Detective 1 makes a separate 64-number note for every token, using its permitted witnesses.'],
     [3, 'nx', 'What the notes say.', 'The notes are really a vector of 64 numbers; these words are our analogy of what they hold.'],
     [4, 'sup1', 'All 12 detectives’ notes are assembled together.', 'Join 12 × 64 numbers end to end: 768 numbers. Joining is not adding.'],
     [4, 'sup2', 'All 12 detectives’ notes are assembled together.', 'Join 12 × 64 numbers end to end: 768 numbers. Joining is not adding.'],
     [4, 'join', 'The 12 Notes join into one 768-number vector.', 'Concatenate means join end to end, not add. Each Note contributes 64 numbers.'],
-    [4, 'project', 'The Lead Detective transforms the joined Notes.', 'The learned output projection W_O mixes the 768 numbers before residual addition.'],
-    [4, 'sup3', 'The Lead Detective summarizes the notes and adds the result to each Case File.', 'Join 12 Notes → transform the 768 numbers with W_O → add to the existing Case File.'],
-    [4, "sup4", "The Lead Detective’s Summary is the updated Case File.", "The projected attention output has been added to the incoming Case File. The result still has 768 numbers."],
+    [4, 'project', 'The Sketch Artist transforms the joined Notes.', 'The learned output projection W_O mixes the 768 numbers before residual addition.'],
+    [4, 'sup3', 'The Sketch Artist combines the notes into a Sketch Update and files it in the existing Case File.', 'Join 12 Notes → transform the 768 numbers with W_O → add to the existing Case File.'],
+    [4, "sup4", "The Updated Case File is the updated Case File.", "The projected attention output has been added to the incoming Case File. The result still has 768 numbers."],
     [5, 'f1', 'The Forensics Expert (MLP) uses additional expertise to refine each Case File.', 'It expands each Case File to 3,072 numbers, transforms them with learned patterns, and condenses the result back to 768.'],
     [5, 'f2', 'The Final Case File.', 'Add the MLP output back: a second residual update. Each Case File stays 768 numbers.'],
     [5, 'f3', 'The Final Case Files pass to the next Investigation Room.', '{next}'],
@@ -117,7 +117,7 @@
   const REAL = {
     1: 'The Case File is the token’s <b>input vector</b>: 768 numbers.',
     2: 'Each investigation room is a <b>transformer block</b>; each detective is an <b>attention head</b> (12 per block). Heads learn different patterns during pre-training; our named specialties are illustrative, not literal jobs. Each block needs the preceding block’s output, so the 12 blocks run in sequence.',
-    3: 'Question = <b>Query</b>; Statement = <b>Key</b>; Evidence = <b>Value</b>. Each head reuses its learned Q/K/V matrices across tokens. Q–K dot products ÷ √64 (= 8), masking, and Softmax give percentages totaling 100%. Weight the Values and add to form a 64-number Note. A token can attend to itself and earlier tokens, never later ones.',
+    3: 'Question = <b>Query</b>; Statement = <b>Key</b>; Verbal Sketch = <b>Value</b>. Each head reuses its learned Q/K/V matrices across tokens. Q–K dot products ÷ √64 (= 8), masking, and Softmax give percentages totaling 100%. Weight the Values and add to form a 64-number Note. A token can attend to itself and earlier tokens, never later ones.',
     4: 'The 12 notes (12 × 64 = 768 numbers) are joined, mixed by one learned matrix, and <b>added</b> to the token’s vector. The Case File stays 768 numbers long.',
     5: 'The Forensics Expert is the <b>feed-forward network (MLP)</b>. Learned transformations expand each 768-number vector to 3,072 dimensions and return it to 768; the result is added to its Case File. Pattern examples illustrate learned relationships, not a database or an external fact check.',
     6: 'GPT-2 scores the last token’s vector against every token’s embedding row (logits), as in the Output tab.',
@@ -127,19 +127,20 @@
   const SW = 1290, TOP = 74, ROW = 34, VW = 120;
   const H = TOP + T * ROW + 70;
   const rowY = (i) => TOP + i * ROW;
-  const X = { tok: 18, card: 108, id: 112, emb: 175, p1: 475, pos: 495, e1: 800, inp: 825, lane: (k, w) => 420 + k * w, q: 410, k: 590, s: 800, v: 880, n: 970, nx: 1064, sp: 405, se: 800, sum: 825, sx: 1125, fp: 405, f: 435, fx: 592, fe: 800, fin: 825, fnx: 1125, panel: 1060, box: 430 };
+  const X = { tok: 18, card: 108, id: 112, emb: 175, p1: 475, pos: 495, e1: 800, inp: 825, lane: (k, w) => 420 + k * w, q: 390, k: 510, s: 665, v: 730, n: 815, nx: 1064, sp: 405, se: 800, sum: 825, sx: 1125, fp: 405, f: 435, fx: 592, fe: 800, fin: 825, fnx: 1125, panel: 1060, box: 430 };
 
   const P = 'tr_', E = (id) => document.getElementById(P + id);
   // ---------- the 12-room stack (Nov 3): one rounded rectangle per room, each room's output feeding the next ----------
   const SK = { x: 478, w: 780, y0: 22, h: 28, gap: 18, lw: 112 };
-  const SLOT = (SK.w - SK.lw - 24 - 52) / 12, CHW = 50; // the last 52 px hold the room's Lead Detective and Forensics Expert // one detective chip per slot in a stack row
+  const SLOT = (SK.w - SK.lw - 24 - 52) / 12, CHW = 50; // the last 52 px hold the room's Sketch Artist and Forensics Expert // one detective chip per slot in a stack row
   const skY = (k) => SK.y0 + (k - 1) * (SK.h + SK.gap); // room k = 1..12
   // zoom timeline (ms, scaled by Speed): later rooms fade, earlier rooms fade, this room grows and its detectives spread, questions, dashed boxes
   const zoomT = () => { const prior = tr.room > 1 ? ms(650) : 0, grow = prior + ms(650); return { later: 0, prior, grow, ask: grow + ms(1150), boxes: grow + ms(1750), end: grow + ms(2300) }; };
-  const ZOOM = { x: 404, y: 20, w: 848, h: rowY(T) + 30 - 20 }; // room for the Lead Detective / Forensics line at the bottom // the expanded room: around the 12 lane headers and boxes
+  const ZOOM = { x: 404, y: 20, w: 848, h: rowY(T) + 30 - 20 }; // room for the Sketch Artist / Forensics line at the bottom // the expanded room: around the 12 lane headers and boxes
 
   // ---------- data ----------
   async function loadData() {
+    if (!window.REALLY_DATA) await new Promise(resolve => { const script = document.createElement('script'); script.src='./data/really-data.js'; script.onload=resolve; script.onerror=resolve; document.head.appendChild(script); });
     const D = window.CTX_DATA || (NT.ctxData ? await NT.ctxData().catch(() => null) : null);
     tr.ctx = D && D.stack[STORY];
     const FD = NT.flowData ? await NT.flowData() : null, X8 = FD && FD[STORY];
@@ -154,10 +155,11 @@
   const mlp = (b, i) => (tr.fv ? tr.fv('m', b - 1, i) : zero()); // what room b's fact checker added
   const add = (a, c) => Float32Array.from(a, (x, k) => x + c[k]);
   const emb = (i) => { const ex = NT.current().ex; return ex && ex.tok ? ex.tok.slice(i * 768, i * 768 + 768) : zero(); };
-  const shares = (q) => { const REL = TH()[3]; const w = REL.map((r, j) => (j <= q ? Math.pow(j === q ? Math.min(r, 0.15) : r, 1.6) : 0)); const s = w.reduce((a, b) => a + b, 0) || 1; return w.map((x) => x / s); };
-  // the interview pictures: each witness's part of its card (64 numbers), and the notes made from them in proportion
-  const illustrativeValue = (b, j, k = 0) => card(b - 1, j).slice(k * 64, k * 64 + 64);
-  const note = (b, i, k = 0) => { const w = shares(i), o = new Float32Array(64); for (let j = 0; j <= i; j++) { const p = illustrativeValue(b, j, k); for (let e = 0; e < 64; e++) o[e] += w[j] * p[e]; } return o; };
+  const trace = () => window.REALLY_DATA && window.REALLY_DATA.blocks[tr.room - 1];
+  const decodeTrace = (p, i) => { const bytes=NT.b64(p.d); const data=new Int8Array(bytes.buffer,bytes.byteOffset,bytes.byteLength); return Float32Array.from({length:p.n},(_,k)=>data[i*p.n+k]*p.s[i]/127); };
+  const shares = q => { const b=trace(); return Array.from({length:T},(_,i)=>i<=q && b ? b.att[q][i] : 0); };
+  const illustrativeValue = (b,j,k=0) => window.REALLY_DATA ? decodeTrace(window.REALLY_DATA.blocks[b-1].v,k*T+j) : new Float32Array(64);
+  const note = (b,i,k=0) => window.REALLY_DATA ? decodeTrace(window.REALLY_DATA.blocks[b-1].z,k*T+i) : new Float32Array(64);
   const role = VZ.role;
   const riverRank = (b) => { const L = tr.ctx && tr.ctx.lens && tr.ctx.lens[b]; if (!L) return null; const k = L.findIndex(([id]) => id === RIVER); return k < 0 ? null : k + 1; };
 
@@ -165,7 +167,7 @@
   function txt(kind, i) {
     const r = tr.room, th = TH();
     if (kind === 'q') return th[1][i];
-    if (kind === 'k') return th[2][i];
+    if (kind === 'k') return th[2][i].replace('I have info about', 'I can offer').replace('I have no', 'I have no');
     if (r === 1) return { nx: NOTEX, sx: SUMX, fx: FACTX, fnx: FINX }[kind][i];
     // later rooms: the note mostly comes from the most significant response; key rows also get their story lines
     const w = shares(i); let top = 0; for (let j = 0; j <= i; j++) if (j !== i && w[j] > w[top]) top = j; if (i === 0) top = 0;
@@ -192,7 +194,7 @@
       h += `<div class="tr-rml ${cls}" id="${P}rml${k}" style="width:${SK.lw}px">${k < r ? '✓ ' : ''}Room ${k} <small>Block ${k}</small></div>`;
       // each detective is its own chip, so on the zoom the current room's detectives can spread out to their places
       for (let d = 0; d < 12; d++) h += `<div class="tr-rc" id="${P}rc${k}_${d}" style="width:${CHW}px;color:${ICOL[d]}">🎤<b>${d + 1}</b></div>`;
-      h += `<div class="tr-rx" id="${P}rx${k}" title="Lead Detective and Forensics Expert (MLP)">✍️ 📚</div>`;
+      h += `<div class="tr-rx" id="${P}rx${k}" title="Sketch Artist and Forensics Expert (MLP)">✍️ 📚</div>`;
     }
     { // the funnel: every token's Case File flows into this room; then a single arrow between rooms, middle to middle
       const cx = SK.x + SK.w / 2, ry = skY(r) + SK.h / 2, x0 = X.card + 292, xm = SK.x - 26;
@@ -205,14 +207,14 @@
       a += `<path d="M${cx} ${skY(12) + SK.h + 1} V${skY(12) + SK.h + 14}" stroke="#8b78d8" stroke-width="2" fill="none" marker-end="url(#${P}sar2)"/>`;
       h += `<svg class="tr-stsvg" id="${P}stsvg" width="${SW}" height="${H}" viewBox="0 0 ${SW} ${H}">${a}</svg>`;
       h += `<div class="tr-skout" id="${P}skout" style="width:220px">to Output: the next-token scores</div>`;
-      // the zoomed room also holds a Lead Detective and a Forensics Expert (their work comes after the 12 Detectives')
-      h += `<div class="tr-zcrew" id="${P}zcrew"><span>✍️ <b>Lead Detective</b> assembles the 12 Notes</span><span>📚 <b>Forensics Expert</b> (MLP) adds learned patterns</span></div>`;
+      // the zoomed room also holds a Sketch Artist and a Forensics Expert (their work comes after the 12 Detectives')
+      h += `<div class="tr-zcrew" id="${P}zcrew"><span>✍️ <b>Sketch Artist</b> assembles the 12 Notes</span><span>📚 <b>Forensics Expert</b> (MLP) adds learned patterns</span></div>`;
     }
     head('tok', 'Token', 80); head('id', 'Token ID', 60); head('emb', 'Embedding <small>Embedding Vector: 768 Numbers</small>', 288); head('pos', 'Position <small>Position Vector: 768 Numbers</small>', 288); head('card', r === 1 ? 'Input vector' : `🪪 Case Files <small>from Room ${r - 1}</small>`, 150);
     const tp = topics(r); for (let k = 0; k < 12; k++) head('l' + k, `<span class="tr-topic" style="--ic:${ICOL[k]}">🎤${k + 1}<i>${esc(tp[k])}</i></span>`, 74);
-    head('joined', 'Concatenated Notes <small>Head Outputs: 768 Numbers</small>', 320); head('projected', 'Lead Detective’s Output <small>Attention Output: 768 Numbers</small>', 320); head('lanes', 'Detective notes', 300); head('lanes2', 'Detective', 200);
-    head('q', '<span class="tr-qh">❓ Question <small>Q: 64 Numbers</small></span>', 175); head('k', '<span class="tr-kh">🏷️ Statement <small>K: 64 Numbers</small></span>', 175); head('s', 'Relevance', 60); head('v', '📨 Evidence <small>V: 64 Numbers</small>', 130); head('n', '<span class="tr-vh">📝 Note <small>Head Output:<br>64 Numbers</small></span>', 90); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
-    head('sum', '✍️ Lead Detective’s Summary <small>Updated Vector: 768 Numbers</small>', 288); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 150);
+    head('joined', 'Concatenated Notes <small>Head Outputs: 768 Numbers</small>', 320); head('projected', 'Sketch Update <small>Attention Output: 768 Numbers</small>', 320); head('lanes', 'Detective notes', 300); head('lanes2', 'Detective', 200);
+    head('q', '<span class="tr-qh">❓ Question <small>Q: 64 Numbers</small></span>', 175); head('k', '<span class="tr-kh">🏷️ Statement <small>K: 64 Numbers</small></span>', 175); head('s', 'Relevance', 60); head('v', '📨 Verbal Sketch <small>V: 64 Numbers</small>', 130); head('n', '<span class="tr-vh">📝 Note <small>Head Output:<br>64 Numbers</small></span>', 90); head('nx', 'Note examples <span class="tr-an">our analogy</span>', 240);
+    head('sum', '✍️ Updated Case File <small>Updated Vector: 768 Numbers</small>', 288); head('sx', 'Summary examples <span class="tr-an">our analogy</span>', 150);
     head('f', '📚 Learned patterns <small>MLP Output: 768 Numbers</small>', 150); head('fx', 'Pattern examples <span class="tr-an">our analogy</span>', 196); head('fin', `🪪 Final Case File <small>Block ${r} Output: 768 Numbers</small>`, 288); head('fnx', 'Final file examples <span class="tr-an">our analogy</span>', 150);
     for (let i = 0; i < T; i++) {
       h += `<div class="tr-c tr-tok" id="${P}t${i}" data-i="${i}" style="--c:${COL[i]};width:84px;height:${ROW - 6}px">${esc(W[i])}</div>`;
@@ -227,7 +229,7 @@
       h += `<div class="fl-op" id="${P}fp${i}">+</div><div class="fl-op" id="${P}fe${i}">=</div>` + cv('f' + i, 120) + cell('fx' + i, 'tr-tx tr-fact', esc(txt('fx', i) || ''), 196) + cv('fin' + i, 140) + cell('fnx' + i, 'tr-tx', esc(txt('fnx', i) || ''), 150);
     }
     h += `<div class="tr-akey" id="${P}akey">Relevance color = share of attention<br>${['20%+', '10–20', '5–10', '2–5', '&lt;2%'].map((t, i) => `<i style="background:${VZ.LINECOL[i]}"></i>${t}`).join(' ')}</div>`; // Nov 3 color key (arcs and %)
-    h += `<div class="tr-c tr-total" id="${P}tot" style="width:60px">100%</div><div class="tr-c tr-sumrow" id="${P}vsum" style="width:240px">Σ weighted V for <b id="${P}vsumw"></b> ${cv('vsumc', 100)}</div>`;
+    h += `<div class="tr-c tr-total" id="${P}tot" style="width:60px">100%</div><div class="tr-c tr-sumrow" id="${P}vsum" style="width:240px">Σ weighted sketch for <b id="${P}vsumw"></b> ${cv('vsumc', 100)}</div>`;
     h += `<div class="tr-panel2" id="${P}panel"><div class="rk-tt">📚 Learned Patterns <small class="muted">learned in training</small></div>${FACTS.map((f) => `<div class="tr-fl">• ${esc(f)}</div>`).join('')}</div>`;
     h += `<div class="tr-box" id="${P}box"></div>`;
     return h + '</div>';
@@ -239,10 +241,10 @@
       VZ.vec(E('emb' + i), emb(i)); VZ.vec(E('pos' + i), NT.posRow(i)); VZ.vec(E('card' + i), c0);
       const joined = Float32Array.from(Array.from({ length: 12 }, (_, k) => Array.from(note(r, i, k))).flat());
       const joinedScale = VZ.p98(joined);
-      role(E('joined' + i), joined, 'v', joinedScale);
+      role(E('joined' + i), joined, 'n', joinedScale);
       role(E('projected' + i), att(r, i), 'o');
-      for (let k = 0; k < 12; k++) role(E('lc' + k + '_' + i), note(r, i, k), 'v', joinedScale);
-      role(E('n' + i), note(r, i, 0), 'v'); VZ.vec(E('sum' + i), s1); role(E('f' + i), mlp(r, i), 'a'); VZ.vec(E('fin' + i), card(r, i));
+      for (let k = 0; k < 12; k++) role(E('lc' + k + '_' + i), note(r, i, k), 'n', joinedScale);
+      role(E('n' + i), note(r, i, 0), 'n'); VZ.vec(E('sum' + i), s1); role(E('f' + i), mlp(r, i), 'a'); VZ.vec(E('fin' + i), card(r, i));
     }
     interview();
   }
@@ -252,7 +254,7 @@
     const values = Array.from({ length: T }, (_, j) => illustrativeValue(r, j));
     const valueScale = VZ.sharedScale(values);
     const weighted = tr.beat >= B.v;
-    E('h-v').innerHTML = '<span class="tr-vh">' + (weighted ? 'Weighted<br>Evidence' : '📨 Evidence') + '<small>V: 64 Numbers</small></span>'; E('h-v').style.width = '86px'; // Nov 3: two lines, so it never runs into Note
+    E('h-v').innerHTML = '<span class="tr-vh">' + 'Verbal Sketch' + '<small>V: 64 Numbers</small></span>'; E('h-v').style.width = '86px'; // Nov 3: two lines, so it never runs into Note
     for (let j = 0; j < T; j++) {
       const s = E('s' + j); s.textContent = j <= q ? Math.round(w[j] * 100) + '%' : '0%'; s.style.color = VZ.shareCol(w[j]);
       const v = E('v' + j);
@@ -269,8 +271,32 @@
       E('t' + j).style.zIndex = '5';
       E('q' + j).classList.toggle('tr-active-query', attention && j === q);
     }
-    role(E('vsumc'), note(r, q, 0), 'v', valueScale); E('vsumw').textContent = `“${W[q]}”`;
+    role(E('vsumc'), note(r, q, 0), 'n', valueScale); E('vsumw').textContent = `“${W[q]}”`;
+    inquiryView();
     arcs();
+  }
+  function inquiryView() {
+    const active=BEATS[tr.beat][0]===3;
+    let chart=E('causalBuild');
+    if (!chart) { chart=document.createElement('div');chart.id=P+'causalBuild'; E('sc').appendChild(chart); }
+    chart.style.cssText='position:absolute;left:875px;top:0;width:400px;font-size:10px;';
+    chart.style.display=active?'block':'none';
+    E('sc').style.width=SW+'px'; E('sc').style.height=H+'px';
+    for(let i=0;i<T;i++) {
+      for(const key of ['card','q','k','s','v','n','nx']) { const el=E(key+i); if(el) el.style.visibility=active && (i>tr.q || key==='q' && i!==tr.q || key==='nx')?'hidden':''; }
+    }
+    if(!active)return;
+    const done=tr.beat>=B.n?tr.q:tr.q-1;
+    let html='<div style="position:absolute;top:4px;font-weight:bold">Causal Attention · Room '+tr.room+' · Detective 1</div>';
+    const cw=400/T;
+    W.forEach((w,j)=>{html+='<div style="position:absolute;top:44px;left:'+(j*cw)+'px;width:'+cw+'px;text-align:center;font-size:9px">'+esc(w)+'</div>';});
+    for(let i=0;i<T;i++)for(let j=0;j<T;j++){
+      const show=i<=done || i===tr.q && tr.beat>=B.s, val=shares(i)[j];
+      const color=j>i?'#faeff2':show?VZ.shareCol(val):'#f5f5f5';
+      html+='<div style="box-sizing:border-box;position:absolute;top:'+(rowY(i))+'px;left:'+(j*cw)+'px;width:'+(cw-2)+'px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid color-mix(in srgb, '+color+' 55%, white);border-radius:3px;background:color-mix(in srgb, '+color+' 20%, white);'+(i===tr.q?'font-weight:bold;':'')+'">'+(show?(j<=i?Math.round(val*100):'—'):'')+'</div>';
+    }
+    chart.innerHTML=html;
+
   }
   function arcs() {
     const svg = E('svg'); if (!svg) return; const b = BEATS[tr.beat][0], sub = tr.beat;
@@ -278,9 +304,7 @@
     if (b === 3 && sub >= B.s && sub <= B.nx) { // from the interviewee's response to each witness's response, bulging to the right, beside the responses
       const q = tr.q, w = shares(q), x = X.k + 179, y0 = rowY(q) + ROW / 2 - 3;
       for (let j = 0; j < q; j++) { const y = rowY(j) + ROW / 2 - 3, bl = 8 + (q - j) * 5; g += `<path d="M${x} ${y0} C ${x + bl} ${y0}, ${x + bl} ${y}, ${x} ${y}" fill="none" stroke="${VZ.shareCol(w[j])}" stroke-width="${(0.5 + w[j] * 7).toFixed(1)}" stroke-linecap="round" opacity=".9"/>`; }
-      // Link the selected Query to the comparison fan through the gap below its Key cell.
-      const qx = X.q + 175, gapY = rowY(q) + ROW - 3;
-      g += `<path d="M${qx} ${y0} V${gapY} H${x} V${y0}" fill="none" stroke="#2877c5" stroke-width="1.5"/><circle cx="${qx}" cy="${y0}" r="2.5" fill="#2877c5"/><circle cx="${x}" cy="${y0}" r="2.5" fill="#2877c5"/>`;
+
     }
     if (b === 6) { const y = rowY(LAST) + ROW / 2 - 3; g += `<rect x="${X.card - 4}" y="${rowY(LAST) - 4}" width="296" height="${ROW - 6}" rx="4" fill="none" stroke="#5b38d1" stroke-width="2.5"/><path d="M${X.card + 298} ${y} C ${X.box - 60} ${y}, ${X.box - 70} ${TOP + 60}, ${X.box - 6} ${TOP + 40}" fill="none" stroke="#5b38d1" stroke-width="2" marker-end="url(#${P}ar)"/>`; }
     svg.innerHTML = `<defs><marker id="${P}ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#5b38d1"/></marker></defs>` + g;
@@ -349,9 +373,9 @@
         set('l' + k + '_' + i, { x: lx, y: y + 4, o: on && filled && bt !== B.join ? 1 : 0, retireAfterMove: bt === B.join, cls: bt === B.join ? 'joined' : 'full', delay: bt === B.sup2 && k > 0 ? (k - 1) * 140 : 0,
           from: bt === B.sup1 && k === 0 ? { x: X.n, y: y + 4, o: 1 } : bt === B.sup2 && k > 0 ? { x: SW + 40, y: y + 4, o: 1 } : null });
       }
-      set('q' + i, { x: X.q, y, o: cols.q }); set('k' + i, { x: X.k, y, o: cols.k }); set('s' + i, { x: X.s, y, o: cols.s });
-      set('v' + i, { x: X.v, y: y + 4, o: cols.v ? 1 : 0 }); set('n' + i, { x: X.n, y: y + 4, o: cols.n, from: bt === B.n && i === tr.q ? { x: X.v + 120, y: rowY(T) + 6, o: 1 } : null, delay: bt === B.n && i !== tr.q ? 500 : 0 });
-      set('nx' + i, { x: X.nx, y, o: cols.nx });
+      set('q' + i, { x: X.q, y, o: cols.q && i === tr.q ? 1 : 0 }); set('k' + i, { x: X.k, y, o: cols.k }); set('s' + i, { x: X.s, y, o: cols.s });
+      set('v' + i, { x: X.v, y: y + 4, o: cols.v ? 1 : 0 }); set('n' + i, { x: X.n, y: y + 4, o: step === 3 && (i < tr.q || (i === tr.q && bt >= B.n)) ? 1 : 0, from: bt === B.n && i === tr.q ? { x: X.v + 120, y: rowY(T) + 6, o: 1 } : null, delay: bt === B.n && i !== tr.q ? 500 : 0 });
+      set('nx' + i, { x: X.nx, y, o: 0 });
       set('sp' + i, { x: X.sp, y: y + 2, o: cols.sp }); set('se' + i, { x: summaryEqualsX, y: y + 2, o: cols.se });
       set('sum' + i, { x: sumX, y: y + 4, o: cols.sum, delay: bt === B.sup3 ? 300 : 0 }); set('sx' + i, { x: summaryExamplesX, y, o: cols.sx, delay: bt === B.sup3 ? 700 : 0 });
       set('fp' + i, { x: X.fp, y: y + 2, o: cols.fp });
@@ -362,6 +386,32 @@
     set('tot', { x: X.s - 6, y: rowY(T), o: cols.s }); set('akey', { x: X.k, y: rowY(T) + 2, o: cols.s ? 1 : 0 }); set('vsum', { x: X.v - 120, y: rowY(T) + 26, o: cols.v && bt === B.v ? 1 : 0 });
     set('panel', { x: X.panel, y: TOP - 4, o: step === 5 && bt < B.f2 ? 1 : 0 }); // Nov 3: gone before the Final Case File examples need its place
     set('box', { x: X.box, y: TOP - 34, o: step === 6 ? 1 : 0 });
+    if(step===3){
+      const positions={card:85,q:390,k:510,s:665,v:730,n:815};
+      for(const [key,x] of Object.entries(positions)){
+        if(L['h-'+key])L['h-'+key].x=x;
+        for(let i=0;i<T;i++)if(L[key+i])L[key+i].x=x;
+      }
+      for(const key of ['q','k']){E('h-'+key).style.width=(key==='q'?115:145)+'px';for(let i=0;i<T;i++){E(key+i).style.width=(key==='q'?115:145)+'px';E(key+i).style.fontSize='11px';}}
+      E('h-n').style.width='58px';E('h-n').innerHTML='Detective Note<small>64 Numbers</small>';E('h-n').style.color='#218343';
+      L.tot.x=665;L.tot.y=rowY(tr.q+1)+2;
+      L.akey.x=390;L.akey.y=rowY(tr.q+1)+2;
+      L.vsum.x=610;L.vsum.y=rowY(tr.q+1)+32;
+      for(const key of ['v','n']) {
+        const width=parseFloat(E('h-'+key).style.width);
+        for(let i=0;i<T;i++) L[key+i].x=positions[key]+(width-E(key+i).offsetWidth)/2;
+      }
+      // Start at the actual canvas, not the text container that precedes it.
+      if(L['n'+tr.q].from){
+        const source=E('vsumc').getBoundingClientRect(), scene=E('sc').getBoundingClientRect();
+        const scale=scene.width/E('sc').offsetWidth;
+        L['n'+tr.q].from={x:(source.left-scene.left)/scale,y:(source.top-scene.top)/scale,o:1};
+      }
+      E('vsum').style.borderTop='none';
+      E('tot').style.borderTop='2px solid #218343';
+      E('tot').style.paddingTop='3px';
+      if(L['h-nx'])L['h-nx'].o=0;
+    }
     return L;
   }
   function apply(L, dur) {
@@ -402,11 +452,11 @@
       if (NT.current().text !== NT.EX[STORY].text) { this.switching = true; NT.setText(NT.EX[STORY].text, 'edit'); this.switching = false; }
       st().innerHTML = `<section class="panel tr-panel"><div class="tr-head"><div class="fl-ctl"><button class="btn" id="trRew" title="Start over">⏮</button><button class="btn" id="trBack">◀ Back</button><button class="btn primary" id="trNext">Next ▶</button><button class="btn" id="trPlay">▶ Play</button><label class="delay" hidden>Speed <input type="range" id="trSpeed" min="0" max="4" value="${tr.sp == null ? 2 : tr.sp}"></label></div></div>
         <div class="fl-cap fixed" id="trCap"></div><div class="fl-box" id="trBox"></div>
-        <div class="tr-legend">Story text, Evidence and attention weights are <span class="tr-an">illustrative</span>. Case Files and block updates use real GPT-2 vectors. <b>How it really works</b> shows actual Q/K/V calculations. Vector proportions and role colors match the technical view; scenes use different zoom levels.</div>
+        <div class="tr-legend">Story text and detective specialties are <span class="tr-an">illustrative</span>. Attention percentages, Verbal Sketches, Notes, Case Files and block updates use stored GPT-2 vectors. <b>How it really works</b> shows actual Q/K/V calculations. Vector proportions and role colors match the technical view; scenes use different zoom levels.</div>
         <div id="trReally"></div></section>`;
       NT.guideRow(st().querySelector('.tr-panel'));
       if (NT.really) NT.really.mount($('#trReally')); // "How it really works": the real GPT-2 operations behind the current step
-      $('#trRew').onclick = () => { pause(); tr.room = 1; tr.beat = 0; tr.q = LAST; rebuild(false); };
+      $('#trRew').onclick = () => { pause(); tr.room = 1; tr.beat = 0; tr.q = 0; rebuild(false); };
       $('#trBack').onclick = () => { pause(); back(); };
       $('#trNext').onclick = () => { pause(); if (!tr.busy) next(); };
       $('#trPlay').onclick = () => (tr.playing ? pause() : play());
@@ -418,7 +468,7 @@
     onText() { if (NT.stations.tfroom.switching) return; NT.stations.tfroom.init(); },
     onTK() {},
     // Nov 4: used only by the checks (js/checks.js) to know the current scene and to jump to one
-    scene: { beats: () => BEATS, now: () => tr.beat, ready: () => !!E('sc'), seek(i) { if (!E('sc')) return false; pause(); tr.room = 1; tr.beat = i; tr.q = LAST; rebuild(false); return true; } },
+    scene: { beats: () => BEATS, now: () => tr.beat, ready: () => !!E('sc'), seek(i) { if (!E('sc')) return false; pause(); tr.room = 1; tr.beat = i; tr.q = 0; rebuild(false); return true; } },
     // a token clicked in the story, or in How it really works (screen = the HIRW screen showing, fromHirw = HIRW is leading)
     selectAttentionToken(i, screen = null, fromHirw = false) {
       if (screen == null) { if (BEATS[tr.beat][0] !== 3) return; pause(); tr.q = i; go(tr.beat, false); return; }
@@ -436,7 +486,7 @@
       if (dir < 0 && !(tr.room === 1 && tr.beat === B.start)) { pause(); back(); return true; }
       return false;
     },
-    state: () => ({ key: BEATS[tr.beat][1], room: tr.room, q: tr.q }), // for checks: where the story is
+    state: () => ({ key: BEATS[tr.beat][1], room: tr.room, q: tr.q, attentionThrough: BEATS[tr.beat][0]===3 ? (tr.beat>=B.s?tr.q:tr.q-1) : LAST, notesThrough: BEATS[tr.beat][0]===3 ? (tr.beat>=B.n?tr.q:tr.q-1) : LAST }), // for checks: where the story is
     hirwCan(dir) { const seq = hirwSeq(), j = hirwIdx(seq) + dir; return (j >= 0 && j < seq.length) || (dir > 0 ? tr.room < 12 : !(tr.room === 1 && tr.beat === B.start)); },
     // a numbered screen chosen in HIRW: stay on this beat if it already shows that screen, otherwise go to the nearest beat that does
     followHirw(sc) {
@@ -496,10 +546,12 @@
   function fit() {
     const box = $('#trBox'), sc = E('sc'); if (!box || !sc) return;
     const top = box.getBoundingClientRect().top + window.scrollY, avail = window.innerHeight - top - 10; // fit the width and the height left on screen
-    const k = Math.max(0.5, Math.min(1.25, box.clientWidth / SW, avail > 250 ? avail / H : 9)); sc.style.transform = `translate(${Math.max(0, (box.clientWidth - SW * k) / 2)}px,0) scale(${k})`; box.style.height = Math.ceil(H * k) + 'px';
+    const width=SW, height=H;
+    const k = Math.max(0.5, Math.min(1.25, box.clientWidth / width, avail > 250 ? avail / H : 9)); sc.style.transform = `translate(${Math.max(0, (box.clientWidth - width * k) / 2)}px,0) scale(${k})`; box.style.height = Math.ceil(height * k) + 'px';
   }
   window.addEventListener('resize', () => { if (S.station === 'tfroom') fit(); });
   function go(bt, animate, screen = null, fromHirw = false) {
+    if (bt === B.q && BEATS[tr.beat][0] !== 3) tr.q=0;
     tr.beat = bt;
     const step = BEATS[bt][0];
     apply(layout(bt), animate ? ms(bt === B.sup2 ? 900 : bt === B.focus ? 700 : 1100) : 0);
@@ -507,9 +559,10 @@
     { const rm = E('rm' + tr.room); if (rm) { clearTimeout(rm._wt); if (bt !== B.room) rm.classList.remove('white'); else if (!animate) rm.classList.add('white'); else { rm.classList.remove('white'); rm._wt = setTimeout(() => rm.classList.add('white'), zoomT().ask + ms(400)); } } }
     { const f = E('stfan'); if (f) { f.classList.remove('draw'); if (animate && bt === B.stack) { void f.getBoundingClientRect(); f.classList.add('draw'); } } }
     interview(); // significance, contribution (only from its own beat on) and arcs
-    arcs(); if (step === 6) knownBox();
+    fit(); arcs(); if (step === 6) knownBox();
     const fill = (t) => t.replace(/\{p\}/g, tr.room - 1).replace(/\{left\}/g, 13 - tr.room).replace(/\{r\}/g, tr.room).replace(/\{q\}/g, W[tr.q]).replace('{topic}', TH()[0]).replace('{next}', tr.room < 12 ? `They leave room ${tr.room} and become room ${tr.room + 1}’s starting Case Files.` : 'This was room 12, the last room.');
     const capT = tr.room > 1 && LATER_CAP[BEATS[bt][1]] || [BEATS[bt][2], BEATS[bt][3]];
+    if (step===3 && bt===B.q) capT[0]='Given what you currently know about the case, what information about “'+TH()[0].replace(/\?$/, '')+'” would help us work out what comes next?';
     $('#trCap').innerHTML = `<div class="fl-ch"><b>${fill(capT[0])}</b></div><div class="fl-cd">${fill(capT[1])}</div>`;
     // the steps are the sub-tabs: chevrons right under the main tabs, then the block counter and a jump to the next block
     const subs = $('#subtabs');
@@ -535,17 +588,28 @@
     hdr.classList.add('tr-swap'); // fade out, swap the words while it slides, fade back in
     setTimeout(() => { if (!hdr.isConnected) return; hdr.innerHTML = html; hdr.classList.remove('tr-swap'); }, ms(350));
   }
+  function runInquiry() {
+    go(B.q,true);
+    let ix=0;
+    const phases=[B.k,B.s,B.v,B.n,B.nx];
+    const tick=()=>{tr.inquiryTimer=setTimeout(()=>{go(phases[ix++],true);if(ix<phases.length)tick();else tr.inquiryTimer=null;},ms(1700));};tick();
+    return true;
+  }
   function next() {
+    if(tr.inquiryTimer) return true;
+    if(tr.beat===B.focus){tr.q=0;return runInquiry();}
+    if (tr.beat === B.nx && tr.q < LAST) { tr.q++; return runInquiry(); }
     if (tr.beat < BEATS.length - 1) { go(tr.beat + 1, true); return true; }
     if (tr.room < 12) { toNextRoom(); return true; } // 7) return to 2) for the next room, in place
     return false;
   }
   function back() {
+    if(tr.beat===B.q && tr.q>0){tr.q--;go(B.nx,false);return;}
     const first = tr.room === 1 ? B.start : B.stack;
     if (tr.beat > first) { go(tr.beat - 1, false); return; }
     if (tr.room > 1) { tr.room--; tr.beat = BEATS.length - 1; rebuild(false); }
   }
   function play() { tr.playing = true; syncPlay(); const tick = () => { tr.timer = setTimeout(() => { if (!tr.playing || S.station !== 'tfroom') return; if (next()) tick(); else pause(); }, ms(BEATS[tr.beat][0] === 6 ? 3600 : tr.beat === B.focus ? 4200 : tr.beat === B.stack ? 4000 : tr.beat === B.room ? 2400 + zoomT().end * spd() : 2600)); }; tick(); }
-  function pause() { tr.playing = false; clearTimeout(tr.timer); syncPlay(); }
+  function pause() { clearTimeout(tr.inquiryTimer); tr.inquiryTimer=null; tr.playing = false; clearTimeout(tr.timer); syncPlay(); }
   function syncPlay() { const p = $('#trPlay'); if (p) p.textContent = tr.playing ? '⏸ Pause' : '▶ Play'; }
 })();

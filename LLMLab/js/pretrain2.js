@@ -11,6 +11,11 @@
   const st = () => $('#stage');
   const SW = 1290, H = 486, P = 'pb_', E = (id) => document.getElementById(P + id);
   const BAND = (i) => NT.BANDS[i].bg;
+  // Nov 11 (Greg): a Speed slider on the long repeated sequences (Repeat and Batches beats of both tabs); other beats always run at ×1
+  const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3], GAP = 500; let spIx = 2, speedy = false;
+  const sp = () => (speedy ? SPEEDS[spIx] : 1);
+  const setSpeedVar = () => { const sc = E('sc'); if (sc) sc.style.setProperty('--pt2-speed', sp()); };
+  const vis = (id, on) => { const e = E(id); if (e) { e.style.opacity = on ? 1 : 0; e.setAttribute('aria-hidden', String(!on)); } };
 
   // ---------- shared drawing ----------
   const rnd = (seed) => { let s = (seed * 9301 + 49297) % 2147483647 || 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647) * 2 - 1; };
@@ -26,6 +31,7 @@
   const brace = (x, y0, y1, open) => { const m = (y0 + y1) / 2, d = open ? -1 : 1, w = 10; return `<path d="M${x} ${y0} q ${w * d} 0 ${w * d} 12 V ${m - 10} q 0 10 ${w * d} 10 q ${-w * d} 0 ${-w * d} 10 V ${y1 - 12} q 0 12 ${-w * d} 12" fill="none" stroke="#5b38d1" stroke-width="2.5" stroke-linecap="round"/>`; };
   const later = (ms) => (ms ? `style="opacity:0;animation:pt2in .4s ${ms}ms forwards"` : '');
   function flash(dir, ms) {
+    ms = ms / sp();
     clearFlow();
     const marker = E('flowMarker');
     marker.style.animationDuration = ms + 'ms';
@@ -57,7 +63,7 @@
       const u = 0.03 + 0.87 * dp, x = gx + u * gw, yy = (1 - u) * (1 - u), y = gy + (1 - yy) * gh * 0.92 + gh * 0.04, slope = 2 * (1 - u) * (gh * 0.92 / gw), half = gw * 0.16;
       E('gp').setAttribute('cx', x); E('gp').setAttribute('cy', y); const t = E('gt'); t.setAttribute('x1', x - half); t.setAttribute('y1', y - slope * half); t.setAttribute('x2', x + half); t.setAttribute('y2', y + slope * half); };
     if (!animate) return upd(1);
-    const t0 = performance.now(); const step = (t) => { if (!E('gc')) return; const p = Math.min(1, (t - t0) / 1200); upd(p); if (p < 1) gdRaf = requestAnimationFrame(step); }; upd(0); gdRaf = requestAnimationFrame(step);
+    const dur = 1200 / sp(), t0 = performance.now(); const step = (t) => { if (!E('gc')) return; const p = Math.min(1, (t - t0) / dur); upd(p); if (p < 1) gdRaf = requestAnimationFrame(step); }; upd(0); gdRaf = requestAnimationFrame(step);
   }
 
   // Shared parameter map: blocks run downward; heads run across each block.
@@ -142,11 +148,12 @@
   function shell(M) {
     st().innerHTML = `<section class="panel tr-panel pt2-panel"><div class="fl-cap fixed pt2-cap" id="pbCap"></div><div class="fl-box" id="pbBox"></div></section>`;
     const subs = $('#subtabs'); subs.querySelectorAll('.pt2-ctl,.minichev').forEach((e) => e.remove());
-    subs.insertAdjacentHTML('afterbegin', `<div class="fl-ctl pt2-ctl"><button class="btn" id="pbRew" title="Start over">⏮</button><button class="btn" id="pbBack">◀ Back</button><button class="btn primary" id="pbNext">Next ▶</button><button class="btn" id="pbPlay">▶ Play</button></div><div class="tr-steps minichev pt2-chev" id="pbSteps"></div>`);
+    subs.insertAdjacentHTML('afterbegin', `<div class="fl-ctl pt2-ctl"><button class="btn" id="pbRew" title="Start over">⏮</button><button class="btn" id="pbBack">◀ Back</button><button class="btn primary" id="pbNext">Next ▶</button><button class="btn" id="pbPlay">▶ Play</button><label class="delay pt2-speed" id="pbSpeedL" hidden>Speed <input type="range" id="pbSpeed" min="0" max="${SPEEDS.length - 1}" value="${spIx}" aria-label="Animation speed"><b id="pbSpV">×${SPEEDS[spIx]}</b></label></div><div class="tr-steps minichev pt2-chev" id="pbSteps"></div>`);
     $('#pbRew').onclick = () => { M.pause(); M.go(0, true); };
     $('#pbBack').onclick = () => { M.pause(); if (M.beat > 0) M.go(M.beat - 1, false); };
     $('#pbNext').onclick = () => { M.pause(); M.next(); };
     $('#pbPlay').onclick = () => (M.playing ? M.pause() : M.play());
+    $('#pbSpeed').oninput = (e) => { spIx = +e.target.value; $('#pbSpV').textContent = '×' + SPEEDS[spIx]; setSpeedVar(); };
   }
   function fit() { const box = $('#pbBox'), sc = E('sc'); if (!box || !sc) return; const top = box.getBoundingClientRect().top + window.scrollY, avail = window.innerHeight - top - 8; const k = Math.max(0.5, Math.min(1.2, box.clientWidth / SW, avail > 250 ? avail / H : 9)); sc.style.transform = `translate(${Math.max(0, (box.clientWidth - SW * k) / 2)}px,0) scale(${k})`; box.style.height = Math.ceil(H * k) + 'px'; alignQkvPixels(k); }
   // Equal CSS widths can rasterize differently after the scene is scaled.
@@ -170,7 +177,7 @@
 
   // a page engine shared by both tabs: beats, chevrons, Play
   function engine(station, CH, BEATS, run) {
-    const M = { beat: 0, playing: false, timer: null, tk: 0, alive: () => false };
+    const M = { beat: 0, playing: false, timer: null, tk: 0, alive: () => false, busy: false, doneAt: 0 };
     M.go = (b, animate) => {
       M.beat = b; const tk = ++M.tk, B = BEATS[b];
       M.alive = () => M.tk === tk && S.station === station && !!E('sc');
@@ -179,16 +186,28 @@
       $('#pbSteps').querySelectorAll('[data-c]').forEach((x) => (x.onclick = () => { M.pause(); M.go(BEATS.findIndex((q) => q.ch === +x.dataset.c), true); }));
       $('#pbBack').disabled = b === 0; $('#pbNext').disabled = b === BEATS.length - 1;
       NT.setStatus(`Step ${b + 1} of ${BEATS.length} · ${CH[B.ch][1]}`); if (b > 0) NT.setWho(false);
-      E('pop').classList.remove('on'); E('end').classList.remove('on'); cancelAnimationFrame(gdRaf);
+      E('pop').classList.remove('on'); E('end').classList.remove('on'); if (E('next')) E('next').classList.remove('on'); cancelAnimationFrame(gdRaf);
+      speedy = !!B.speedy; $('#pbSpeedL').hidden = !speedy; setSpeedVar(); M.busy = false; M.doneAt = performance.now();
       run(b, animate, M); fit(); setTimeout(fit, 60);
     };
     M.next = () => { if (M.beat < BEATS.length - 1) { M.go(M.beat + 1, true); return true; } return false; };
-    M.play = () => { M.playing = true; $('#pbPlay').textContent = '⏸ Pause'; const tick = () => { M.timer = setTimeout(() => { if (!M.playing || S.station !== station) return; if (M.next()) tick(); else M.pause(); }, BEATS[M.beat].wait || 3600); }; tick(); };
+    // Nov 11: a beat with a staged sequence (hold) waits for the sequence to finish, then holds before moving on
+    const waitOf = () => (BEATS[M.beat].hold != null ? 150 : BEATS[M.beat].wait || 3600);
+    M.play = () => { M.playing = true; $('#pbPlay').textContent = '⏸ Pause'; const tick = (ms) => { M.timer = setTimeout(() => { if (!M.playing || S.station !== station) return;
+      const B = BEATS[M.beat]; if (B.hold != null) { if (M.busy) return tick(150); const left = B.hold - (performance.now() - M.doneAt); if (left > 20) return tick(left); }
+      if (M.next()) tick(waitOf()); else M.pause(); }, ms); }; tick(waitOf()); };
     M.pause = () => { M.playing = false; clearTimeout(M.timer); const p = $('#pbPlay'); if (p) p.textContent = '▶ Play'; };
     M.scene = { beats: () => BEATS, now: () => M.beat, ready: () => S.station === station && !!E('sc'), seek(i) { if (S.station !== station || !E('sc')) return false; M.pause(); M.go(i, false); return true; } }; // Nov 4: for the checks only
     return M;
   }
-  const at = (M, ms, fn) => { const tk = M.tk; setTimeout(() => { if (M.tk === tk && M.alive()) fn(); }, ms); }; // a timer from an earlier step never fires into a later one
+  const at = (M, ms, fn) => { const tk = M.tk; setTimeout(() => { if (M.tk === tk && M.alive()) fn(); }, ms / sp()); }; // a timer from an earlier step never fires into a later one
+  // Nov 11: staged sequence: each [fn, ms] runs, then waits ms (at the current speed) before the next; the Speed slider applies from the next stage on
+  function seq(M, steps) {
+    const tk = M.tk; let i = 0; M.busy = true;
+    const next = () => { if (M.tk !== tk || !M.alive()) return; if (i >= steps.length) { M.busy = false; M.doneAt = performance.now(); return; } const [fn, ms] = steps[i++]; if (fn) fn(); setTimeout(next, (ms || 0) / sp()); };
+    next();
+  }
+  const pause = [null, GAP];
   const popHTML = (endText) => `<div class="pt2-pop" id="${P}pop">✔ 124,439,808 Parameters Updated</div><div class="pt2-pop pt2-end" id="${P}end">${endText}</div>`;
   const outShell = () => `<div class="pt2-gd" id="${P}gd"><svg width="300" height="192" viewBox="0 0 300 192" id="${P}gds"></svg></div>`;
 
@@ -221,8 +240,10 @@
     { ch: 5, t: 'Back propagation: how does each parameter affect the error?', d: 'Working backward, GPT-2 calculates gradients: how parameter changes affect loss.', wait: 4000 },
     { ch: 6, t: 'Gradient descent: update parameters to reduce loss.', d: 'BP calculates gradients. GD uses them with the learning rate to update parameters; the curve illustrates the slopes.', wait: 4000 },
   ];
-  for (let j = 1; j <= 5; j++) PBEATS.push({ ch: 7, k: j, wait: 9800, t: j < 5 ? `Illustrated pass ${j}: forward, error, back propagation, gradient descent.` : 'Illustrated pass 5: “worst” = 100%, every other token = 0%.', d: j < 5 ? `With the nudged parameters, “worst” now gets ${j * 20}%. The arrows shrink.` : 'An idealized illustration: real training does not guarantee 100% confidence.' });
-  PBEATS.push({ ch: 8, wait: 65000, t: 'Pre-training uses batches: here, a third of the shelf at a time.', d: 'Each bar shows the probability assigned to the target token in a different example. Losses are combined before BP and the parameter update; values are illustrative.' });
+  for (let j = 1; j <= 5; j++) PBEATS.push({ ch: 7, k: j, wait: 9800, speedy: true, hold: 1500, t: j < 5 ? `Illustrated pass ${j}: forward, error, back propagation, gradient descent.` : 'Illustrated pass 5: “worst” = 100%, every other token = 0%.', d: j < 5 ? `With the nudged parameters, “worst” now gets ${j * 20}%. The arrows shrink.` : 'An idealized illustration: real training does not guarantee 100% confidence.' });
+  // Nov 11 (Greg): after the example ends, the target joins the context and training moves on to the next word
+  PBEATS.push({ ch: 7, nw: true, wait: 6000, t: 'The target word joins the context. Training moves on.', d: '“worst” is added to the text and becomes the newest token. Its next word in the book, “of”, is the next training target.' });
+  PBEATS.push({ ch: 8, wait: 65000, speedy: true, hold: 2500, t: 'Pre-training uses batches: here, a third of the shelf at a time.', d: 'Each bar shows the probability assigned to the target token in a different example. Losses are combined before BP and the parameter update; values are illustrative.' });
   const PB = PBEATS.length - 1; // the batch beat
   const passOf = (b) => (b < 7 ? null : b <= 10 ? 0 : PBEATS[b].k);
   const levelOf = (b) => (b < 10 ? 0 : b === 10 ? 1 : Math.min(5, (PBEATS[b].k || 5) + 1));
@@ -233,14 +254,17 @@
     h += `<div class="pt2-spine pt2-tale" id="${P}tale" style="left:${taleX0}px;top:${SHY + 22}px;height:228px"><span>A Tale of Two Cities</span></div>`;
     h += `<div class="pt2-book" id="${P}book"><div class="pg l"><div class="bt">A TALE OF TWO CITIES</div><div class="ba">Charles Dickens · 1859</div><div class="bc">Book the First<br>Recalled to Life</div><div class="bc">Chapter I<br>The Period</div></div><div class="pg r"><p><span class="hl">It was the best of times, it was the</span> <b class="wr">worst</b> of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity…</p></div></div>`;
     const RM = NT.repMarks(IDS.map((id) => NT.tokText(id))); IDS.forEach((id, i) => { const t = NT.tokText(id); h += `<div class="pt2-tok${i === IDS.length - 1 ? ' last' : ''}" id="${P}t${i}">${esc(t.trim() || t)}${RM[i]}</div>`; });
+    h += `<div class="pt2-tok last" id="${P}t10" style="left:20px;top:${ROWY(10)}px;opacity:0">worst</div>`; // Nov 11: the target, added after the example ends
     h += `<div class="pt2-mh" id="${P}evh" style="left:95px;top:8px">Embedding vectors</div><div class="pt2-mh" id="${P}pvh" style="left:236px;top:8px">Position vectors</div>`;
     for (let i = 0; i < 10; i++) h += `<canvas class="fx fl-strip" data-x="150" id="${P}e${i}" style="left:95px;top:${ROWY(i) + (26 - NT.viz.vectorSize(768, 110).height) / 2}px;width:110px;height:${NT.viz.vectorSize(768, 110).height}px"></canvas><div class="pt2-plus" id="${P}pl${i}" style="left:210px;top:${ROWY(i) + 2}px">+</div><canvas class="fx fl-strip" data-x="260" id="${P}p${i}" style="left:228px;top:${ROWY(i) + (26 - NT.viz.vectorSize(768, 110).height) / 2}px;width:110px;height:${NT.viz.vectorSize(768, 110).height}px"></canvas>`;
+    { const vh = NT.viz.vectorSize(768, 110).height; h += `<canvas class="fx fl-strip" id="${P}e10" style="left:95px;top:${ROWY(10) + (26 - vh) / 2}px;width:110px;height:${vh}px;opacity:0"></canvas><div class="pt2-plus" id="${P}pl10" style="left:210px;top:${ROWY(10) + 2}px;opacity:0">+</div><canvas class="fx fl-strip" id="${P}p10" style="left:228px;top:${ROWY(10) + (26 - vh) / 2}px;width:110px;height:${vh}px;opacity:0"></canvas>`; }
     // the batch shelf (left) and the stylized vocabulary output (right)
     h += `<div class="pt2-bsh" id="${P}bsh"><div class="pt2-bsp">${SPINES.map(([, ht, c], i) => `<i id="${P}bs${i}" style="height:${Math.round(ht * 0.5)}px;background:${c}"></i>`).join('')}</div><div class="pt2-board"></div><div class="pt2-bcap" id="${P}bcap"></div></div>`;
     h += `<div class="pt2-voc" id="${P}voc"><div class="pt2-batch-key">Target-token probability · one bar per example</div>${Array.from({ length: 10 }, (_, i) => `<div class="pt2-vr"><span class="pt2-example">${i + 1}<small id="${P}vp${i}"></small></span><span class="bar"><i id="${P}vb${i}"></i></span><svg width="22" height="26" id="${P}va${i}"></svg></div>`).join('')}</div>`;
     h += tfHTML();
     h += `<div class="pt2-out" id="${P}out">${OUTS.map((w, i) => `<div class="pt2-orow ${i ? '' : 'tgt'}" id="${P}o${i}"><b>${esc(w)}</b><span class="v" id="${P}ov${i}"></span><span class="bar"><i id="${P}ob${i}"></i></span><svg width="22" height="46" id="${P}oa${i}"></svg></div>`).join('')}</div>`;
     h += outShell() + popHTML('This example ends here. Real training combines many next-token targets in batches; it does not wait for one token to reach 100%.');
+    h += `<div class="pt2-pop pt2-end" id="${P}next">The process continues automatically: GPT-2 now trains on the next word in the book. “It was the best of times, it was the worst” → target “of”, and so on through every word of every book.</div>`;
     return h + '</div>';
   }
   function preOut(k, arrows, focus) {
@@ -260,14 +284,40 @@
     const delta = i % 4 === 0 ? -0.025 : 0.06 + (i % 3) * 0.025;
     return [Math.max(0.02, end - (2 - rd) * delta), 1];
   });
-  function vocOut(bt, rd) { vocVals(bt, rd).forEach(([p, tgt], i) => {
+  function vocOut(bt, rd, arrows = true) { vocVals(bt, rd).forEach(([p, tgt], i) => {
     const b = E('vb' + i); b.style.width = p * 100 + '%'; b.style.background = mcol(p * 100);
-    E('vp' + i).textContent = Math.round(p * 100) + '%'; E('va' + i).innerHTML = arrow(p, tgt, false, 26);
+    E('vp' + i).textContent = Math.round(p * 100) + '%'; E('va' + i).innerHTML = arrows ? arrow(p, tgt, false, 26) : '';
   }); }
   function batchShelf(bt) { SPINES.forEach((_, i) => { const e = E('bs' + i), g = Math.floor(i / 10); e.className = bt >= 3 ? 'done' : g === bt ? 'on' : g < bt ? 'done' : ''; }); E('bcap').textContent = bt < 0 ? 'The whole shelf' : bt >= 3 ? 'Three batches complete · predictions still vary' : `Batch ${bt + 1} of 3: books ${bt * 10 + 1}–${bt * 10 + 10}`; }
 
+  // Nov 11 (Greg): the right brace fades with the output list; forward propagation hides both and the curve panel
+  const rightBrace = (y1, hidden) => `<g id="${P}brR" style="transition:opacity .6s${hidden ? ';opacity:0' : ''}">${brace(BR_R, 14, y1, true)}</g>`;
+  const leftBrace = (rows) => brace(BR_L, ROWY(0) - 2, ROWY(rows - 1) + 28, false);
+  const rightOn = (on, list = 'out') => { vis(list, on); const g = E('brR'); if (g) g.style.opacity = on ? 1 : 0; };
+  function blankOut() { OUTS.forEach((_, i) => { E('ov' + i).textContent = ''; E('o' + i).classList.remove('gray'); E('ob' + i).style.width = '0%'; E('oa' + i).innerHTML = ''; }); }
+  // the 11th token row: "worst" with its embedding and position vectors
+  const NEWTXT = TEXT + ' worst', NEWMARK = { band: 0, tip: 'Training target from the book · added to the context' };
+  function newRow(parts) {
+    ['t10', 'e10', 'pl10', 'p10'].forEach((id) => { E(id).style.transitionDelay = '0ms'; E(id).style.opacity = parts.includes(id) ? 1 : 0; });
+    E('t9').classList.toggle('last', !parts.includes('t10'));
+    if (parts.includes('e10')) paint(E('e10'), 4785 % 997, 5);
+    if (parts.includes('p10')) paint(E('p10'), 60, 5);
+  }
+  function flyWorst(M) {
+    const from = E('o0').querySelector('b'), to = $('#sentBack'), a = from.getBoundingClientRect(), targets = [E('t10').getBoundingClientRect()];
+    if (to) { const mk = document.createElement('span'); mk.textContent = '\u200b'; to.appendChild(mk); targets.push(mk.getBoundingClientRect()); mk.remove(); }
+    const bd = NT.BANDS[0];
+    const flies = targets.map((t) => { const f = document.createElement('div'); f.className = 'pk-fly'; f.textContent = 'worst'; f.style.cssText = `left:${a.left}px;top:${a.top}px;background:${bd.bg};color:${bd.fg}`; document.body.appendChild(f);
+      requestAnimationFrame(() => requestAnimationFrame(() => (f.style.transform = `translate(${t.left - a.left}px,${t.top - a.top}px)`))); return f; });
+    setTimeout(() => flies.forEach((f) => f.remove()), 950);
+    at(M, 950, () => { newRow(['t10']); NT.setText(NEWTXT, 'append', NEWMARK); });
+    at(M, 1350, () => newRow(['t10', 'e10']));
+    at(M, 1750, () => { newRow(['t10', 'e10', 'pl10', 'p10']); E('brL').innerHTML = leftBrace(11); });
+    at(M, 2600, () => E('next').classList.add('on'));
+  }
   function preRun(b, animate, M) {
-    const inC = b >= 6, batch = b === PB, show = (id, on) => { const e = E(id); if (e) e.style.opacity = on ? 1 : 0; };
+    const inC = b >= 6, batch = b === PB, nw = !!PBEATS[b].nw, show = (id, on) => { const e = E(id); if (e) e.style.opacity = on ? 1 : 0; };
+    if (S.text !== TEXT && !(nw && !animate)) NT.setText(TEXT, 'edit'); // the added word leaves the context on every other beat
     // the book: off the shelf, tilting up and to the right, then to just left of the whole shelf; the open book appears after it lands
     show('shelf', b === 0 || (b === 1 && animate)); E('shelf').style.transitionDelay = b === 1 && animate ? '900ms' : '0ms'; if (b === 1 && animate) at(M, 50, () => (E('shelf').style.opacity = 0)); show('shcap', b === 0);
     const tale = E('tale'); tale.style.opacity = b <= 2 ? 1 : 0;
@@ -282,9 +332,10 @@
     IDS.forEach((_, i) => { const e = E('t' + i); if (b < 3) { e.style.left = 560 + i * 26 + 'px'; e.style.top = '90px'; e.style.opacity = 0; } else { e.style.left = '20px'; e.style.top = ROWY(i) + 'px'; e.style.opacity = left ? 1 : 0; e.style.transitionDelay = b === 3 && animate ? i * 90 + 'ms' : '0ms'; } });
     show('evh', left && b >= 4); show('pvh', left && b >= 5);
     for (let i = 0; i < 10; i++) { const e = E('e' + i), p = E('p' + i); e.style.opacity = left && b >= 4 ? 1 : 0; e.style.transitionDelay = b === 4 && animate ? i * 70 + 'ms' : '0ms'; p.style.opacity = left && b >= 5 ? 1 : 0; p.style.transitionDelay = b === 5 && animate ? i * 70 + 'ms' : '0ms'; E('pl' + i).style.opacity = left && b >= 5 ? 1 : 0; }
+    newRow(nw && !animate ? ['t10', 'e10', 'pl10', 'p10'] : []);
     showTF(inC, b === 6 && animate);
     show('out', b >= 7 && !batch); show('gd', b >= 9); show('bsh', batch); show('voc', batch);
-    let g = ''; if (inC) g += brace(BR_L, batch ? 60 : ROWY(0) - 2, batch ? 300 : ROWY(9) + 28, false) + tfLines(b === 6 && animate); if (b >= 7) g += brace(BR_R, 14, batch ? 214 : 200, true); E('svg').innerHTML = g;
+    let g = ''; if (inC) g += `<g id="${P}brL">${batch ? brace(BR_L, 60, 300, false) : leftBrace(nw && !animate ? 11 : 10)}</g>` + tfLines(b === 6 && animate); if (b >= 7) g += rightBrace(batch ? 214 : 200, batch && animate); E('svg').innerHTML = g;
     const lv = levelOf(b), k = passOf(b);
     if (b < 7) { prePaint(0); return; }
     if (batch) return preBatch(animate, M);
@@ -292,32 +343,48 @@
       prePaint(b === 10 && animate ? 0 : lv); preOut(0, b >= 8, b === 9);
       if (b >= 9) gdCurve(animate && b === 9);
       if (animate && b === 9) flash(-1, 1400);
-      if (animate && b === 7) { show('out', false); flash(1, 1400); at(M, 1500, () => show('out', true)); }
+      if (animate && b === 7) { rightOn(false); blankOut(); flash(1, 1400); at(M, 1500, () => rightOn(true)); at(M, 1900, () => preOut(0, false, false)); }
       if (b === 10) { if (animate) { applyUpdate(M, lv, prePaint); at(M, 1900, () => { prePaint(lv); E('pop').classList.add('on'); }); } else E('pop').classList.add('on'); }
       return;
     }
-    if (!animate) { prePaint(lv); preOut(k, true, false); gdCurve(false); E(k < 5 ? 'pop' : 'end').classList.add('on'); return; }
-    prePaint(k); preOut(k - 1, false, false); gdCurve(false); flash(1, 1300);
-    at(M, 1500, () => preOut(k, false, false)); at(M, 2700, () => preOut(k, true, false));
-    if (k < 5) { at(M, 3600, () => { preOut(k, true, true); gdCurve(true); flash(-1, 1300); }); at(M, 6300, () => { preOut(k, true, false); applyUpdate(M, lv, prePaint); at(M, 1800, () => { prePaint(lv); E('pop').classList.add('on'); }); }); }
-    else at(M, 3400, () => E('end').classList.add('on'));
+    if (nw) {
+      prePaint(lv); preOut(5, true, false); vis('gd', false);
+      if (!animate) { if (S.text !== NEWTXT) NT.setText(NEWTXT, 'append', NEWMARK); E('next').classList.add('on'); return; }
+      at(M, 300, () => flyWorst(M));
+      return;
+    }
+    if (!animate) { prePaint(lv); preOut(k, true, false); gdCurve(false); vis('gd', k < 5); E(k < 5 ? 'pop' : 'end').classList.add('on'); return; }
+    // Nov 11 (Greg): forward (list, brace and curve hidden) → list returns and its bars move → arrows → curve with BP → GD → stop at the notice; 0.5 s between stages
+    prePaint(k); preOut(k - 1, false, false); gdCurve(false); rightOn(false); vis('gd', false);
+    const steps = [
+      [() => flash(1, 1300), 1300], pause,
+      [() => { rightOn(true); at(M, 400, () => preOut(k, false, false)); }, 1500], pause,
+    ];
+    if (k < 5) steps.push(
+      [() => preOut(k, true, false), 300], pause,
+      [() => { vis('gd', true); preOut(k, true, true); gdCurve(true); flash(-1, 1300); }, 1400], pause,
+      [() => { preOut(k, true, false); applyUpdate(M, lv, prePaint); }, 1800],
+      [() => { prePaint(lv); E('pop').classList.add('on'); }, 0]);
+    else steps.push([() => E('end').classList.add('on'), 0]);
+    seq(M, steps);
   }
   // Every batch round includes the complete curve and a clearly separated update.
   function preBatch(animate, M) {
     gdCurve(false); prePaint(5);
     if (!animate) { batchShelf(3); vocOut(2, 2); prePaint(9.5); return; }
-    batchShelf(-1); vocOut(0, -1); E('voc').style.opacity = 0;
-    let t = 600;
-    for (let bt = 0; bt < 3; bt++) {
-      at(M, t, () => { batchShelf(bt); vocOut(bt, -1); E('voc').style.opacity = 0; }); t += 700;
-      for (let rd = 0; rd < 3; rd++) {
-        at(M, t, () => flash(1, 700)); t += 1000;
-        at(M, t, () => { vocOut(bt, rd); E('voc').style.opacity = 1; }); t += 900;
-        at(M, t, () => { gdCurve(true); flash(-1, 1400); }); t += 2700;
-        at(M, t, () => applyUpdate(M, 5.5 + (bt * 3 + rd) * 0.5, prePaint)); t += 2200;
-      }
-    }
-    at(M, t, () => batchShelf(3));
+    // Nov 11 (Greg): each round uses the pass sequence; the update notice shows for 0.5 s and the rounds run straight through
+    batchShelf(-1); vocOut(0, -1, false); rightOn(false, 'voc'); vis('gd', false);
+    const steps = [[null, 600]];
+    for (let bt = 0; bt < 3; bt++) for (let rd = 0; rd < 3; rd++) steps.push(
+      [() => { if (rd === 0) batchShelf(bt); rightOn(false, 'voc'); vis('gd', false); flash(1, 700); at(M, 650, () => vocOut(bt, rd - 1, false)); }, 1000], pause,
+      [() => { rightOn(true, 'voc'); at(M, 400, () => vocOut(bt, rd, false)); }, 1100], pause,
+      [() => vocOut(bt, rd, true), 300], pause,
+      [() => { vis('gd', true); gdCurve(true); flash(-1, 1400); }, 1400], pause,
+      [() => applyUpdate(M, 5.5 + (bt * 3 + rd) * 0.5, prePaint), 1800],
+      [() => E('pop').classList.add('on'), GAP],
+      [() => E('pop').classList.remove('on'), 400]);
+    steps.push([() => batchShelf(3), 0]);
+    seq(M, steps);
   }
   const PRE = engine('mlbook', PCH, PBEATS, preRun);
   NT.stations.mlbook = {
@@ -351,8 +418,8 @@
     { ch: 4, t: 'Backpropagation: calculate gradients from the training objective.', d: 'The reward score helps define an objective that also discourages excessive change. BP calculates gradients; the curve is a simplified illustration.', wait: 4000 },
     { ch: 5, t: 'Gradient descent: update the response model’s parameters.', d: 'Watch the outlined matrices change. The scorer stays fixed; the response model learns from the objective, not from differentiating through a human grade.', wait: 4000 },
   ];
-  ['C', 'B', 'A'].forEach((g, j) => QBEATS.push({ ch: 6, g, wait: 13000, t: `Illustrated round ${j + 2}: generate, score, BP, update.`, d: 'The same prompt makes changes easy to compare. Responses and scores here are symbolic; real updates do not guarantee improvement.' }));
-  QBEATS.push({ ch: 7, wait: 34000, t: 'Many prompts and responses contribute to a batch update.', d: 'Six examples are shown together. Generate → score → combined objective → BP → update. Each miniature document represents a separate response.' });
+  ['C', 'B', 'A'].forEach((g, j) => QBEATS.push({ ch: 6, g, wait: 13000, speedy: true, hold: 1500, t: `Illustrated round ${j + 2}: generate, score, BP, update.`, d: 'The same prompt makes changes easy to compare. Responses and scores here are symbolic; real updates do not guarantee improvement.' }));
+  QBEATS.push({ ch: 7, wait: 34000, speedy: true, hold: 2500, t: 'Many prompts and responses contribute to a batch update.', d: 'Six examples are shown together. Generate → score → combined objective → BP → update. Each miniature document represents a separate response.' });
   const QB = QBEATS.length - 1;
   const BATCH_G = [['F', 'C', 'B', 'F', 'C', 'C'], ['C', 'A', 'C', 'B', 'B', 'C'], ['B', 'C', 'A', 'C', 'B', 'A']];
   function responseDoc(id, tiny = false) {
@@ -366,7 +433,7 @@
     h += `<div class="pt2-human-source" id="${P}humanSource">${humanAssessment()}<span><b>Human preferences</b><small>Comparisons teach the scorer</small><strong>↓</strong></span></div><div class="pt2-scorer" id="${P}scorer"><span class="pt2-score-icon">▥</span><div><b>Reward model</b><small>Learned from human comparisons</small><small id="${P}scorerState">Scores the prompt + response</small></div></div><div class="pt2-phase" id="${P}phase" aria-live="polite"></div>`;
     h += `<div class="pt2-batch-prompts" id="${P}batchPrompts"><b>Different prompts</b>${PROMPTS.map((p, i) => `<p><span>${i + 1}</span> ${p}</p>`).join('')}</div>`;
     h += tfHTML();
-    h += `<div class="pt2-gout" id="${P}gout"><div class="pt2-gdoc">${responseDoc('response')}<div class="pt2-gst" id="${P}gst"></div></div><div class="pt2-grow"><small>Illustrative score</small><span class="v" id="${P}gv"></span><span class="bar"><i id="${P}gb"></i></span><svg width="22" height="46" id="${P}ga"></svg></div></div>`;
+    h += `<div class="pt2-gout" id="${P}gout"><div class="pt2-gdoc">${responseDoc('response')}<div class="pt2-gst" id="${P}gst"></div></div><div class="pt2-grow" id="${P}grow"><small>Illustrative score</small><span class="v" id="${P}gv"></span><span class="bar"><i id="${P}gb"></i></span><svg width="22" height="46" id="${P}ga"></svg></div></div>`;
     h += `<div class="pt2-bout" id="${P}bout">${Array.from({length:6}, (_, i) => `<div class="pt2-bcell"><div class="pt2-gdoc"><small>Prompt ${i + 1}</small>${responseDoc('batchResponse' + i, true)}<div class="pt2-gst" id="${P}bst${i}"></div></div><span class="bar"><i id="${P}bb${i}"></i></span><svg width="22" height="30" id="${P}ba${i}"></svg></div>`).join('')}</div>`;
     h += outShell() + popHTML('Keep training across varied prompts. A higher reward is not a guarantee of truth.');
     return h + '</div>';
@@ -376,7 +443,8 @@
     E('gv').textContent = g || ''; const b = E('gb'); b.style.width = p * 100 + '%'; b.style.background = mcol(p * 100);
     E('ga').innerHTML = g && arrows ? arrow(p, 1, false) : '';
   }
-  function batchGrades(bt) { BATCH_G[bt].forEach((g, i) => { E('bst' + i).innerHTML = stamp(g, true); const p = GRADES[g][1], b = E('bb' + i); b.style.width = p * 100 + '%'; b.style.background = mcol(p * 100); E('ba' + i).innerHTML = arrow(p, 1, false, 30); }); }
+  function batchGrades(bt, arrows = true) { if (bt < 0) { for (let i = 0; i < 6; i++) { E('bst' + i).innerHTML = ''; E('bb' + i).style.width = '0%'; E('ba' + i).innerHTML = ''; } return; }
+    BATCH_G[bt].forEach((g, i) => { E('bst' + i).innerHTML = stamp(g, true); const p = GRADES[g][1], b = E('bb' + i); b.style.width = p * 100 + '%'; b.style.background = mcol(p * 100); E('ba' + i).innerHTML = arrows ? arrow(p, 1, false, 30) : ''; }); }
   function clearBatch() { for (let i = 0; i < 6; i++) { E('bst' + i).innerHTML = ''; E('bb' + i).style.width = '0%'; E('ba' + i).innerHTML = ''; E('batchResponse' + i).innerHTML = ''; } }
   function phase(text) { E('phase').textContent = text; }
   function showResponse(n, version = 0, batch = false) {
@@ -387,7 +455,7 @@
     const count = batch ? 12 : 24; let time = start;
     at(M, start, () => { phase(batch ? 'Generate responses · parallel examples' : 'Generate · parameters fixed'); E('scorerState').textContent = 'Waiting for completed responses'; showResponse(0, version, batch); });
     for (let i = 0; i < count; i++) {
-      const duration = i < 2 ? 650 : 180;
+      const duration = 180; // Nov 11 (Greg): no slower first tokens
       at(M, time, () => flash(1, duration));
       time += duration;
       at(M, time, () => showResponse(i + 1, version, batch));
@@ -399,21 +467,29 @@
     at(M, atTime, () => { phase('Prompt + response → reward model'); E('scorer').classList.add('scoring'); E('scorerState').textContent = 'Evaluating…'; });
     at(M, atTime + 1000, () => { E('scorer').classList.remove('scoring'); E('scorerState').textContent = 'Score → training objective'; if (batch) batchGrades(g); else grade(g, true); phase(batch ? 'Combine learning signals across the batch' : 'Score → training objective'); });
   }
-  function postCycle(M, start, version, g, level, batch = false) {
-    at(M, start, () => { if (batch) clearBatch(); else grade(null); });
-    const end = generate(M, version, batch, start);
-    evaluate(M, end + 200, g, batch);
-    at(M, end + 1800, () => { phase('BP · calculate gradients'); gdCurve(true); flash(-1, 1400); });
-    at(M, end + 4500, () => { phase('GD · update response-model parameters'); applyUpdate(M, level); });
-    at(M, end + 6500, () => { phase('Parameters updated · ready for another response'); E('scorerState').textContent = 'Scorer parameters stay fixed'; });
-    return end + 6800;
+  // Nov 11 (Greg): generate (score and curve hidden) → reward model scores → score bar moves from the last grade → arrows → curve with BP → GD → update notice; 0.5 s between stages
+  const noScore = (on, batch) => E(batch ? 'bout' : 'gout').classList.toggle('pt2-noscore', on);
+  const setGrade = (g, arrows, batch) => (batch ? batchGrades(g, arrows) : grade(g, arrows));
+  function postCycle(M, version, g, prev, level, batch = false) {
+    return [
+      [() => { noScore(true, batch); vis('gd', false); if (batch) { clearBatch(); batchGrades(prev, false); } else grade(prev, false); generate(M, version, batch, 0); }, (batch ? 12 : 24) * 180], pause,
+      [() => { phase('Prompt + response → reward model'); E('scorer').classList.add('scoring'); E('scorerState').textContent = 'Evaluating…'; }, 1000],
+      [() => { E('scorer').classList.remove('scoring'); E('scorerState').textContent = 'Score → training objective'; noScore(false, batch); phase(batch ? 'Combine learning signals across the batch' : 'Score → training objective'); }, 400],
+      [() => setGrade(g, false, batch), 1100], pause,
+      [() => setGrade(g, true, batch), 300], pause,
+      [() => { phase('BP · calculate gradients'); vis('gd', true); gdCurve(true); flash(-1, 1400); }, 1400], pause,
+      [() => { phase('GD · update response-model parameters'); applyUpdate(M, level); }, 1800],
+      [() => { phase('Parameters updated · ready for another response'); E('scorerState').textContent = 'Scorer parameters stay fixed'; E('pop').classList.add('on'); }, batch ? GAP : 0],
+      ...(batch ? [[() => E('pop').classList.remove('on'), 400]] : []),
+    ];
   }
   function postRun(b, animate, M) {
     const batch = b === QB, show = (id, on) => { E(id).style.opacity = on ? 1 : 0; E(id).setAttribute('aria-hidden', String(!on)); };
-    show('prompt', !batch); show('human', b === 0); show('humanSource', b > 0); show('scorer', true); show('batchPrompts', batch);
+    show('prompt', !batch); show('human', b === 0); show('humanSource', false); show('scorer', true); show('batchPrompts', batch); show('phase', b === 0); // Nov 11: only the reward model card stays
+    noScore(false, false); noScore(false, true);
     show('gout', b >= 2 && !batch); show('bout', batch); show('gd', b >= 4);
     E('scorer').classList.remove('scoring'); E('scorerState').textContent = b === 0 ? 'Learns to predict human preferences' : 'Scorer parameters stay fixed during response-model training';
-    E('scorer').style.left = b === 0 ? '955px' : '14px'; E('scorer').style.top = b === 0 ? '180px' : '380px';
+    E('scorer').style.left = '955px'; E('scorer').style.top = b === 0 ? '180px' : '218px'; // Nov 11: between the output and the curve
     E('phase').style.left = b === 0 ? '955px' : '14px'; E('phase').style.top = b === 0 ? '260px' : '450px';
     E('choice').style.opacity = b === 0 && animate ? 0 : 1;
     if (b === 0 && animate) at(M, 1200, () => E('choice').style.opacity = 1);
@@ -426,9 +502,11 @@
     if (batch) {
       gdCurve(false);
       if (!animate) { showResponse(12, 6, true); batchGrades(2); phase('Three illustrative batch updates complete'); return; }
-      let time = 200;
-      for (let bt = 0; bt < 3; bt++) time = postCycle(M, time, bt * 2, bt, 9.5 + bt * .5, true);
-      at(M, time, () => phase('Three illustrative batch updates complete'));
+      vis('gd', false);
+      const steps = [[null, 200]];
+      for (let bt = 0; bt < 3; bt++) steps.push(...postCycle(M, bt * 2, bt, bt - 1, 9.5 + bt * .5, true));
+      steps.push([() => phase('Three illustrative batch updates complete'), 0]);
+      seq(M, steps);
       return;
     }
     if (b === 2) { if (animate) generate(M, 0); else showResponse(24); return; }
@@ -440,8 +518,8 @@
       return;
     }
     const g = QBEATS[b].g;
-    if (!animate) { grade(g, true); gdCurve(false); phase('Parameters updated · ready for another response'); return; }
-    gdCurve(false); postCycle(M, 0, b - 5, g, level);
+    if (!animate) { grade(g, true); gdCurve(false); phase('Parameters updated · ready for another response'); E('pop').classList.add('on'); return; }
+    gdCurve(false); seq(M, postCycle(M, b - 5, g, { C: 'F', B: 'C', A: 'B' }[g], level));
   }
   const POST = engine('rlhf', QCH, QBEATS, postRun);
   NT.stations.rlhf = {

@@ -40,7 +40,7 @@
 
   // ---------- pictures: input/output vectors keep the app's multicolor stripes; Q blue, K orange, V violet, MLP amber.
   //            Near 0 is pale; a large positive value is the role color, a large negative one a gray of the same hue. ----------
-  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [56, 75] } /* MLP: mustard/olive (Nov 3), clearly apart from Key orange */;
+  const HUE = { n: [140, 60], q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [56, 75] } /* MLP: mustard/olive (Nov 3), clearly apart from Key orange */;
   const p98 = NT.viz.p98, share = (vs) => NT.viz.sharedScale(vs);
   function px(hu, sa, t) {
     t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
@@ -110,7 +110,7 @@
     const j = st.q; let h = dv('band', 'rw-band', '', 268, ROW - 4);
     // headers
     h += hd('hin', 'Input Vector <small>1 × 768 · (Case File)</small>', 288);
-    h += hd('hq', '<b class="rw-cq">Query</b> <small>1 × 64</small><small>(Question)</small>', 70) + hd('hk', '<b class="rw-ck">Key</b> <small>1 × 64</small><small>(Statement)</small>', 70) + hd('hv', '<b class="rw-cv">Value</b> <small>1 × 64</small><small>(Evidence)</small>', 70);
+    h += hd('hq', '<b class="rw-cq">Query</b> <small>1 × 64</small><small>(Question)</small>', 70) + hd('hk', '<b class="rw-ck">Key</b> <small>1 × 64</small><small>(Statement)</small>', 70) + hd('hv', '<b class="rw-cv">Value</b> <small>1 × 64</small><small>(Verbal Sketch)</small>', 70);
     h += matBox('wq', 'q', 'W<sub>Q</sub> <small>768 × 64</small>', L64, L768) + matBox('wk', 'k', 'W<sub>K</sub> <small>768 × 64</small>', L64, L768) + matBox('wv', 'v', 'W<sub>V</sub> <small>768 × 64</small>', L64, L768);
     h += one('x1', '×') + one('e1', '=');
     for (let i = 0; i < T; i++) h += tok(i) + cv('in' + i, L768) + cv('q' + i, L64) + cv('k' + i, L64) + cv('v' + i, L64);
@@ -139,12 +139,12 @@
     for (let k = 0; k < 12; k++) for (let i = 0; i < T; i++) h += cv(`hs${k}_${i}`, L64);
     h += hd('hcat', 'Concatenated head outputs <small>12 heads × 64 = 1 × 768 (all 12 Notes)</small>', 300);
     // screen 11: W_O, then the first addition
-    h += matBox('wo', 'o', 'W<sub>O</sub> <small>768 × 768 · output projection (Lead Detective)</small>', L768, L768) + one('x2', '×') + one('e2', '=');
-    h += hd('hao', '<b class="rw-co">Attention output</b> <small>1 × 768 (Lead Detective’s Output)</small>', 288) + hd('hin2', 'Input Vector <small>1 × 768 (Case File)</small>', 288) + hd('hup', 'Updated vector <small>1 × 768 (Lead Detective’s Summary)</small>', 288);
+    h += matBox('wo', 'o', 'W<sub>O</sub> <small>768 × 768 · output projection (Sketch Artist)</small>', L768, L768) + one('x2', '×') + one('e2', '=');
+    h += hd('hao', '<b class="rw-co">Attention output</b> <small>1 × 768 (Sketch Update)</small>', 288) + hd('hin2', 'Input Vector <small>1 × 768 (Case File)</small>', 288) + hd('hup', 'Updated vector <small>1 × 768 (Updated Case File)</small>', 288);
     for (let i = 0; i < T; i++) h += cv('ao' + i, L768) + cv('in2_' + i, L768) + cv('up' + i, L768);
     h += sym('pl1', '+', 22) + sym('eq1', '=', 22);
     // screens 12–13: the MLP, vectors to scale (the 3,072-number hidden layer is 4× as long); W1 and W2 drawn at ¼ scale
-    h += hd('hup2', 'Updated vector <small>1 × 768 (Lead Detective’s Summary)</small>', 288) + hd('hhid', '<b class="rw-ca">Hidden layer</b> <small>1 × 3,072: four times as long (Forensics Expert)</small>', 560) + hd('hf', '<b class="rw-ca">MLP output</b> <small>1 × 768 (Forensics Expert’s result)</small>', 288) + hd('hu3', 'Updated vector <small>1 × 768</small>', 288) + hd('hbo', `Block ${st.room} output <small>1 × 768 (final Case File)</small>`, 288);
+    h += hd('hup2', 'Updated vector <small>1 × 768 (Updated Case File)</small>', 288) + hd('hhid', '<b class="rw-ca">Hidden layer</b> <small>1 × 3,072: four times as long (Forensics Expert)</small>', 560) + hd('hf', '<b class="rw-ca">MLP output</b> <small>1 × 768 (Forensics Expert’s result)</small>', 288) + hd('hu3', 'Updated vector <small>1 × 768</small>', 288) + hd('hbo', `Block ${st.room} output <small>1 × 768 (final Case File)</small>`, 288);
     h += matBox('m1', 'a', 'W<sub>1</sub> <small>768 × 3,072 (¼ scale)</small>', L768, L768 / 4) + matBox('m2', 'a', 'W<sub>2</sub> <small>3,072 × 768 (¼ scale)</small>', L768 / 4, L768) + one('x3', '×') + one('e3', '=') + one('x4', '×') + dv('gelu', 'rw-gelu', 'GELU', 40, T * ROW - 6);
     for (let i = 0; i < T; i++) h += cv('u' + i, L768) + cv('hp' + i, L768) + cv('ha' + i, L3072) + cv('f' + i, L768) + cv('bo' + i, L768);
     h += sym('pl2', '+', 22) + sym('eq2', '=', 22);
@@ -173,10 +173,10 @@
       role(E('kt' + i), K[i], 'k', mk); role(E('vt' + i), V[i], 'v', mvv); role(E('vw' + i), V[i].map((x) => x * (i <= j ? att(j)[i] : 0)), 'v', mvv);
       const c = i <= j ? NT.viz.shareCol(att(j)[i]) : null; const t = E('pc' + i); if (t && c) t.style.setProperty('--pc', c);
     }
-    role(E('qa'), Q[j], 'q', mq); role(E('ns'), hv('z', 0, j), 'v', mvv); role(E('nb'), hv('z', 0, j), 'v', mvv);
+    role(E('qa'), Q[j], 'q', mq); role(E('ns'), hv('z', 0, j), 'n', mvv); role(E('nb'), hv('z', 0, j), 'n', mvv);
     for (let r = 0; r < T; r++) for (let c = 0; c <= r; c++) { const g = E(`g${r}_${c}`); if (g) g.style.setProperty('--gc', NT.viz.shareCol(att(r)[c])); }
-    for (let k = 0; k < 12; k++) { const Z = all('z', k), m = share(Z); for (let i = 0; i < T; i++) { role(E(`hs${k}_${i}`), Z[i], 'v', m); if (k === 0) role(E('go' + i), Z[i], 'v', m); } }
-    for (let i = 0; i < T; i++) { const joined = Float32Array.from(Array.from({length:12}, (_,k) => Array.from(hv('z',k,i))).flat()); role(E(i ? 'catv'+i : 'catv'), joined, 'v'); }
+    for (let k = 0; k < 12; k++) { const Z = all('z', k), m = share(Z); for (let i = 0; i < T; i++) { role(E(`hs${k}_${i}`), Z[i], 'n', m); if (k === 0) role(E('go' + i), Z[i], 'n', m); } }
+    for (let i = 0; i < T; i++) { const joined = Float32Array.from(Array.from({length:12}, (_,k) => Array.from(hv('z',k,i))).flat()); role(E(i ? 'catv'+i : 'catv'), joined, 'n'); }
     const O = Array.from({ length: T }, (_, i) => row(b.o, i)), U = Array.from({ length: T }, (_, i) => row(b.m, i)), mo = share(O), mu = share(U);
     const HP = Array.from({ length: T }, (_, i) => row(b.u, i)), HA = HP.map((u) => u.map(gelu)), F = Array.from({ length: T }, (_, i) => row(b.f, i)), BO = Array.from({ length: T }, (_, i) => vecIn(st.room, i));
     const mh = share(HP), ma = share(HA), mf = share(F), mb = share(BO);
@@ -282,16 +282,18 @@
       return;
     }
     if (s === 9) { // every token does the same: the attention grid, then head 1's output for every token
+      const progress=NT.stations.tfroom.state();
+      const through=progress.attentionThrough ?? st.q, notesThrough=progress.notesThrough ?? st.q;
       const gone = ['kth', 'teq', 'nb', 'nl', 'ns', 'div', 'band', 'hq', 'hk', 'hv'];
       for (let i = 0; i < T; i++) gone.push('q' + i, 'k' + i, 'v' + i, 'vt' + i, 'vw' + i, 'pc' + i, 'px' + i, 'lb' + i, 'fs' + i, 'pp' + i);
       fade(A, gone, 0, 500);
       put('hg', { x: GX(0), y: 2 }); mv(A, 'hg', { o: 1 }, 400, 500);
       for (let c = 0; c < T; c++) { put('gl' + c, { x: GX(c), y: TOP - 18 }); mv(A, 'gl' + c, { o: 1 }, 400, 500); }
-      for (let r = 0; r < T; r++) for (let c = 0; c < T; c++) { put(`g${r}_${c}`, { x: GX(c), y: rowY(r) + 1 }); mv(A, `g${r}_${c}`, { o: 1 }, 300, 700 + r * 110 + (c <= r ? c * 12 : 120)); }
+      for (let r = 0; r < T; r++) for (let c = 0; c < T; c++) { put(`g${r}_${c}`, { x: GX(c), y: rowY(r) + 1 }); mv(A, `g${r}_${c}`, { o: r<=through?1:0 }, 300, 700 + r * 110 + (c <= r ? c * 12 : 120)); }
       const t1 = 700 + T * 110 + 600;
       put('hgo', { x: GOUT - 30, y: 14 }); mv(A, 'hgo', { o: 1 }, 400, t1);
-      for (let i = 0; i < T; i++) { put('go' + i, { x: GOUT - (A ? 20 : 0), y: barY(i), w: L64 }); mv(A, 'go' + i, { x: GOUT, o: 1 }, 400, t1 + i * 90); flash(A, 'go' + i, t1 + i * 90 + 300); }
-      at(t1, () => svg(arrowDefs + rows((i) => `<path d="M${GX(T - 1) + 34} ${barY(i) + BH / 2} H${GOUT - 8}" class="rw-ln rw-lnv" marker-end="url(#${P}ar)"/>`), A));
+      for (let i = 0; i < T; i++) { put('go' + i, { x: GOUT - (A ? 20 : 0), y: barY(i), w: L64 }); mv(A, 'go' + i, { x: GOUT, o: i<=notesThrough?1:0 }, 400, t1 + i * 90); if(i<=notesThrough) flash(A, 'go' + i, t1 + i * 90 + 300); }
+      at(t1, () => svg(arrowDefs + rows((i) => i<=notesThrough ? `<path d="M${GX(T - 1) + 34} ${barY(i) + BH / 2} H${GOUT - 8}" class="rw-ln rw-lnv" marker-end="url(#${P}ar)"/>` : ''), A));
       return;
     }
     if (s === 10) { // 12 heads: head 1's outputs slide into lane 1, the others fly in from the right with ‖, then they join
@@ -312,7 +314,7 @@
       put('hcat', { x: AX.cat, y: 14 }); mv(A, 'hcat', { o: 1 }, 400, t2 + 1300);
       return;
     }
-    if (s === 11) { // × W_O (the Lead Detective) = attention output; then + the Input Vector = the updated vector
+    if (s === 11) { // × W_O (the Sketch Artist) = attention output; then + the Input Vector = the updated vector
       put('wo', { x: AX.wo, y: matY(L768) }); mv(A, 'wo', { o: 1 }, 600, 200);
       put('x2', { x: AX.cat + L768 + 8, y: midY - 14 }); put('e2', { x: AX.wo + L768 + 10, y: midY - 14 }); fade(A, ['x2', 'e2'], 1, 400, 300);
       at(500, () => svg(linesTo(AX.cat + L768, AX.wo, L768, AX.out, 'o'), A));
@@ -383,14 +385,14 @@
       [`Each token enters Block ${r} as an Input Vector (its Case File): 1 × 768.`, r === 1 ? 'In Block 1, the Input Vector is the token’s embedding vector + its position vector.' : `These are Block ${r - 1}’s outputs, which already carry context.`],
       ['Input Vector × the Query matrix W_Q = a Query vector (the Question).', 'One learned 768 × 64 matrix for every token turns 768 numbers into 64. The Query is 12 times shorter.'],
       ['Input Vector × the Key matrix W_K = a Key vector (the Statement).', 'A second learned 768 × 64 matrix, the same for every token.'],
-      ['Input Vector × the Value matrix W_V = a Value vector (the Evidence Packet).', 'A third learned 768 × 64 matrix. Every token now has its own Query, Key and Value.'],
+      ['Input Vector × the Value matrix W_V = a Value vector (the Verbal Sketch).', 'A third learned 768 × 64 matrix. Every token now has its own Query, Key and Value.'],
       ['Q, K and V are ready, so the Input Vectors step aside.', 'Same three matrices, different Input Vectors, so every token’s Q, K and V are different.'],
       [`Rotate the Keys into Kᵀ, then multiply by the Query of ${w}.`, `Each Key becomes a 64 × 1 column. Q × Kᵀ: one score per witness. Later tokens can’t be witnesses.`],
       ['Scale, mask and Softmax give each witness’s Relevance.', 'Divide by √64 = 8, block later tokens, then Softmax turns the scores into percentages totaling 100%.'],
       [`Multiply each Value by its percentage, then add: head 1’s output for ${w}.`, 'Each witness’s Value × its weight, all added together: one 1 × 64 vector (Detective 1’s Note).'],
       ['Every token does the same, using only itself and earlier tokens.', 'Each grid row is one token’s attention percentages (totaling 100%); each gives one 1 × 64 head output.'],
       ['All 12 heads’ outputs are concatenated (‖) into one vector per token.', '12 heads × 64 numbers = 768. Concatenated means joined end to end, not added.'],
-      ['The output projection W_O (the Lead Detective), then an addition.', 'W_O, a learned 768 × 768 matrix, mixes the 12 heads’ outputs; the result is added to the Input Vector.'],
+      ['The output projection W_O (the Sketch Artist), then an addition.', 'W_O, a learned 768 × 768 matrix, mixes the 12 heads’ outputs; the result is added to the Input Vector.'],
       ['The MLP (the Forensics Expert) stretches each vector to 3,072 numbers.', '× a learned 768 × 3,072 matrix W1: four times as long. Then GELU keeps positive values and mostly silences negative ones.'],
       ['…then shrinks them back to 768 and adds the result.', `× a learned 3,072 × 768 matrix W2 gives the 1 × 768 MLP output, added to the updated vector: Block ${r}’s output.`],
       [`Block ${r} is complete: each token has an updated Case File.`, r < 12 ? 'The next block begins when the analogy advances to its next Investigation Room. Intermediate rankings above are diagnostic readouts.' : 'After Block 12, the final token’s Case File scores the vocabulary for the next-token prediction.'],
@@ -399,8 +401,8 @@
 
   const assemblyKeys = ['sup1','sup2','join','project','sup3','sup4'];
   function assemblyCaption() {
-    if(st.key==='project') return ['Concatenated head outputs × W_O = Attention Output.', 'The Lead Detective’s Output is a 1 × 768 update; it has not yet been added to the Case File.'];
-    if(st.key==='sup3'||st.key==='sup4') return ['Input Vector + Attention Output = Updated Vector.', 'Residual addition produces the Lead Detective’s Summary, still 1 × 768.'];
+    if(st.key==='project') return ['Concatenated head outputs × W_O = Attention Output.', 'The Sketch Update is a 1 × 768 update; it has not yet been added to the Case File.'];
+    if(st.key==='sup3'||st.key==='sup4') return ['Input Vector + Attention Output = Updated Vector.', 'Residual addition produces the Updated Case File, still 1 × 768.'];
     return ['12 head outputs join end to end: 12 × 64 = 768.', st.key==='join' ? 'Concatenation preserves all 12 Notes. The output projection comes next.' : 'The ‖ symbols mean concatenate, not add.'];
   }
   function storyAssembly(A) {

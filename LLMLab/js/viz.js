@@ -30,7 +30,7 @@
   V.sharedScale = (vs) => { const a = vs.filter(Boolean).map(V.p98).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 1; };
   V.vecHTML = (id, cls = '') => `<canvas class="vz-vec ${cls}" id="${id}"></canvas>`;
 
-  const HUE = { q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [56, 75] } /* MLP: mustard/olive (Nov 3), clearly apart from Key orange */;
+  const HUE = { n: [140, 60], q: [214, 78], k: [27, 92], v: [268, 62], o: [174, 70], a: [56, 75] } /* MLP: mustard/olive (Nov 3), clearly apart from Key orange */;
   const p98 = V.p98;
   function px(hu, sa, t) {
     t = Math.max(-1, Math.min(1, t)); t = Math.sign(t) * Math.sqrt(Math.abs(t));
